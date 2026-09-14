@@ -227,6 +227,7 @@ function CopyConfig() {
 
 export function VariantDialog() {
   const { reset } = useVariants()
+  const [active, setActive] = React.useState<ItemKey>(itemSpecs[0].key)
   return (
     <Dialog>
       <DialogTrigger
@@ -246,9 +247,26 @@ export function VariantDialog() {
         </DialogHeader>
 
         <div className="flex min-w-0 flex-col gap-5">
-          {itemSpecs.map((item) => (
-            <ItemControls key={item.key} item={item.key} />
-          ))}
+          <div role="tablist" className="flex gap-0.5 rounded-md bg-muted p-0.5">
+            {itemSpecs.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                role="tab"
+                aria-selected={active === item.key}
+                onClick={() => setActive(item.key)}
+                className={cn(
+                  "h-6 flex-1 rounded px-2 text-[11px] transition-colors",
+                  active === item.key
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <ItemControls item={active} />
 
           <div className="flex flex-col gap-2 border-t pt-4">
             <div className="flex items-center justify-between">
