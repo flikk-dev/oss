@@ -130,7 +130,7 @@ export function Description({ className }: { className?: string }) {
       onChange={(description) => set({ description })}
       placeholder="Add description"
       className={cn(
-        "min-w-0 max-w-full self-start text-xs text-muted-foreground group-data-[variant=compact]/editor:text-2xs group-data-[variant=wide]/editor:text-sm",
+        "max-w-full min-w-0 self-start text-xs text-muted-foreground group-data-[variant=compact]/editor:text-2xs group-data-[variant=wide]/editor:text-sm",
         className
       )}
     />
@@ -160,7 +160,7 @@ export function Examples({ className }: { className?: string }) {
       }
       placeholder="Add examples"
       className={cn(
-        "min-w-0 max-w-full self-start text-xs text-muted-foreground/70 group-data-[variant=compact]/editor:text-2xs group-data-[variant=wide]/editor:text-sm",
+        "max-w-full min-w-0 self-start text-xs text-muted-foreground/70 group-data-[variant=compact]/editor:text-2xs group-data-[variant=wide]/editor:text-sm",
         className
       )}
     />
@@ -629,21 +629,33 @@ export function Row({
     zid === id ||
     zid === list.parentId ||
     isDescendant(store.getState(), id, zid)
-  // paint straight on the DOM — state would re-render the list mid-drag
-  const paint = (active: string | null) => {
-    for (const [zid, el] of zones.current)
-      el.dataset.over = String(zid === active)
+  const outside = (r: DOMRect | undefined, x: number, y: number) =>
+    !!r && (x < r.left || x > r.right || y < r.top || y > r.bottom)
+  /**
+   * Paint straight on the DOM — state would re-render the list mid-drag.
+   *  - over:    group row the pointer is on → "drop into" outline
+   *  - popout:  own parent group, pointer left it → dashed slot after the group
+   *  - target:  on the dragged row while either is active → hides its own slot skeleton
+   */
+  const paint = (x: number, y: number) => {
+    const target = zoneUnder(zones.current, x, y, skip)
+    const parent = zones.current.get(list.parentId)
+    const popout = !target && outside(parent?.getBoundingClientRect(), x, y)
+    for (const [zid, el] of zones.current) {
+      el.dataset.over = String(zid === target)
+      el.toggleAttribute("data-popout", popout && el === parent)
+    }
+    ref.current?.toggleAttribute("data-target", !!target || popout)
+    return { target, popout }
   }
   const onDragEnd = (x: number, y: number) => {
-    const target = zoneUnder(zones.current, x, y, skip)
-    paint(null)
-    if (target) return store.getState().moveInto(id, target)
-    const frame = zones.current.get(list.parentId)?.getBoundingClientRect()
-    if (
-      frame &&
-      (x < frame.left || x > frame.right || y < frame.top || y > frame.bottom)
-    )
-      store.getState().popOut(id)
+    const { target, popout } = paint(x, y)
+    for (const el of zones.current.values()) {
+      el.dataset.over = "false"
+      el.removeAttribute("data-popout")
+    }
+    if (target) store.getState().moveInto(id, target)
+    else if (popout) store.getState().popOut(id)
   }
 
   const group = isGroupType(node.type)
@@ -668,12 +680,16 @@ export function Row({
           whileDrag={{ opacity: 0.9 }}
           style={{ x, y }}
           onDragStart={() => {
-            ref.current?.setAttribute("data-dragging", "")
+            const el = ref.current
+            if (!el) return
+            el.setAttribute("data-dragging", "")
             document.body.style.userSelect = "none"
+            // pop-out placeholder takes the dragged row's height
+            zones.current
+              .get(list.parentId)
+              ?.style.setProperty("--drag-h", `${el.offsetHeight}px`)
           }}
-          onDrag={(_, info) =>
-            paint(zoneUnder(zones.current, info.point.x, info.point.y, skip))
-          }
+          onDrag={(_, info) => paint(info.point.x, info.point.y)}
           onDragEnd={(_, info) => {
             requestAnimationFrame(() =>
               ref.current?.removeAttribute("data-dragging")
@@ -686,11 +702,10 @@ export function Row({
           data-type={node.type}
           data-depth={list.depth}
           className={cn(
-            "relative flex min-w-0 flex-col rounded-md border bg-background",
-            "data-[over=true]:bg-primary/5 data-[over=true]:outline-2 data-[over=true]:outline-offset-2 data-[over=true]:outline-primary/50 data-[over=true]:outline-dashed",
-            group
-              ? "border-border"
-              : "border-transparent has-[>[data-slot=header]:hover]:border-border",
+            // isolate: a card's z-10 stays inside its row, so the dragging row (z-1 from Reorder) is above every sibling's children
+            "relative isolate flex min-w-0 flex-col",
+            // pop-out placeholder: dashed slot right after this group, above later siblings
+            "data-popout:z-20 data-popout:after:pointer-events-none data-popout:after:absolute data-popout:after:inset-x-0 data-popout:after:top-[calc(100%+0.375rem)] data-popout:after:h-(--drag-h) data-popout:after:rounded-md data-popout:after:border-2 data-popout:after:border-dashed data-popout:after:border-primary/40 data-popout:after:bg-primary/5 data-popout:after:content-['']",
             className
           )}
         >
@@ -698,44 +713,57 @@ export function Row({
           <motion.div
             aria-hidden
             style={{ x: backX, y: backY }}
-            className="pointer-events-none absolute -inset-px z-10 hidden rounded-md border-2 border-dashed border-primary/40 bg-primary/5 [[data-dragging]>&]:block"
+            className="pointer-events-none absolute inset-0 hidden rounded-md border-2 border-dashed border-primary/40 bg-primary/5 [[data-dragging]:not([data-target])>&]:block"
           />
-          {mobile ? (
-            <div className="relative overflow-hidden rounded-md">
-              <Actions className="absolute inset-y-0 right-0 items-start px-2 py-1 opacity-100" />
-              <motion.div
-                drag="x"
-                dragDirectionLock
-                dragConstraints={{ left: -SWIPE, right: 0 }}
-                dragElastic={0.05}
-                style={{ x: swipeX }}
-                onDragEnd={(_, info) => {
-                  const open =
-                    info.offset.x < -SWIPE / 2 || info.velocity.x < -200
-                  animate(swipeX, open ? -SWIPE : 0, {
-                    type: "spring",
-                    stiffness: 500,
-                    damping: 40,
-                  })
-                }}
-                className="relative z-10 flex min-w-0 flex-col bg-background"
-              >
-                {children ?? (
-                  <>
-                    <Header />
-                    <Group />
-                  </>
-                )}
-              </motion.div>
-            </div>
-          ) : (
-            (children ?? (
+          {/* the card; positioned so it paints above the skeleton */}
+          <div
+            data-slot="card"
+            className={cn(
+              "relative z-10 flex min-w-0 flex-col rounded-md border bg-background",
+              "[[data-over=true]>&]:bg-primary/5 [[data-over=true]>&]:outline-2 [[data-over=true]>&]:outline-offset-2 [[data-over=true]>&]:outline-primary/50 [[data-over=true]>&]:outline-dashed",
+              group
+                ? "border-border"
+                : "border-transparent has-[>[data-slot=header]:hover]:border-border",
+              mobile && "overflow-hidden"
+            )}
+          >
+            {mobile ? (
               <>
-                <Header />
-                <Group />
+                <Actions className="absolute inset-y-0 right-0 items-start px-2 py-1 opacity-100" />
+                <motion.div
+                  drag="x"
+                  dragDirectionLock
+                  dragConstraints={{ left: -SWIPE, right: 0 }}
+                  dragElastic={0.05}
+                  style={{ x: swipeX }}
+                  onDragEnd={(_, info) => {
+                    const open =
+                      info.offset.x < -SWIPE / 2 || info.velocity.x < -200
+                    animate(swipeX, open ? -SWIPE : 0, {
+                      type: "spring",
+                      stiffness: 500,
+                      damping: 40,
+                    })
+                  }}
+                  className="relative z-10 flex min-w-0 flex-col bg-background"
+                >
+                  {children ?? (
+                    <>
+                      <Header />
+                      <Group />
+                    </>
+                  )}
+                </motion.div>
               </>
-            ))
-          )}
+            ) : (
+              (children ?? (
+                <>
+                  <Header />
+                  <Group />
+                </>
+              ))
+            )}
+          </div>
           {/* sibling of Header: React events bubble through portals, so a click
               inside the sheet must not reach the header's open handler */}
           {mobile && <FieldSheet />}
