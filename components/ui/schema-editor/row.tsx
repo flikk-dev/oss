@@ -7,6 +7,7 @@ import {
   Reorder,
   useDragControls,
   useMotionValue,
+  useTransform,
 } from "motion/react"
 import { cn } from "cn"
 import {
@@ -129,7 +130,7 @@ export function Description({ className }: { className?: string }) {
       onChange={(description) => set({ description })}
       placeholder="Add description"
       className={cn(
-        "min-w-0 text-xs text-muted-foreground group-data-[variant=compact]/editor:text-2xs group-data-[variant=wide]/editor:text-sm",
+        "min-w-0 max-w-full self-start text-xs text-muted-foreground group-data-[variant=compact]/editor:text-2xs group-data-[variant=wide]/editor:text-sm",
         className
       )}
     />
@@ -159,7 +160,7 @@ export function Examples({ className }: { className?: string }) {
       }
       placeholder="Add examples"
       className={cn(
-        "min-w-0 text-xs text-muted-foreground/70 group-data-[variant=compact]/editor:text-2xs group-data-[variant=wide]/editor:text-sm",
+        "min-w-0 max-w-full self-start text-xs text-muted-foreground/70 group-data-[variant=compact]/editor:text-2xs group-data-[variant=wide]/editor:text-sm",
         className
       )}
     />
@@ -499,7 +500,7 @@ export function Header({ className }: { className?: string }) {
       }}
       className={cn(
         "group/header flex items-start gap-1.5 px-3 py-2",
-        !mobile && "cursor-grab active:cursor-grabbing",
+        !mobile && "cursor-grab select-none active:cursor-grabbing",
         "group-data-[variant=compact]/editor:gap-1 group-data-[variant=compact]/editor:px-1.5 group-data-[variant=compact]/editor:py-1",
         "group-data-[variant=wide]/editor:gap-3 group-data-[variant=wide]/editor:px-4 group-data-[variant=wide]/editor:py-3",
         mobile && "touch-none select-none active:bg-muted/60",
@@ -538,8 +539,9 @@ export function Group({ className }: { className?: string }) {
   const count = useEditorStore((s) => s.children[node.id]?.length ?? 0)
   const ref = React.useRef<HTMLDivElement>(null)
 
+  // drop zone = the whole group row (header + children), so hovering anywhere over it targets it
   React.useEffect(() => {
-    const el = ref.current
+    const el = ref.current?.closest<HTMLElement>("[data-slot=row]")
     if (!el || !isGroupType(node.type)) return
     const map = zones.current
     map.set(node.id, el)
@@ -552,10 +554,7 @@ export function Group({ className }: { className?: string }) {
     <div
       ref={ref}
       data-slot="group"
-      className={cn(
-        "flex min-w-0 flex-col border-t border-border transition-[background-color,box-shadow] data-[over=true]:bg-primary/5 data-[over=true]:ring-2 data-[over=true]:ring-primary/40",
-        className
-      )}
+      className={cn("flex min-w-0 flex-col border-t border-border", className)}
     >
       {node.collapsed ? (
         <div className="px-3 py-1 text-2xs text-muted-foreground">
@@ -609,7 +608,12 @@ export function Row({
   const controls = useDragControls()
   const ref = React.useRef<HTMLDivElement>(null)
   // swipe-to-reveal actions (mobile)
+  const swipeX = useMotionValue(0)
+  // own x/y so the skeleton can counter-translate back to the slot
   const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const backX = useTransform(x, (v) => -v)
+  const backY = useTransform(y, (v) => -v)
   const SWIPE = 88
   const node = useEditorStore((s) => s.byId[id])
   const taken = useEditorStore(
@@ -622,7 +626,9 @@ export function Row({
   const takenSet = React.useMemo(() => new Set(taken), [taken])
 
   const skip = (zid: string) =>
-    zid === id || isDescendant(store.getState(), id, zid)
+    zid === id ||
+    zid === list.parentId ||
+    isDescendant(store.getState(), id, zid)
   // paint straight on the DOM — state would re-render the list mid-drag
   const paint = (active: string | null) => {
     for (const [zid, el] of zones.current)
@@ -660,7 +666,11 @@ export function Row({
           dragListener={false}
           dragControls={controls}
           whileDrag={{ opacity: 0.9 }}
-          onDragStart={() => ref.current?.setAttribute("data-dragging", "")}
+          style={{ x, y }}
+          onDragStart={() => {
+            ref.current?.setAttribute("data-dragging", "")
+            document.body.style.userSelect = "none"
+          }}
           onDrag={(_, info) =>
             paint(zoneUnder(zones.current, info.point.x, info.point.y, skip))
           }
@@ -668,6 +678,7 @@ export function Row({
             requestAnimationFrame(() =>
               ref.current?.removeAttribute("data-dragging")
             )
+            document.body.style.userSelect = ""
             onDragEnd(info.point.x, info.point.y)
           }}
           exit={{ opacity: 0, x: -12, transition: { duration: 0.15 } }}
@@ -676,12 +687,19 @@ export function Row({
           data-depth={list.depth}
           className={cn(
             "relative flex min-w-0 flex-col rounded-md border bg-background",
+            "data-[over=true]:bg-primary/5 data-[over=true]:outline-2 data-[over=true]:outline-offset-2 data-[over=true]:outline-primary/50 data-[over=true]:outline-dashed",
             group
               ? "border-border"
               : "border-transparent has-[>[data-slot=header]:hover]:border-border",
             className
           )}
         >
+          {/* skeleton at the drop slot: item is translated, this translates back */}
+          <motion.div
+            aria-hidden
+            style={{ x: backX, y: backY }}
+            className="pointer-events-none absolute -inset-px z-10 hidden rounded-md border-2 border-dashed border-primary/40 bg-primary/5 [[data-dragging]>&]:block"
+          />
           {mobile ? (
             <div className="relative overflow-hidden rounded-md">
               <Actions className="absolute inset-y-0 right-0 items-start px-2 py-1 opacity-100" />
@@ -690,11 +708,11 @@ export function Row({
                 dragDirectionLock
                 dragConstraints={{ left: -SWIPE, right: 0 }}
                 dragElastic={0.05}
-                style={{ x }}
+                style={{ x: swipeX }}
                 onDragEnd={(_, info) => {
                   const open =
                     info.offset.x < -SWIPE / 2 || info.velocity.x < -200
-                  animate(x, open ? -SWIPE : 0, {
+                  animate(swipeX, open ? -SWIPE : 0, {
                     type: "spring",
                     stiffness: 500,
                     damping: 40,
