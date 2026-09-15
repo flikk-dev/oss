@@ -3,123 +3,101 @@
 import * as React from "react"
 import { AnimatePresence, Reorder } from "motion/react"
 import { cn } from "cn"
+import { PlusIcon } from "lucide-react"
 import { useShallow } from "zustand/react/shallow"
-import { Actions } from "./actions"
-import { Add } from "./add"
-import { Group, GroupToggle } from "./group"
-import { Badges, Description, Slug, Title } from "./header"
-import { ListProvider, useEditorStore, useTheme } from "./root"
+import { Button } from "@/components/ui/button"
+import { OptionMenu, typeSections } from "./menu"
+import { ListProvider, useEditorStore, useList, useVariant } from "./root"
 import { ROOT } from "./store"
-import { flag } from "./theme"
-import { TypePicker } from "./type-picker"
-import { labelText, listGap } from "./variants"
 
-export type ListProps = {
-  /** default root */
-  parentId?: string
-  depth?: number
-  /** "table": one CSS grid, rows are subgrids → columns align */
-  mode?: "rows" | "table"
-  /** children are oneOf alternatives: "or" between rows */
-  alternatives?: boolean
-  /** custom row composition */
-  renderRow?: (id: string, index: number) => React.ReactNode
-  className?: string
-}
-
-/** icon · title · key · description · actions */
-const TABLE_COLS = "grid-cols-[auto_minmax(6rem,1fr)_auto_minmax(0,2fr)_auto]"
-
-function OrSeam() {
-  const t = useTheme()
+/** creates a field at the end of the enclosing list */
+export function Add({ className }: { className?: string }) {
+  const { parentId, depth } = useList()
+  const insert = useEditorStore((s) => s.insert)
+  const text = depth ? "Add nested field" : "Add field"
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex -translate-y-1/2 justify-center">
-      <span className={cn("rounded-full border border-border bg-background px-1.5", labelText({ size: t.text.size }))}>
-        or
-      </span>
-    </div>
+    <OptionMenu
+      title="New field type"
+      sections={typeSections((type) => insert(parentId, type))}
+      trigger={
+        <Button
+          data-slot="add"
+          variant="ghost"
+          size="xs"
+          className={cn(
+            "text-muted-foreground hover:text-foreground",
+            className
+          )}
+        >
+          <PlusIcon /> {text}
+        </Button>
+      }
+    />
   )
 }
 
 /** One Reorder.Group per sibling set. Groups render their own List. */
-export function List({ parentId = ROOT, depth = 0, mode, alternatives = false, renderRow, className }: ListProps) {
-  const t = useTheme()
+export function List({
+  parentId = ROOT,
+  depth = 0,
+  alternatives = false,
+  className,
+}: {
+  parentId?: string
+  depth?: number
+  /** children are oneOf alternatives: "or" between rows */
+  alternatives?: boolean
+  className?: string
+}) {
+  const variant = useVariant()
   const ids = useEditorStore(useShallow((s) => s.children[parentId] ?? []))
   const reorder = useEditorStore((s) => s.reorder)
-  const bottom = t.add.placement === "bottom" || t.add.placement === "both"
-  const showAdd = depth === 0 || flag(t.add.nested)
-  const table = (mode ?? "rows") === "table"
-
-  const row = (id: string, i: number) => {
-    const seam = alternatives && i > 0 ? <OrSeam /> : undefined
-    if (renderRow) return renderRow(id, i)
-    if (!table) return <Row key={id} id={id} index={i} seam={seam} />
-    return (
-      <Row key={id} id={id} index={i} seam={seam} className="col-span-full grid grid-cols-subgrid items-center">
-        <Grip />
-        <Surface className="col-span-full grid grid-cols-subgrid items-center gap-x-2">
-          <TypePicker />
-          <div className="flex min-w-0 items-center gap-1.5">
-            <Title />
-            <Badges />
-          </div>
-          <Slug />
-          <Description multiline={false} />
-          <div className="flex items-center gap-0.5">
-            <Actions placement="inline" />
-            <GroupToggle className="ml-0" />
-          </div>
-          <Group className="col-span-full" />
-        </Surface>
-      </Row>
-    )
-  }
 
   return (
     <ListProvider value={{ parentId, depth }}>
-      <div data-slot="list" data-depth={depth} className={cn("flex min-w-0 flex-col", className)}>
-        {table && flag(t.group.tableHeader) && (
-          <div className="border-b border-border pl-(--gutter)">
-            <div className={cn("grid gap-x-2 px-(--sx) py-0.5", TABLE_COLS, labelText({ size: t.text.size }))}>
-              <span />
-              <span>Field</span>
-              <span>Key</span>
-              <span>Description</span>
-              <span />
-            </div>
-          </div>
-        )}
+      <div
+        data-slot="list"
+        data-depth={depth}
+        className={cn("flex min-w-0 flex-col", className)}
+      >
         <Reorder.Group
+          as="div"
           axis="y"
           values={ids}
-          onReorder={(next) => reorder(parentId === ROOT ? null : parentId, next)}
+          onReorder={(next) => reorder(parentId, next)}
           className={cn(
-            listGap({
-              // children never get dividers; the group box is the container
-              chrome: depth > 0 ? "hover" : t.surface.chrome,
-              gap: depth > 0 && t.group.childChrome !== "same" ? "0" : t.surface.gap,
-            }),
-            table && cn("grid", TABLE_COLS)
+            "flex flex-col",
+            {
+              compact: "gap-0.5",
+              default: "gap-1.5",
+              wide: "gap-3",
+              mobile: "gap-1",
+            }[variant]
           )}
         >
-          <AnimatePresence initial={false}>{ids.map(row)}</AnimatePresence>
+          <AnimatePresence initial={false}>
+            {ids.map((id, i) => (
+              <Row key={id} id={id}>
+                {alternatives && i > 0 && (
+                  <span className="pointer-events-none absolute inset-x-0 top-0 z-10 flex -translate-y-1/2 justify-center">
+                    <span className="rounded-full border border-border bg-background px-1.5 text-2xs text-muted-foreground">
+                      or
+                    </span>
+                  </span>
+                )}
+                <Header />
+                <Group />
+              </Row>
+            ))}
+          </AnimatePresence>
         </Reorder.Group>
-
-        {bottom && showAdd && (
-          <div
-            className={cn(
-              "flex",
-              depth ? "justify-end px-(--sx) pt-1.5 pb-1" : "pt-1",
-              !depth && t.add.style !== "dashed" && "pl-1"
-            )}
-          >
-            <Add label={alternatives ? "Add alternative" : undefined} />
-          </div>
-        )}
+        <div className={cn("flex", depth ? "justify-end px-2 py-1" : "pt-1")}>
+          <Add />
+        </div>
       </div>
     </ListProvider>
   )
 }
 
 // after List so the cycle (row → group → list → row) resolves at call time
-import { Grip, Row, Surface } from "./row"
+import { Group, Header, Row } from "./row"

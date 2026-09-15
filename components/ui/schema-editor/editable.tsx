@@ -3,130 +3,66 @@
 import * as React from "react"
 import { cn } from "cn"
 
-export type EditMode = "ghost" | "click"
-
 type Props = {
   value: string
   onChange: (v: string) => void
-  /** fired on blur / Enter with final value, both modes */
+  /** fired on blur / Enter with final value */
   onCommit?: (v: string) => void
-  mode: EditMode
   placeholder?: string
   multiline?: boolean
+  /** render as plain text (mobile rows) */
+  readOnly?: boolean
   className?: string
-  /** classes for the input itself (ghost bg etc.) */
-  inputClassName?: string
-  /** data-* passthrough */
   [key: `data-${string}`]: string | undefined
 }
 
-/**
- * Inline text edit.
- * ghost: always an input, styled as plain text, sized to content.
- * click: text until clicked, then input; Enter/blur commit, Esc reverts.
- */
+/** Inline text edit: always an input, styled as plain text, sized to content. */
 export function Editable({
   value,
   onChange,
   onCommit,
-  mode,
   placeholder,
   multiline,
+  readOnly,
   className,
-  inputClassName,
   ...rest
 }: Props) {
-  const [editing, setEditing] = React.useState(false)
-  const [draft, setDraft] = React.useState(value)
-  const ref = React.useRef<HTMLInputElement & HTMLTextAreaElement>(null)
-
-  React.useEffect(() => {
-    if (!editing) setDraft(value)
-  }, [value, editing])
-
-  React.useEffect(() => {
-    if (editing) ref.current?.select()
-  }, [editing])
-
-  const base = cn(
-    "min-w-6 rounded-sm bg-transparent px-0.5 -mx-0.5 outline-none field-sizing-content",
-    "placeholder:text-muted-foreground/60",
-    className
-  )
-
-  const commit = () => {
-    onChange(draft)
-    onCommit?.(draft)
-    setEditing(false)
-  }
-  const revert = () => {
-    setDraft(value)
-    setEditing(false)
-  }
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !(multiline && e.shiftKey)) {
-      e.preventDefault()
-      ;(e.target as HTMLElement).blur()
-    }
-    if (e.key === "Escape") {
-      e.preventDefault()
-      if (mode === "click") revert()
-      else (e.target as HTMLElement).blur()
-    }
-  }
-
-  const Tag = multiline ? "textarea" : "input"
-
-  if (mode === "ghost") {
+  if (readOnly)
     return (
-      <Tag
-        ref={ref}
+      <span
         {...rest}
-        value={value}
-        rows={multiline ? 1 : undefined}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={(e) => onCommit?.(e.target.value)}
-        onKeyDown={onKeyDown}
         className={cn(
-          base,
-          "resize-none hover:bg-muted/60 focus:bg-muted",
-          inputClassName
-        )}
-      />
-    )
-  }
-
-  if (!editing) {
-    return (
-      <button
-        type="button"
-        {...rest}
-        onClick={() => setEditing(true)}
-        className={cn(
-          base,
-          "cursor-text truncate text-left hover:bg-muted/60",
+          "truncate",
           !value && "text-muted-foreground/60",
-          inputClassName
+          className
         )}
       >
         {value || placeholder}
-      </button>
+      </span>
     )
-  }
-
+  const Tag = multiline ? "textarea" : "input"
   return (
     <Tag
-      ref={ref}
       {...rest}
-      autoFocus
-      value={draft}
+      value={value}
       rows={multiline ? 1 : undefined}
       placeholder={placeholder}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={onKeyDown}
-      className={cn(base, "resize-none bg-muted", inputClassName)}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={(e) => onCommit?.(e.target.value)}
+      onKeyDown={(e) => {
+        if (
+          (e.key === "Enter" && !(multiline && e.shiftKey)) ||
+          e.key === "Escape"
+        ) {
+          e.preventDefault()
+          e.currentTarget.blur()
+        }
+      }}
+      className={cn(
+        "-mx-0.5 field-sizing-content min-w-6 resize-none rounded-sm bg-transparent px-0.5 outline-none",
+        "placeholder:text-muted-foreground/60 hover:bg-muted/60 focus:bg-muted",
+        className
+      )}
     />
   )
 }

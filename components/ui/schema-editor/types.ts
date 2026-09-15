@@ -36,8 +36,8 @@ export type JsonType = {
   group: JsonTypeGroup
   /** JSON Schema representation this editor type maps to */
   schema: Record<string, unknown>
-  /** tailwind color token for tinted icon style */
-  tone: "blue" | "amber" | "teal" | "green" | "pink" | "violet" | "orange" | "gray" | "sky" | "rose" | "indigo" | "fuchsia"
+  /** explicit class string so tailwind sees it; colors from --type-* in globals.css */
+  color: string
 }
 
 export const jsonTypes: JsonType[] = [
@@ -48,7 +48,7 @@ export const jsonTypes: JsonType[] = [
     icon: ALargeSmallIcon,
     group: "primitive",
     schema: { type: "string" },
-    tone: "blue",
+    color: "bg-type-string/10 text-type-string",
   },
   {
     key: "number",
@@ -57,7 +57,7 @@ export const jsonTypes: JsonType[] = [
     icon: HashIcon,
     group: "primitive",
     schema: { type: "number" },
-    tone: "amber",
+    color: "bg-type-number/10 text-type-number",
   },
   {
     key: "integer",
@@ -66,7 +66,7 @@ export const jsonTypes: JsonType[] = [
     icon: BinaryIcon,
     group: "primitive",
     schema: { type: "integer" },
-    tone: "teal",
+    color: "bg-type-integer/10 text-type-integer",
   },
   {
     key: "boolean",
@@ -75,7 +75,7 @@ export const jsonTypes: JsonType[] = [
     icon: ToggleLeftIcon,
     group: "primitive",
     schema: { type: "boolean" },
-    tone: "green",
+    color: "bg-type-boolean/10 text-type-boolean",
   },
   {
     key: "enum",
@@ -84,7 +84,7 @@ export const jsonTypes: JsonType[] = [
     icon: ListCheckIcon,
     group: "primitive",
     schema: { type: "string", enum: [] },
-    tone: "pink",
+    color: "bg-type-enum/10 text-type-enum",
   },
   {
     key: "object",
@@ -93,7 +93,7 @@ export const jsonTypes: JsonType[] = [
     icon: BracesIcon,
     group: "structure",
     schema: { type: "object", properties: {} },
-    tone: "violet",
+    color: "bg-type-object/10 text-type-object",
   },
   {
     key: "oneOf",
@@ -102,7 +102,7 @@ export const jsonTypes: JsonType[] = [
     icon: SplitIcon,
     group: "structure",
     schema: { oneOf: [] },
-    tone: "fuchsia",
+    color: "bg-type-oneOf/10 text-type-oneOf",
   },
   {
     key: "date",
@@ -111,7 +111,7 @@ export const jsonTypes: JsonType[] = [
     icon: CalendarIcon,
     group: "format",
     schema: { type: "string", format: "date-time" },
-    tone: "sky",
+    color: "bg-type-date/10 text-type-date",
   },
   {
     key: "email",
@@ -120,7 +120,7 @@ export const jsonTypes: JsonType[] = [
     icon: MailIcon,
     group: "format",
     schema: { type: "string", format: "email" },
-    tone: "rose",
+    color: "bg-type-email/10 text-type-email",
   },
   {
     key: "url",
@@ -129,7 +129,7 @@ export const jsonTypes: JsonType[] = [
     icon: LinkIcon,
     group: "format",
     schema: { type: "string", format: "uri" },
-    tone: "indigo",
+    color: "bg-type-url/10 text-type-url",
   },
   {
     key: "null",
@@ -138,7 +138,7 @@ export const jsonTypes: JsonType[] = [
     icon: CircleSlashIcon,
     group: "special",
     schema: { type: "null" },
-    tone: "gray",
+    color: "bg-type-null/10 text-type-null",
   },
 ]
 
@@ -152,19 +152,3 @@ export const jsonTypeGroups: { key: JsonTypeGroup; label: string }[] = [
   { key: "format", label: "Formats" },
   { key: "special", label: "Special" },
 ]
-
-/** Explicit class strings so tailwind sees them at build time */
-export const toneClasses: Record<JsonType["tone"], string> = {
-  blue: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  amber: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  teal: "bg-teal-500/10 text-teal-600 dark:text-teal-400",
-  green: "bg-green-500/10 text-green-600 dark:text-green-400",
-  pink: "bg-pink-500/10 text-pink-600 dark:text-pink-400",
-  violet: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
-  orange: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
-  sky: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
-  rose: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
-  indigo: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
-  fuchsia: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400",
-  gray: "bg-muted text-muted-foreground",
-}

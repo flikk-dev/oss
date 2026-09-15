@@ -1,15 +1,15 @@
 import { EditorPreview } from "@/components/json/editor-preview"
+import type { Variant } from "@/components/ui/schema-editor"
 
-export default function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ variant?: string }>
+}) {
+  const { variant = "default" } = await searchParams
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-3 p-6">
-      <div>
-        <h1 className="text-sm font-medium">Editor preview</h1>
-        <p className="text-xs text-muted-foreground">
-          Live. Variants from top-right dialog. Saved in localStorage.
-        </p>
-      </div>
-      <EditorPreview />
+      <EditorPreview variant={variant as Variant} />
     </div>
   )
 }
