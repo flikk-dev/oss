@@ -1,51 +1,54 @@
-import { JsonHeader } from "@/components/json/header"
+"use client"
 
-type Row = {
-  label: string
-  props: React.ComponentProps<typeof JsonHeader>
-}
+import * as React from "react"
+import { SchemaEditor, type PartialTheme } from "@/components/ui/schema-editor"
+import type { JsonTypeKey } from "@/components/ui/schema-editor/types"
+
+type Row = { label: string; theme: PartialTheme }
 
 const triggers: Row[] = [
-  { label: "icon", props: { trigger: "icon" } },
-  { label: "icon-boxed", props: { trigger: "icon-boxed" } },
-  { label: "icon-boxed · tinted", props: { trigger: "icon-boxed", iconStyle: "tinted" } },
-  { label: "label", props: { trigger: "label" } },
-  { label: "label · chevron · tinted", props: { trigger: "label", chevron: true, iconStyle: "tinted" } },
-  { label: "chip", props: { trigger: "chip" } },
-  { label: "chip · tinted · chevron", props: { trigger: "chip", iconStyle: "tinted", chevron: true } },
+  { label: "icon · ghost", theme: { icon: { trigger: "icon" } } },
+  { label: "icon-boxed · tinted", theme: { icon: { trigger: "icon-boxed", style: "tinted" } } },
+  { label: "icon-boxed · boxed", theme: { icon: { trigger: "icon-boxed", style: "boxed" } } },
+  { label: "label · chevron", theme: { icon: { trigger: "label", chevron: "true" } } },
+  { label: "chip · tinted", theme: { icon: { trigger: "chip", style: "tinted" } } },
 ]
 
 const sizes: Row[] = [
-  { label: "sm", props: { size: "sm", trigger: "label" } },
-  { label: "md", props: { size: "md", trigger: "label" } },
-  { label: "lg", props: { size: "lg", trigger: "label" } },
+  { label: "xs", theme: { icon: { size: "xs", trigger: "label" }, text: { size: "xs" } } },
+  { label: "sm", theme: { icon: { size: "sm", trigger: "label" }, text: { size: "sm" } } },
+  { label: "md", theme: { icon: { size: "md", trigger: "label" }, text: { size: "md" } } },
+  { label: "lg", theme: { icon: { size: "lg", trigger: "label" }, text: { size: "lg" } } },
 ]
 
-const layouts: Row[] = [
-  { label: "list · boxed · check", props: { layout: "list", iconStyle: "boxed", selection: "check" } },
-  { label: "list · tinted · highlight", props: { layout: "list", iconStyle: "tinted", selection: "highlight" } },
-  { label: "list · plain · both · no desc", props: { layout: "list", iconStyle: "plain", selection: "both", showDescription: false } },
-  { label: "list · grouped · tinted", props: { layout: "list", iconStyle: "tinted", grouped: true } },
-  { label: "compact · plain", props: { layout: "compact", iconStyle: "plain" } },
-  { label: "compact · boxed · grouped", props: { layout: "compact", iconStyle: "boxed", grouped: true } },
-  { label: "grid · boxed", props: { layout: "grid", iconStyle: "boxed", selection: "highlight" } },
-  { label: "grid · tinted · loose", props: { layout: "grid", iconStyle: "tinted", density: "loose", selection: "highlight" } },
-  { label: "grid · tinted · grouped", props: { layout: "grid", iconStyle: "tinted", grouped: true, selection: "highlight" } },
+const menus: Row[] = [
+  { label: "list · tight · grouped", theme: { menu: { layout: "list", density: "tight", grouped: "true" } } },
+  { label: "compact · compact · plain icons", theme: { menu: { layout: "compact", density: "compact" }, icon: { style: "plain" } } },
+  { label: "grid · loose · highlight", theme: { menu: { layout: "grid", density: "loose", selection: "highlight" } } },
+  { label: "compact · xs text · no groups", theme: { menu: { layout: "compact", grouped: "false" }, text: { size: "xs" } } },
 ]
+
+function Picker({ theme }: { theme: PartialTheme }) {
+  const [type, setType] = React.useState<JsonTypeKey>("string")
+  return (
+    <SchemaEditor.Variants {...theme}>
+      <div className="flex items-center gap-2">
+        <SchemaEditor.TypePicker value={type} onChange={setType} />
+        <span className="font-mono text-xs">fieldName</span>
+      </div>
+    </SchemaEditor.Variants>
+  )
+}
 
 function Section({ title, rows }: { title: string; rows: Row[] }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {title}
-      </h2>
+      <h2 className="text-xs tracking-wide text-muted-foreground uppercase">{title}</h2>
       <div className="flex flex-col divide-y rounded-lg border">
         {rows.map((r) => (
           <div key={r.label} className="flex items-center gap-6 px-3 py-2">
-            <div className="w-56 shrink-0 font-mono text-[11px] text-muted-foreground">
-              {r.label}
-            </div>
-            <JsonHeader {...r.props} />
+            <div className="w-56 shrink-0 font-mono text-[11px] text-muted-foreground">{r.label}</div>
+            <Picker theme={r.theme} />
           </div>
         ))}
       </div>
@@ -55,16 +58,18 @@ function Section({ title, rows }: { title: string; rows: Row[] }) {
 
 export default function Page() {
   return (
-    <div className="flex flex-col gap-10 p-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-sm font-medium">Type picker · variant matrix</h1>
-        <p className="text-xs text-muted-foreground">
-          Every axis side by side. Pick winners on the landing page.
-        </p>
+    <SchemaEditor value={[]} onChange={() => {}}>
+      <div className="flex flex-col gap-10 p-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-sm">Type picker · primitive matrix</h1>
+          <p className="text-xs text-muted-foreground">
+            Each row overrides single axes via <code>SchemaEditor.Variants</code>.
+          </p>
+        </div>
+        <Section title="icon.trigger / icon.style" rows={triggers} />
+        <Section title="icon.size + text.size" rows={sizes} />
+        <Section title="menu.*" rows={menus} />
       </div>
-      <Section title="Trigger" rows={triggers} />
-      <Section title="Size" rows={sizes} />
-      <Section title="Menu layout" rows={layouts} />
-    </div>
+    </SchemaEditor>
   )
 }

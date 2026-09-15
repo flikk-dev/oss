@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "cn"
-import { MonitorIcon, SmartphoneIcon } from "lucide-react"
+import { MonitorIcon, SmartphoneIcon, SquareIcon } from "lucide-react"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { VariantDialog } from "@/components/variants/controls"
 import { useVariants } from "@/components/variants/provider"
 
@@ -36,35 +37,26 @@ export function SiteNav() {
         <span className="font-mono text-xs text-muted-foreground">
           <kbd>d</kbd> dark
         </span>
-        <div
-          role="radiogroup"
+        <ToggleGroup
+          variant="outline"
+          size="sm"
+          spacing={0}
           aria-label="Preview viewport"
-          className="flex gap-0.5 rounded-md bg-muted p-0.5"
+          value={[viewport]}
+          onValueChange={(v) => v[0] && setViewport(v[0] as "auto" | "compact" | "phone")}
         >
           {(
             [
               { v: "auto", Icon: MonitorIcon, title: "Desktop (follows window width)" },
-              { v: "phone", Icon: SmartphoneIcon, title: "Phone frame, 390px, forces mobile behaviour" },
+              { v: "compact", Icon: SquareIcon, title: "Compact box, 500×500 → compact tier" },
+              { v: "phone", Icon: SmartphoneIcon, title: "Phone frame, 390px, coarse pointer" },
             ] as const
           ).map(({ v, Icon, title }) => (
-            <button
-              key={v}
-              type="button"
-              role="radio"
-              aria-checked={viewport === v}
-              title={title}
-              onClick={() => setViewport(v)}
-              className={cn(
-                "flex size-6 items-center justify-center rounded transition-colors",
-                viewport === v
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
+            <ToggleGroupItem key={v} value={v} title={title} className="h-6 w-7 min-w-0 px-0 data-pressed:bg-muted">
               <Icon className="size-3.5" />
-            </button>
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
         <VariantDialog />
       </div>
     </nav>

@@ -10,6 +10,7 @@ import {
   XIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   Dialog,
   DialogContent,
@@ -18,104 +19,69 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  defaultConfig,
-  itemSpecs,
-  type Axis,
-  type ItemKey,
-  type VariantConfig,
-} from "@/lib/variants"
+import { defaultConfig, itemSpecs, type Axis, type ItemKey, type Tier, type VariantConfig } from "@/lib/variants"
 import { useVariants, type Snapshot } from "./provider"
+import { Segmented } from "./segmented"
 
 /* ------------------------------ segmented ------------------------------- */
 
-function Segmented({
-  axis,
-  value,
-  onChange,
-}: {
-  axis: Axis
-  value: string
-  onChange: (v: string) => void
-}) {
+function AxisControl({ axis, value, onChange }: { axis: Axis; value: string; onChange: (v: string) => void }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <span className="text-xs">{axis.label}</span>
-      <div
-        role="radiogroup"
-        className="flex min-w-0 flex-wrap gap-0.5 rounded-md bg-muted p-0.5"
-      >
-        {axis.options.map((o) => {
-          const on = o.value === value
-          return (
-            <button
-              key={o.value}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              title={o.hint}
-              onClick={() => onChange(o.value)}
-              className={cn(
-                "h-6 min-w-0 flex-1 truncate rounded px-2 text-[11px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                on
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {o.label}
-            </button>
-          )
-        })}
-      </div>
+      {axis.label && <span className="text-xs">{axis.label}</span>}
+      <Segmented value={value} onChange={onChange} options={axis.options} label={axis.label} />
     </div>
   )
 }
 
+function AxisRow({ axis, item }: { axis: Axis; item: ItemKey }) {
+  const { config, set } = useVariants()
+  const value = (config[item] as Record<string, unknown>)[axis.key]
+  if (axis.tiered) {
+    const v = value as Record<Tier, string>
+    return (
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="text-xs">{axis.label}</span>
+        <div className="grid grid-cols-2 gap-2">
+          {(["wide", "compact"] as const).map((tier) => (
+            <div key={tier} className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground">{tier === "wide" ? "wide ≥ 560px" : "compact < 560px"}</span>
+              <AxisControl axis={{ ...axis, label: "" }} value={v[tier]} onChange={(x) => set(item, axis.key, x, tier)} />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  return <AxisControl axis={axis} value={value as string} onChange={(x) => set(item, axis.key, x)} />
+}
+
 function ItemControls({ item }: { item: ItemKey }) {
-  const { config, set, reset } = useVariants()
+  const { reset } = useVariants()
   const spec = itemSpecs.find((s) => s.key === item)!
-  const values = config[item] as Record<string, string>
+  const axes = spec.axes as readonly Axis[]
+  const sections = [
+    { key: "all", label: "Any pointer", axes: axes.filter((a) => !a.pointer) },
+    { key: "coarse", label: "Touch only", axes: axes.filter((a) => a.pointer === "coarse") },
+  ].filter((s) => s.axes.length)
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-xs font-medium">{spec.label}</div>
-          <div className="text-[11px] text-muted-foreground">
-            {spec.description}
-          </div>
+          <div className="text-xs">{spec.label}</div>
+          <div className="text-[11px] text-muted-foreground">{spec.description}</div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          title="Reset this item to defaults"
-          onClick={() => reset(item)}
-        >
+        <Button variant="ghost" size="icon-xs" title="Reset this primitive" onClick={() => reset(item)}>
           <RotateCcwIcon />
         </Button>
       </div>
-
-      {spec.sections.map((section) => (
-        <div
-          key={section.key}
-          className="flex min-w-0 flex-col gap-3 rounded-lg border p-3"
-        >
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs font-medium">{section.label}</span>
-            <span className="text-[11px] text-muted-foreground">
-              {section.hint}
-            </span>
-          </div>
-          {spec.axes
-            .filter((a) => a.section === section.key)
-            .map((axis) => (
-              <Segmented
-                key={axis.key}
-                axis={axis}
-                value={values[axis.key]}
-                onChange={(v) => set(item, axis.key, v)}
-              />
-            ))}
+      {sections.map((section) => (
+        <div key={section.key} className="flex min-w-0 flex-col gap-3 rounded-lg border p-3">
+          <span className="text-xs">{section.label}</span>
+          {section.axes.map((axis) => (
+            <AxisRow key={axis.key} axis={axis} item={item} />
+          ))}
         </div>
       ))}
     </div>
@@ -131,10 +97,16 @@ function summarize(config: VariantConfig) {
   for (const item of itemSpecs) {
     const a = config[item.key] as Record<string, string>
     const b = d[item.key] as Record<string, string>
-    for (const axis of item.axes) {
-      if (a[axis.key] === b[axis.key]) continue
-      const opt = axis.options.find((o) => o.value === a[axis.key])
-      parts.push(opt?.label ?? a[axis.key])
+    for (const axis of item.axes as readonly Axis[]) {
+      const av = a[axis.key] as unknown
+      const bv = b[axis.key] as unknown
+      if (JSON.stringify(av) === JSON.stringify(bv)) continue
+      const label = (x: unknown) => axis.options.find((o) => o.value === x)?.label ?? String(x)
+      parts.push(
+        av && typeof av === "object"
+          ? `${axis.key}: ${label((av as Record<string, string>).wide)} / ${label((av as Record<string, string>).compact)}`
+          : label(av)
+      )
     }
   }
   return parts.length ? parts.join(" · ") : "defaults"
@@ -157,27 +129,29 @@ function HistoryRow({ snap, active }: { snap: Snapshot; active: boolean }) {
         active ? "bg-muted" : "hover:bg-muted/60"
       )}
     >
-      <button
-        type="button"
+      <Button
+        variant="link"
+        size="xs"
         onClick={() => restore(snap.id)}
-        className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-left outline-none"
+        className="h-auto min-w-0 flex-1 justify-start gap-2 overflow-hidden p-0 text-left font-normal text-foreground no-underline hover:no-underline"
       >
         <span className="w-7 shrink-0 font-mono text-muted-foreground">
           {ago(snap.at)}
         </span>
         <span className="min-w-0 truncate">{summarize(snap.config)}</span>
-      </button>
+      </Button>
       {active ? (
         <CheckIcon className="size-3 shrink-0 text-muted-foreground" />
       ) : (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon-xs"
           title="Remove"
           onClick={() => remove(snap.id)}
-          className="shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground"
+          className="size-5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100"
         >
           <XIcon className="size-3" />
-        </button>
+        </Button>
       )}
     </div>
   )
@@ -247,25 +221,21 @@ export function VariantDialog() {
         </DialogHeader>
 
         <div className="flex min-w-0 flex-col gap-5">
-          <div role="tablist" className="flex gap-0.5 rounded-md bg-muted p-0.5">
+          <ToggleGroup
+            variant="outline"
+            size="sm"
+            spacing={0}
+            aria-label="Primitive"
+            value={[active]}
+            onValueChange={(v) => v[0] && setActive(v[0] as ItemKey)}
+            className="flex-wrap"
+          >
             {itemSpecs.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                role="tab"
-                aria-selected={active === item.key}
-                onClick={() => setActive(item.key)}
-                className={cn(
-                  "h-6 flex-1 rounded px-2 text-[11px] transition-colors",
-                  active === item.key
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
+              <ToggleGroupItem key={item.key} value={item.key} className="h-6 px-2 text-[11px] font-normal data-pressed:bg-muted">
                 {item.label}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
           <ItemControls item={active} />
 
           <div className="flex flex-col gap-2 border-t pt-4">

@@ -1,155 +1,118 @@
 "use client"
 
 import * as React from "react"
-import {
-  defaultConfig,
-  itemSpecs,
-  type ItemKey,
-  type VariantConfig,
-} from "@/lib/variants"
+import { create } from "zustand"
+import { persist } from "zustand/middleware"
+import { defaultConfig, itemSpecs, type Axis, type ItemKey, type Tier, type VariantConfig } from "@/lib/variants"
 
-const STORAGE_KEY = "json-editor:variants"
-const HISTORY_KEY = "json-editor:variants:history"
-const VIEWPORT_KEY = "json-editor:viewport"
 const HISTORY_MAX = 30
 
-export type Viewport = "auto" | "phone"
-
 export type Snapshot = { id: string; at: number; config: VariantConfig }
+export type Viewport = "auto" | "compact" | "phone"
 
-type Ctx = {
+type LabState = {
   config: VariantConfig
   history: Snapshot[]
-  /** preview frame; "phone" forces mobile behaviour in a 390px frame */
   viewport: Viewport
-  setViewport: (v: Viewport) => void
-  set: (item: ItemKey, axis: string, value: string) => void
+  set: (item: ItemKey, axis: string, value: string, tier?: Tier) => void
   reset: (item?: ItemKey) => void
   restore: (id: string) => void
   remove: (id: string) => void
+  setViewport: (v: Viewport) => void
 }
-
-const VariantContext = React.createContext<Ctx | null>(null)
 
 /** merge stored config over defaults; drops unknown keys, fills missing ones */
 function hydrate(stored: unknown): VariantConfig {
-  const base = defaultConfig()
-  if (!stored || typeof stored !== "object") return base
+  const base = defaultConfig() as Record<string, Record<string, unknown>>
+  if (!stored || typeof stored !== "object") return base as VariantConfig
   for (const item of itemSpecs) {
     const s = (stored as Record<string, unknown>)[item.key]
     if (!s || typeof s !== "object") continue
-    for (const axis of item.axes) {
+    for (const axis of item.axes as readonly Axis[]) {
       const v = (s as Record<string, unknown>)[axis.key]
-      if (typeof v === "string" && axis.options.some((o) => o.value === v)) {
-        ;(base[item.key] as Record<string, string>)[axis.key] = v
-      }
+      const ok = (x: unknown) => typeof x === "string" && axis.options.some((o) => o.value === x)
+      if (axis.tiered) {
+        const cur = base[item.key][axis.key] as Record<Tier, string>
+        if (v && typeof v === "object") {
+          const o = v as Record<string, unknown>
+          if (ok(o.wide)) cur.wide = o.wide as string
+          if (ok(o.compact)) cur.compact = o.compact as string
+        } else if (ok(v)) cur.wide = cur.compact = v as string
+      } else if (ok(v)) base[item.key][axis.key] = v
     }
   }
-  return base
+  return base as VariantConfig
 }
 
-const same = (a: VariantConfig, b: VariantConfig) =>
-  JSON.stringify(a) === JSON.stringify(b)
+const same = (a: VariantConfig, b: VariantConfig) => JSON.stringify(a) === JSON.stringify(b)
 
-function read<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? (JSON.parse(raw) as T) : fallback
-  } catch {
-    return fallback
-  }
-}
+let commitTimer: ReturnType<typeof setTimeout> | null = null
 
-function write(key: string, value: unknown) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {}
+export const useLab = create<LabState>()(
+  persist(
+    (set, get) => {
+      /** debounced: rapid clicks collapse into one snapshot; newest first, deduped, capped */
+      const commit = (config: VariantConfig) => {
+        if (commitTimer) clearTimeout(commitTimer)
+        commitTimer = setTimeout(() => {
+          const prev = get().history
+          if (prev.some((s) => same(s.config, config))) return
+          set({
+            history: [{ id: Math.random().toString(36).slice(2, 10), at: Date.now(), config }, ...prev].slice(
+              0,
+              HISTORY_MAX
+            ),
+          })
+        }, 1500)
+      }
+      const apply = (config: VariantConfig, record = true) => {
+        set({ config })
+        if (record) commit(config)
+      }
+      return {
+        config: defaultConfig(),
+        history: [],
+        viewport: "auto",
+        set: (item, axis, value, tier) => {
+          const cur = get().config as Record<string, Record<string, unknown>>
+          const prev = cur[item][axis]
+          const next =
+            prev && typeof prev === "object" ? { ...(prev as object), [tier ?? "wide"]: value } : value
+          apply({ ...cur, [item]: { ...cur[item], [axis]: next } } as VariantConfig)
+        },
+        reset: (item) => {
+          const d = defaultConfig()
+          apply(item ? { ...get().config, [item]: d[item] } : d)
+        },
+        restore: (id) => {
+          const snap = get().history.find((s) => s.id === id)
+          if (snap) apply(snap.config, false)
+        },
+        remove: (id) => set({ history: get().history.filter((s) => s.id !== id) }),
+        setViewport: (viewport) => set({ viewport }),
+      }
+    },
+    {
+      name: "schema-editor-lab",
+      partialize: (s) => ({ config: s.config, history: s.history, viewport: s.viewport }),
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<LabState>
+        return {
+          ...current,
+          config: hydrate(p.config),
+          history: (p.history ?? []).map((h) => ({ ...h, config: hydrate(h.config) })),
+          viewport: p.viewport ?? "auto",
+        }
+      },
+    }
+  )
+)
+
+/** kept for existing call sites */
+export function useVariants() {
+  return useLab()
 }
 
 export function VariantProvider({ children }: { children: React.ReactNode }) {
-  const [config, setConfig] = React.useState<VariantConfig>(defaultConfig)
-  const [history, setHistory] = React.useState<Snapshot[]>([])
-  const [viewport, setViewportState] = React.useState<Viewport>("auto")
-  const commitTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // load after mount so SSR markup matches
-  React.useEffect(() => {
-    setConfig(hydrate(read(STORAGE_KEY, null)))
-    setViewportState(read<Viewport>(VIEWPORT_KEY, "auto") === "phone" ? "phone" : "auto")
-    const h = read<Snapshot[]>(HISTORY_KEY, [])
-    setHistory(
-      Array.isArray(h)
-        ? h
-            .filter((s) => s && typeof s.id === "string")
-            .map((s) => ({ ...s, config: hydrate(s.config) }))
-        : []
-    )
-  }, [])
-
-  /**
-   * Push config into history, debounced — rapid clicks through several
-   * options collapse into one snapshot. Newest first, deduped, capped.
-   */
-  const commit = React.useCallback((next: VariantConfig) => {
-    if (commitTimer.current) clearTimeout(commitTimer.current)
-    commitTimer.current = setTimeout(() => {
-      setHistory((prev) => {
-        if (prev.some((s) => same(s.config, next))) return prev
-        const snap: Snapshot = {
-          id: Math.random().toString(36).slice(2, 10),
-          at: Date.now(),
-          config: next,
-        }
-        const out = [snap, ...prev].slice(0, HISTORY_MAX)
-        write(HISTORY_KEY, out)
-        return out
-      })
-    }, 1500)
-  }, [])
-
-  const apply = (next: VariantConfig, record = true) => {
-    setConfig(next)
-    write(STORAGE_KEY, next)
-    if (record) commit(next)
-  }
-
-  const set: Ctx["set"] = (item, axis, value) =>
-    apply({ ...config, [item]: { ...config[item], [axis]: value } })
-
-  const reset: Ctx["reset"] = (item) => {
-    const d = defaultConfig()
-    apply(item ? { ...config, [item]: d[item] } : d)
-  }
-
-  const restore: Ctx["restore"] = (id) => {
-    const snap = history.find((s) => s.id === id)
-    if (snap) apply(snap.config, false)
-  }
-
-  const remove: Ctx["remove"] = (id) => {
-    setHistory((prev) => {
-      const out = prev.filter((s) => s.id !== id)
-      write(HISTORY_KEY, out)
-      return out
-    })
-  }
-
-  const setViewport = (v: Viewport) => {
-    setViewportState(v)
-    write(VIEWPORT_KEY, v)
-  }
-
-  return (
-    <VariantContext.Provider
-      value={{ config, history, viewport, setViewport, set, reset, restore, remove }}
-    >
-      {children}
-    </VariantContext.Provider>
-  )
-}
-
-export function useVariants() {
-  const ctx = React.useContext(VariantContext)
-  if (!ctx) throw new Error("useVariants outside VariantProvider")
-  return ctx
+  return <>{children}</>
 }

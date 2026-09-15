@@ -5,6 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    --text-3xs: 0.5625rem;
+    --text-3xs--line-height: 0.75rem;
+    --text-2xs: 0.625rem;
+    --text-2xs--line-height: 0.875rem;
     --font-heading: var(--font-sans);
     --font-sans: var(--font-sans);
     --color-sidebar-ring: var(--sidebar-ring);

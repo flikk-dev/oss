@@ -4,7 +4,7 @@ import {
   BinaryIcon,
   ToggleLeftIcon,
   BracesIcon,
-  BracketsIcon,
+  SplitIcon,
   ListCheckIcon,
   CircleSlashIcon,
   CalendarIcon,
@@ -20,7 +20,7 @@ export type JsonTypeKey =
   | "boolean"
   | "enum"
   | "object"
-  | "array"
+  | "oneOf"
   | "null"
   | "date"
   | "email"
@@ -37,7 +37,7 @@ export type JsonType = {
   /** JSON Schema representation this editor type maps to */
   schema: Record<string, unknown>
   /** tailwind color token for tinted icon style */
-  tone: "blue" | "amber" | "teal" | "green" | "pink" | "violet" | "orange" | "gray" | "sky" | "rose" | "indigo"
+  tone: "blue" | "amber" | "teal" | "green" | "pink" | "violet" | "orange" | "gray" | "sky" | "rose" | "indigo" | "fuchsia"
 }
 
 export const jsonTypes: JsonType[] = [
@@ -96,13 +96,13 @@ export const jsonTypes: JsonType[] = [
     tone: "violet",
   },
   {
-    key: "array",
-    title: "List",
-    description: "Repeated items of one type",
-    icon: BracketsIcon,
+    key: "oneOf",
+    title: "One of",
+    description: "Exactly one of several shapes",
+    icon: SplitIcon,
     group: "structure",
-    schema: { type: "array", items: {} },
-    tone: "orange",
+    schema: { oneOf: [] },
+    tone: "fuchsia",
   },
   {
     key: "date",
@@ -165,5 +165,6 @@ export const toneClasses: Record<JsonType["tone"], string> = {
   sky: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
   rose: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
   indigo: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+  fuchsia: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400",
   gray: "bg-muted text-muted-foreground",
 }

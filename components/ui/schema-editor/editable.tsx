@@ -16,6 +16,8 @@ type Props = {
   className?: string
   /** classes for the input itself (ghost bg etc.) */
   inputClassName?: string
+  /** data-* passthrough */
+  [key: `data-${string}`]: string | undefined
 }
 
 /**
@@ -32,6 +34,7 @@ export function Editable({
   multiline,
   className,
   inputClassName,
+  ...rest
 }: Props) {
   const [editing, setEditing] = React.useState(false)
   const [draft, setDraft] = React.useState(value)
@@ -78,6 +81,7 @@ export function Editable({
     return (
       <Tag
         ref={ref}
+        {...rest}
         value={value}
         rows={multiline ? 1 : undefined}
         placeholder={placeholder}
@@ -97,6 +101,7 @@ export function Editable({
     return (
       <button
         type="button"
+        {...rest}
         onClick={() => setEditing(true)}
         className={cn(
           base,
@@ -113,6 +118,7 @@ export function Editable({
   return (
     <Tag
       ref={ref}
+      {...rest}
       autoFocus
       value={draft}
       rows={multiline ? 1 : undefined}
