@@ -422,10 +422,10 @@ export const actions = {
       label: "Position",
       tiered: true,
       options: [
-        { value: "inline", label: "Right of box, takes width" },
+        { value: "column", label: "Column outside boxes, mirrors grip" },
         { value: "overlay", label: "Float over box edge" },
       ],
-      default: "inline",
+      default: "column",
     },
     {
       key: "reveal",
@@ -488,8 +488,10 @@ export const drag = {
       label: "Grip gutter",
       tiered: true,
       options: [
-        { value: "wide", label: "24px" },
+        { value: "outside", label: "0, grip outside bounds", hint: "shows on hover in the left margin" },
+        { value: "hover", label: "0, opens on hover", hint: "row shifts right to make room" },
         { value: "narrow", label: "16px" },
+        { value: "wide", label: "24px" },
         { value: "none", label: "None, grip hidden" },
       ],
       default: "narrow",
@@ -508,11 +510,11 @@ export const drag = {
       label: "Drag from",
       pointer: "coarse",
       options: [
-        { value: "arrange", label: "Grips only in Arrange mode", hint: "toolbar toggle" },
+        { value: "longpress", label: "Long-press row", hint: "no grip, full width" },
+        { value: "arrange", label: "Grips in Arrange mode", hint: "toolbar toggle" },
         { value: "handle", label: "Grip, always visible" },
-        { value: "row", label: "Anywhere on row" },
       ],
-      default: "arrange",
+      default: "longpress",
     },
   ],
 } as const satisfies Primitive
@@ -526,21 +528,30 @@ export const group = {
       key: "frame",
       label: "Children area inside parent box",
       options: [
-        { value: "box", label: "Tinted, top divider" },
-        { value: "rule", label: "Top divider" },
-        { value: "none", label: "Plain" },
+        { value: "rule", label: "Line under header" },
+        { value: "tint", label: "Line + tinted background" },
+        { value: "none", label: "Nothing" },
       ],
-      default: "box",
+      default: "rule",
     },
     {
       key: "children",
       label: "Child fields read as",
       tiered: true,
       options: [
+        { value: "rows", label: "Same as top level" },
         { value: "table", label: "Table, aligned columns" },
-        { value: "rows", label: "Rows, same as top level" },
       ],
-      default: "table",
+      default: "rows",
+    },
+    {
+      key: "childChrome",
+      label: "Non-group rows inside a group",
+      options: [
+        { value: "plain", label: "No borders; group box is the container" },
+        { value: "same", label: "Same box as top-level rows" },
+      ],
+      default: "plain",
     },
     { key: "tableHeader", label: "Table column headings", options: showHide, default: "false" },
     { key: "collapsible", label: "Collapse toggle", options: showHide, default: "true" },
@@ -617,12 +628,20 @@ export type PartialTheme = {
   }
 }
 
+/** per-tier defaults that differ from the axis default */
+const tierDefaults: Record<string, Record<string, Partial<Record<Tier, string>>>> = {
+  drag: { gutter: { compact: "outside" } },
+}
+
 export function defaultTheme(): SchemaEditorTheme {
   return Object.fromEntries(
     primitives.map((p) => [
       p.key,
       Object.fromEntries(
-        (p.axes as readonly Axis[]).map((a) => [a.key, a.tiered ? { wide: a.default, compact: a.default } : a.default])
+        (p.axes as readonly Axis[]).map((a) => [
+          a.key,
+          a.tiered ? { wide: a.default, compact: a.default, ...tierDefaults[p.key]?.[a.key] } : a.default,
+        ])
       ),
     ])
   ) as SchemaEditorTheme

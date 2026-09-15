@@ -10,23 +10,52 @@ import { Actions, FieldSheet } from "./actions"
 import { Inserter } from "./add"
 import { Group } from "./group"
 import { Header } from "./header"
-import { FieldProvider, useEditorStore, useEnv, useField, useList, useTheme, useZones } from "./root"
+import {
+  DragControlsContext,
+  FieldProvider,
+  hoverProps,
+  useEditorStore,
+  useEnv,
+  useField,
+  useList,
+  useTheme,
+  useZones,
+} from "./root"
 import { flag } from "./theme"
-import { grip as gripCva, rowShell, surface as surfaceCva, whileDragStyles } from "./variants"
+import {
+  grip as gripCva,
+  lineHeight,
+  padVars,
+  rowShell,
+  surface as surfaceCva,
+  whileDragStyles,
+} from "./variants"
 
-/* ---------------------------------- grip --------------------------------- */
+/* ------------------------------- drag mode ------------------------------- */
 
-const DragControlsContext = React.createContext<ReturnType<typeof useDragControls> | null>(null)
-
-function useDragFrom() {
+/** resolved "from" for the current pointer; arrange mode off → no grips at all */
+export function useDragFrom() {
   const t = useTheme()
   const { pointer } = useEnv()
   return pointer === "coarse" ? t.drag.coarseFrom : t.drag.from
 }
 
-export function Grip({ className }: { className?: string }) {
+function useGutter() {
   const t = useTheme()
   const from = useDragFrom()
+  const arrange = useEditorStore((s) => s.arrange)
+  if (from === "longpress") return "none" as const
+  if (from === "arrange") return arrange ? ("narrow" as const) : ("none" as const)
+  if (from === "handle") return t.drag.gutter === "none" ? ("narrow" as const) : t.drag.gutter
+  return t.drag.gutter
+}
+
+/* ---------------------------------- grip --------------------------------- */
+
+export function Grip({ className }: { className?: string }) {
+  const from = useDragFrom()
+  const gutter = useGutter()
+  const { depth } = useList()
   const controls = React.useContext(DragControlsContext)
   return (
     <div
@@ -34,8 +63,9 @@ export function Grip({ className }: { className?: string }) {
       role="button"
       aria-label="Drag to reorder"
       tabIndex={-1}
-      onPointerDown={(e) => from !== "row" && controls?.start(e)}
-      className={cn(gripCva({ from, gutter: t.drag.gutter }), className)}
+      {...hoverProps}
+      onPointerDown={(e) => controls?.start(e)}
+      className={cn(gripCva({ from, gutter, nested: depth > 0 }), className)}
     >
       <GripVerticalIcon />
     </div>
@@ -60,15 +90,20 @@ export function Surface({
 }) {
   const t = useTheme()
   const { pointer } = useEnv()
-  const { node } = useField()
+  const { node, depth } = useField()
   const openSheet = useEditorStore((s) => s.openSheet)
   const arrange = useEditorStore((s) => s.arrange)
   const tapSheet = pointer === "coarse" && t.surface.coarseTap === "sheet" && !arrange
+  const plain = depth > 0 && t.group.childChrome !== "same" && !isGroupType(node.type)
   return (
     <div
       data-slot="surface"
       className={cn(
-        surfaceCva({ chrome: chrome ?? t.surface.chrome, groupChrome: t.surface.groupChrome, padding: padding ?? t.surface.padding }),
+        surfaceCva({
+          chrome: chrome ?? (plain ? "plain" : t.surface.chrome),
+          groupChrome: t.surface.groupChrome,
+          padding: padding ?? t.surface.padding,
+        }),
         tapSheet && "cursor-pointer",
         className
       )}
@@ -76,7 +111,8 @@ export function Surface({
         if ((e.target as HTMLElement).closest(INTERACTIVE)) e.stopPropagation()
       }}
       onClick={(e) => {
-        if (!tapSheet || (e.target as HTMLElement).closest(INTERACTIVE)) return
+        const el = e.target as HTMLElement
+        if (!tapSheet || el.closest(INTERACTIVE) || el.closest("[data-slot=row]")?.hasAttribute("data-dragging")) return
         openSheet(node.id)
       }}
     >
@@ -104,7 +140,13 @@ export type RowProps = {
 }
 
 /** innermost group frame under a point, skipping own subtree */
-function zoneUnder(zones: Map<string, HTMLElement>, x: number, y: number, selfId: string, isInside: (id: string) => boolean) {
+function zoneUnder(
+  zones: Map<string, HTMLElement>,
+  x: number,
+  y: number,
+  selfId: string,
+  isInside: (id: string) => boolean
+) {
   let best: { id: string; area: number } | null = null
   for (const [id, el] of zones) {
     if (id === selfId || isInside(id)) continue
@@ -123,7 +165,7 @@ export function Row({ id, index, className, children, seam }: RowProps) {
   const zones = useZones()
   const controls = useDragControls()
   const from = useDragFrom()
-  const byHandle = from !== "row"
+  const gutter = useGutter()
   const node = useEditorStore((s) => s.byId[id])
   const taken = useEditorStore(
     useShallow((s) => (s.children[list.parentId] ?? []).filter((x) => x !== id).map((x) => s.byId[x].slug))
@@ -196,7 +238,8 @@ export function Row({ id, index, className, children, seam }: RowProps) {
         <Reorder.Item
           value={id}
           layout="position"
-          dragListener={!byHandle}
+          // drags start from the Header (drag anywhere / long-press) or the Grip, never from children
+          dragListener={false}
           dragControls={controls}
           whileDrag={whileDragStyles[t.drag.whileDrag]}
           onDrag={(_, info) => paint(zoneUnder(zones.current, info.point.x, info.point.y, id, isInside))}
@@ -209,7 +252,12 @@ export function Row({ id, index, className, children, seam }: RowProps) {
           data-collapsed={node.collapsed || undefined}
           data-array={node.isArray || undefined}
           data-optional={node.optional || undefined}
-          className={cn(rowShell({ from, gutter: t.drag.gutter, placement: t.actions.placement }), className)}
+          className={cn(
+            rowShell({ from, gutter, actionSize: t.actions.size, nested: list.depth > 0, placement: t.actions.placement }),
+            padVars({ padding: t.surface.padding }),
+            lineHeight({ size: t.icon.size }),
+            className
+          )}
         >
           {between && showAdd && index > 0 && <Inserter at={index} />}
           {seam}

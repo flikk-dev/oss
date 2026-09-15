@@ -130,6 +130,42 @@ export function useFieldOptional() {
   return ctx && node ? { ...ctx, node, set } : null
 }
 
+/**
+ * Row hover, tracked on the DOM (no re-render). Header, grip and actions all
+ * call these; leaving one and entering another within the grace period keeps
+ * `data-hover` on, so the cursor can travel from the row to its buttons.
+ */
+const hoverTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>()
+const HOVER_GRACE = 200
+export const rowOf = (el: HTMLElement) => el.closest<HTMLElement>("[data-slot=row]")
+export function rowHoverIn(el: HTMLElement) {
+  const row = rowOf(el)
+  if (!row) return
+  const t = hoverTimers.get(row)
+  if (t) clearTimeout(t)
+  hoverTimers.delete(row)
+  row.setAttribute("data-hover", "")
+}
+export function rowHoverOut(el: HTMLElement) {
+  const row = rowOf(el)
+  if (!row) return
+  hoverTimers.set(
+    row,
+    setTimeout(() => {
+      // keep while a menu opened from this row is up
+      if (!row.querySelector(":scope > [data-slot=actions] [aria-expanded=true]")) row.removeAttribute("data-hover")
+      hoverTimers.delete(row)
+    }, HOVER_GRACE)
+  )
+}
+export const hoverProps = {
+  onPointerEnter: (e: React.PointerEvent<HTMLElement>) => rowHoverIn(e.currentTarget),
+  onPointerLeave: (e: React.PointerEvent<HTMLElement>) => rowHoverOut(e.currentTarget),
+}
+
+/** drag controls of the enclosing row; Header starts drags from here */
+export const DragControlsContext = React.createContext<import("motion/react").DragControls | null>(null)
+
 export type ListCtx = { parentId: string; depth: number }
 const ListContext = React.createContext<ListCtx>({ parentId: ROOT, depth: 0 })
 export const ListProvider = ListContext.Provider

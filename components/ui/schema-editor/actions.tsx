@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Description, Slug, Title } from "./header"
 import { OptionMenu, type MenuSection } from "./menu"
-import { useEditorStore, useEnv, useField, useSchemaEditor, useTheme } from "./root"
+import { hoverProps, useEditorStore, useEnv, useField, useSchemaEditor, useTheme } from "./root"
 import { TypePicker } from "./type-picker"
 import { actionSize, actionVariant, actionsBar, dangerTone, labelText } from "./variants"
 
@@ -114,20 +114,26 @@ export function Actions({
   children,
 }: {
   reveal?: "hover" | "always" | "swipe"
-  placement?: "inline" | "overlay"
+  placement?: "column" | "overlay" | "inline"
   className?: string
   children?: React.ReactNode
 }) {
   const t = useTheme()
   const { pointer } = useEnv()
+  const { depth } = useField()
   const coarse = pointer === "coarse"
   const mode = reveal ?? (coarse ? t.actions.coarseReveal : t.actions.reveal)
   if (mode === "sheet") return null
   return (
     <div
       data-slot="actions"
+      {...hoverProps}
       className={cn(
-        actionsBar({ reveal: mode, placement: mode === "swipe" ? "inline" : (placement ?? t.actions.placement) }),
+        actionsBar({
+          reveal: mode,
+          placement: mode === "swipe" ? "inline" : (placement ?? t.actions.placement),
+          nested: depth > 0,
+        }),
         className
       )}
     >

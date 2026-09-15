@@ -50,7 +50,7 @@ export function GroupCount({ className }: { className?: string }) {
  * Registers as a drop zone: rows dragged over it move inside; child rows
  * dragged out of it pop up a level.
  */
-export function Group({ frame, className, children }: { frame?: "box" | "rule" | "none"; className?: string; children?: React.ReactNode }) {
+export function Group({ frame, className, children }: { frame?: "none" | "tint" | "rule"; className?: string; children?: React.ReactNode }) {
   const t = useTheme()
   const zones = useZones()
   const { node, depth } = useField()

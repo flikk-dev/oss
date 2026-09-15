@@ -160,15 +160,28 @@ export const menuItem = cva(
 
 /* -------------------------------- surface -------------------------------- */
 
-/** row box; sets --sx/--sy so nested frames can cancel the padding */
-export const surface = cva(
-  "flex min-w-0 flex-1 flex-col rounded-md border px-(--sx) py-(--sy) transition-[border-color,box-shadow]",
-  {
-    variants: {
+/** --sx/--sy from the padding pick; set on row and surface so siblings (grip, actions) can align */
+export const padVars = cva("", {
+  variants: {
+    padding: {
+      normal: "[--sx:0.75rem] [--sy:0.5rem]",
+      tight: "[--sx:0.5rem] [--sy:0.25rem]",
+      none: "[--sx:0.25rem] [--sy:0.125rem]",
+    },
+  },
+  defaultVariants: { padding: "tight" },
+})
+
+/** row box; nested frames cancel the padding via --sx/--sy */
+export const surface = cva("flex min-w-0 flex-1 flex-col px-(--sx) py-(--sy)", {
+  variants: {
       chrome: {
-        hover: "border-transparent bg-background hover:border-border",
-        card: "border-border bg-background",
-        divider: "border-transparent",
+        /** border on the row's own hover (header/grip/actions), not when a child row is hovered */
+        hover: "rounded-md border border-transparent bg-background [[data-hover]>&]:border-border",
+        card: "rounded-md border border-border bg-background",
+        divider: "rounded-md border border-transparent",
+        /** non-group row inside a group: nothing at all */
+        plain: "border-0 bg-transparent",
       },
       /** groups always outlined, regardless of chrome */
       groupChrome: {
@@ -182,8 +195,7 @@ export const surface = cva(
       },
     },
     defaultVariants: { chrome: "hover", groupChrome: "always", padding: "tight" },
-  }
-)
+})
 
 export const listGap = cva("flex flex-col", {
   variants: {
@@ -210,8 +222,14 @@ export const headerBody = cva("flex min-w-0 flex-1", {
 })
 
 /** title line height = type trigger height, so the icon centres on it */
-export const titleLine = cva("flex min-w-0 items-center gap-1.5", {
-  variants: { size: { xs: "min-h-4", sm: "min-h-5", md: "min-h-6", lg: "min-h-7" } },
+export const titleLine = cva("flex min-h-(--line) min-w-0 items-center gap-1.5", {
+  variants: { size: { xs: "", sm: "", md: "", lg: "" } },
+  defaultVariants: { size: "sm" },
+})
+
+/** --line = title line height, from icon size; set on the row so grip/actions can align */
+export const lineHeight = cva("", {
+  variants: { size: { xs: "[--line:1rem]", sm: "[--line:1.25rem]", md: "[--line:1.5rem]", lg: "[--line:1.75rem]" } },
   defaultVariants: { size: "sm" },
 })
 
@@ -236,49 +254,94 @@ export const dangerTone = cva("", {
   defaultVariants: { tone: "default" },
 })
 
-export const actionsBar = cva("flex shrink-0 items-center gap-0.5", {
+/** on the header line; reveal scoped to the row's own header hover */
+export const actionsBar = cva("flex h-(--line) shrink-0 items-center gap-0.5", {
   variants: {
     reveal: {
       always: "",
-      hover: "opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 has-[[aria-expanded=true]]:opacity-100",
+      hover: "opacity-0 [[data-hover]>&]:opacity-100 has-[[aria-expanded=true]]:opacity-100",
       /** sits under the surface, revealed by swiping it left */
-      swipe: "absolute inset-y-0 right-0 px-1",
+      swipe: "absolute inset-y-0 right-0 h-auto px-1",
     },
     placement: {
-      inline: "",
-      overlay: "absolute top-1/2 right-1 -translate-y-1/2 rounded-md bg-background/90 pl-2 backdrop-blur-[2px]",
+      /** one column outside every box, mirror of the grip */
+      column: "absolute top-(--sy) w-(--acts) justify-end",
+      overlay: "absolute top-(--sy) right-1 rounded-md bg-background/90 pl-2 backdrop-blur-[2px]",
+      /** in-flow (table cells) */
+      inline: "mt-(--sy)",
     },
+    nested: { true: "", false: "" },
   },
-  defaultVariants: { reveal: "hover", placement: "inline" },
+  compoundVariants: [
+    { placement: "column", nested: false, className: "right-[calc(var(--rgutter)-var(--acts))]" },
+    { placement: "column", nested: true, className: "-right-(--acts)" },
+  ],
+  defaultVariants: { reveal: "hover", placement: "column", nested: false },
 })
 
 /* --------------------------------- drag ---------------------------------- */
 
 /** row shell; --gutter reserved left of the box for the grip */
-export const rowShell = cva("group/row relative flex items-center pl-(--gutter)", {
-  variants: {
-    from: { row: "cursor-grab active:cursor-grabbing", hover: "", always: "", handle: "", arrange: "" },
-    gutter: { wide: "[--gutter:1.5rem]", narrow: "[--gutter:1rem]", none: "[--gutter:0px]" },
-    placement: { inline: "gap-1.5", overlay: "gap-0" },
-  },
-  defaultVariants: { from: "row", gutter: "narrow", placement: "inline" },
-})
-
-export const grip = cva(
-  "absolute top-1/2 left-0 flex w-(--gutter) -translate-y-1/2 cursor-grab touch-none items-center justify-center text-muted-foreground active:cursor-grabbing",
+/**
+ * Row shell. `data-hover` is set by the row's own Header (not by children),
+ * so grip/actions of a group light up only when its header is hovered.
+ */
+export const rowShell = cva(
+  "group/row relative flex items-start pl-(--gutter) pr-(--rgutter)",
   {
     variants: {
       from: {
-        row: "opacity-0 transition-opacity group-hover/row:opacity-100",
-        hover: "opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100",
+        row: "",
+        hover: "",
+        always: "",
+        handle: "",
+        arrange: "",
+        longpress: "touch-pan-y select-none",
+      },
+      /** --gutter = padding reserved on root rows; --grip = grip column width */
+      /** left: --gutter reserved / --grip column; right: --rgutter reserved / --acts column */
+      gutter: {
+        outside: "[--gutter:0px] [--grip:1rem] [--rgutter:0px]",
+        hover: "[--gutter:0px] [--grip:1rem] [--rgutter:0px] data-[hover]:[--gutter:1rem] data-[hover]:[--rgutter:var(--acts)]",
+        wide: "[--gutter:1.5rem] [--grip:1.5rem] [--rgutter:var(--acts)]",
+        narrow: "[--gutter:1rem] [--grip:1rem] [--rgutter:var(--acts)]",
+        none: "[--gutter:0px] [--grip:0px] [--rgutter:var(--acts)]",
+      },
+      /** width of the actions column, from button size */
+      actionSize: { sm: "[--acts:3.25rem]", md: "[--acts:3.75rem]" },
+      /** nested rows add no indent; grip and actions hang outside, in the shared columns */
+      nested: { true: "pl-0 pr-0", false: "" },
+      placement: { column: "", overlay: "", swipe: "" },
+    },
+    defaultVariants: { from: "row", gutter: "narrow", actionSize: "sm", nested: false, placement: "column" },
+  }
+)
+
+/** sits in the gutter, vertically on the header line (--line = title line height) */
+export const grip = cva(
+  "absolute top-(--sy) flex h-(--line) w-(--grip) cursor-grab touch-none items-center justify-center text-muted-foreground active:cursor-grabbing",
+  {
+    variants: {
+      /** root: inside the gutter (or just outside when gutter is 0); nested: always one column left */
+      nested: { true: "-left-(--grip)", false: "left-[calc(var(--gutter)-var(--grip))]" },
+      from: {
+        row: "opacity-0 [[data-hover]>&]:opacity-100",
+        hover: "opacity-0 [[data-hover]>&]:opacity-100",
         always: "",
         handle: "",
         /** only while arrange mode is on */
         arrange: "hidden group-data-[arrange=true]/editor:flex",
+        longpress: "hidden",
       },
-      gutter: { wide: "[&_svg]:size-4", narrow: "[&_svg]:size-3", none: "hidden" },
+      gutter: {
+        outside: "opacity-0 [[data-hover]>&]:opacity-100 [&_svg]:size-3",
+        hover: "opacity-0 [[data-hover]>&]:opacity-100 [&_svg]:size-3",
+        wide: "[&_svg]:size-4",
+        narrow: "[&_svg]:size-3",
+        none: "hidden",
+      },
     },
-    defaultVariants: { from: "row", gutter: "narrow" },
+    defaultVariants: { from: "row", gutter: "narrow", nested: false },
   }
 )
 
@@ -295,12 +358,12 @@ export const groupFrame = cva(
   {
     variants: {
       frame: {
-        box: "rounded-b-md border-t border-border bg-muted/30",
         rule: "border-t border-border",
+        tint: "rounded-b-md border-t border-border bg-muted/30",
         none: "",
       },
     },
-    defaultVariants: { frame: "box" },
+    defaultVariants: { frame: "rule" },
   }
 )
 

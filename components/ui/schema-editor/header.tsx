@@ -8,7 +8,7 @@ import { slugify, uniqueSlug } from "@/lib/schema-editor/slug"
 import { isGroupType } from "@/lib/schema-editor/tree"
 import { Editable } from "./editable"
 import { GroupCount, GroupToggle } from "./group"
-import { useEditorStore, useField, useTheme } from "./root"
+import { DragControlsContext, rowHoverIn, rowHoverOut, rowOf, useEditorStore, useEnv, useField, useTheme } from "./root"
 import { flag } from "./theme"
 import { TypePicker } from "./type-picker"
 import {
@@ -227,10 +227,83 @@ export function Tooltip({ children, className }: { children: React.ReactElement;
  * Default header: type picker + title line + secondary lines, arranged by
  * the `layout` primitive. Pass children to compose your own.
  */
+const INTERACTIVE = "input, textarea, button, a, [role=button], [contenteditable=true]"
+const HOLD_MS = 350
+const HOLD_SLOP = 8
+
+/**
+ * Header owns row interaction:
+ *  - sets `data-hover` on its own row (children rows are siblings, so a
+ *    group's grip/actions only light when its header is hovered)
+ *  - fine pointer + drag.from=row: pointerdown starts the drag
+ *  - coarse pointer + longpress: hold still ~350ms, then drag
+ */
+function useHeaderInteraction() {
+  const t = useTheme()
+  const { pointer } = useEnv()
+  const controls = React.useContext(DragControlsContext)
+  const from = pointer === "coarse" ? t.drag.coarseFrom : t.drag.from
+  const hold = React.useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number } | null>(null)
+
+  const row = rowOf
+  const cancelHold = () => {
+    if (hold.current) clearTimeout(hold.current.timer)
+    hold.current = null
+  }
+
+  return {
+    className: from === "row" ? "cursor-grab active:cursor-grabbing" : from === "longpress" ? "select-none" : "",
+    onPointerEnter: (e: React.PointerEvent<HTMLElement>) => rowHoverIn(e.currentTarget),
+    onPointerLeave: (e: React.PointerEvent<HTMLElement>) => {
+      rowHoverOut(e.currentTarget)
+      cancelHold()
+    },
+    onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
+      if ((e.target as HTMLElement).closest(INTERACTIVE) || !controls) return
+      if (from === "row") return controls.start(e)
+      if (from !== "longpress") return
+      const native = e.nativeEvent
+      const r = row(e.currentTarget)
+      hold.current = {
+        x: e.clientX,
+        y: e.clientY,
+        timer: setTimeout(() => {
+          hold.current = null
+          navigator.vibrate?.(10)
+          r?.setAttribute("data-dragging", "")
+          // page must not scroll while the row is being dragged
+          const block = (ev: TouchEvent) => ev.preventDefault()
+          document.addEventListener("touchmove", block, { passive: false })
+          const done = () => {
+            document.removeEventListener("touchmove", block)
+            document.removeEventListener("pointerup", done)
+            document.removeEventListener("pointercancel", done)
+            requestAnimationFrame(() => r?.removeAttribute("data-dragging"))
+          }
+          document.addEventListener("pointerup", done)
+          document.addEventListener("pointercancel", done)
+          controls.start(native)
+        }, HOLD_MS),
+      }
+    },
+    onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
+      const h = hold.current
+      if (h && Math.hypot(e.clientX - h.x, e.clientY - h.y) > HOLD_SLOP) cancelHold()
+    },
+    onPointerUp: cancelHold,
+    onPointerCancel: cancelHold,
+  }
+}
+
+/**
+ * Default header: type picker + title line + secondary lines, arranged by
+ * the `layout` primitive. Pass children to compose your own.
+ */
 export function Header({ className, children }: { className?: string; children?: React.ReactNode }) {
   const t = useTheme()
   const L = t.layout
   const arrange = useEditorStore((s) => s.arrange)
+  const { className: cursor, ...interaction } = useHeaderInteraction()
   const inline = L.arrangement === "inline"
   const tipOn = L.slug === "tooltip" || L.description === "tooltip"
   const tipTrigger = t.tooltip.trigger
@@ -277,7 +350,8 @@ export function Header({ className, children }: { className?: string; children?:
   const el = (
     <div
       data-slot="header"
-      className={cn(headerCva({ iconAlign: L.iconAlign }), arrange && "pointer-events-none", className)}
+      {...interaction}
+      className={cn(headerCva({ iconAlign: L.iconAlign }), cursor, arrange && "pointer-events-none", className)}
     >
       <TypePicker />
       {body}

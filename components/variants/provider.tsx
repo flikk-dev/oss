@@ -93,7 +93,7 @@ export const useLab = create<LabState>()(
       }
     },
     {
-      name: "schema-editor-lab",
+      name: "schema-editor-lab-v2",
       partialize: (s) => ({ config: s.config, history: s.history, viewport: s.viewport }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<LabState>

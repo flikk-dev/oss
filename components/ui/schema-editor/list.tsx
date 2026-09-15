@@ -6,7 +6,7 @@ import { cn } from "cn"
 import { useShallow } from "zustand/react/shallow"
 import { Actions } from "./actions"
 import { Add } from "./add"
-import { Group } from "./group"
+import { Group, GroupToggle } from "./group"
 import { Badges, Description, Slug, Title } from "./header"
 import { ListProvider, useEditorStore, useTheme } from "./root"
 import { ROOT } from "./store"
@@ -65,7 +65,10 @@ export function List({ parentId = ROOT, depth = 0, mode, alternatives = false, r
           </div>
           <Slug />
           <Description multiline={false} />
-          <Actions />
+          <div className="flex items-center gap-0.5">
+            <Actions placement="inline" />
+            <GroupToggle className="ml-0" />
+          </div>
           <Group className="col-span-full" />
         </Surface>
       </Row>
@@ -90,13 +93,26 @@ export function List({ parentId = ROOT, depth = 0, mode, alternatives = false, r
           axis="y"
           values={ids}
           onReorder={(next) => reorder(parentId === ROOT ? null : parentId, next)}
-          className={cn(listGap({ chrome: t.surface.chrome, gap: t.surface.gap }), table && cn("grid", TABLE_COLS))}
+          className={cn(
+            listGap({
+              // children never get dividers; the group box is the container
+              chrome: depth > 0 ? "hover" : t.surface.chrome,
+              gap: depth > 0 && t.group.childChrome !== "same" ? "0" : t.surface.gap,
+            }),
+            table && cn("grid", TABLE_COLS)
+          )}
         >
           <AnimatePresence initial={false}>{ids.map(row)}</AnimatePresence>
         </Reorder.Group>
 
         {bottom && showAdd && (
-          <div className={cn("flex", depth ? "pt-0.5" : "pt-1", t.add.style !== "dashed" && "pl-1")}>
+          <div
+            className={cn(
+              "flex",
+              depth ? "justify-end px-(--sx) pt-1.5 pb-1" : "pt-1",
+              !depth && t.add.style !== "dashed" && "pl-1"
+            )}
+          >
             <Add label={alternatives ? "Add alternative" : undefined} />
           </div>
         )}
