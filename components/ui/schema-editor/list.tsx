@@ -13,7 +13,12 @@ import { ROOT } from "./store"
 export function Add({ className }: { className?: string }) {
   const { parentId, depth } = useList()
   const insert = useEditorStore((s) => s.insert)
-  const text = depth ? "Add nested field" : "Add field"
+  const inChoice = useEditorStore((s) => s.byId[parentId]?.type === "oneOf")
+  const text = inChoice
+    ? "Add option"
+    : depth
+      ? "Add nested field"
+      : "Add field"
   return (
     <OptionMenu
       title="New field type"

@@ -59,8 +59,9 @@ export function Editable({
         }
       }}
       className={cn(
-        "-mx-0.5 field-sizing-content min-w-6 resize-none rounded-sm bg-transparent px-0.5 outline-none",
-        "placeholder:text-muted-foreground/60 hover:bg-muted/60 focus:bg-muted",
+        // padding with matching negative margins: breathing room on hover / focus, no layout shift
+        "-mx-1.5 -my-0.5 field-sizing-content min-w-6 resize-none rounded-md bg-transparent px-1.5 py-0.5 outline-none",
+        "placeholder:text-muted-foreground/60 hover:bg-muted/50 focus:bg-muted/70",
         className
       )}
     />

@@ -28,8 +28,16 @@ function fieldSchema(n: FieldNode): Schema {
     case "object":
       s = objectSchema(n.children ?? [])
       break
-    case "oneOf":
-      s = { oneOf: (n.children ?? []).map(fieldSchema) }
+    case "oneOf": {
+      const kids = n.children ?? []
+      // all constants → a string enum with titles; otherwise alternatives of shapes
+      s = kids.every((k) => k.type === "const")
+        ? { type: "string", oneOf: kids.map(fieldSchema) }
+        : { oneOf: kids.map(fieldSchema) }
+      break
+    }
+    case "const":
+      s = { const: n.slug }
       break
     default:
       s = { ...jsonTypeMap[n.type].schema }
@@ -41,7 +49,8 @@ function fieldSchema(n: FieldNode): Schema {
     if (typeof s.type === "string") s.type = [s.type, "null"]
     else s = { anyOf: [s, { type: "null" }] }
   }
-  if (n.isArray) s = { type: "array", items: s, ...(n.title ? { title: n.title } : {}) }
+  if (n.isArray)
+    s = { type: "array", items: s, ...(n.title ? { title: n.title } : {}) }
   return s
 }
 
@@ -75,8 +84,8 @@ function exampleValue(n: FieldNode): unknown {
     case "boolean":
       v = n.examples[0] ? n.examples[0] === "true" : true
       break
-    case "enum":
-      v = n.examples[0] ?? "option"
+    case "const":
+      v = n.slug
       break
     case "date":
       v = n.examples[0] ?? "2026-01-01T00:00:00Z"

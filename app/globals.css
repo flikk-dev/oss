@@ -16,7 +16,7 @@
   --color-type-number: var(--type-number);
   --color-type-integer: var(--type-integer);
   --color-type-boolean: var(--type-boolean);
-  --color-type-enum: var(--type-enum);
+  --color-type-const: var(--type-const);
   --color-type-object: var(--type-object);
   --color-type-oneOf: var(--type-oneOf);
   --color-type-date: var(--type-date);
@@ -95,7 +95,7 @@
   --type-number: oklch(0.666 0.179 58.318);
   --type-integer: oklch(0.6 0.118 184.704);
   --type-boolean: oklch(0.627 0.194 149.214);
-  --type-enum: oklch(0.592 0.249 0.584);
+  --type-const: oklch(0.592 0.249 0.584);
   --type-object: oklch(0.541 0.281 293.009);
   --type-oneOf: oklch(0.591 0.293 322.896);
   --type-date: oklch(0.588 0.158 241.966);
@@ -141,7 +141,7 @@
   --type-number: oklch(0.828 0.189 84.429);
   --type-integer: oklch(0.777 0.152 181.912);
   --type-boolean: oklch(0.792 0.209 151.711);
-  --type-enum: oklch(0.823 0.12 346.018);
+  --type-const: oklch(0.823 0.12 346.018);
   --type-object: oklch(0.811 0.111 293.571);
   --type-oneOf: oklch(0.833 0.145 321.434);
   --type-date: oklch(0.828 0.111 230.318);

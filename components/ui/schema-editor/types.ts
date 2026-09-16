@@ -5,7 +5,7 @@ import {
   ToggleLeftIcon,
   BracesIcon,
   SplitIcon,
-  ListCheckIcon,
+  EqualIcon,
   CircleSlashIcon,
   CalendarIcon,
   MailIcon,
@@ -18,7 +18,7 @@ export type JsonTypeKey =
   | "number"
   | "integer"
   | "boolean"
-  | "enum"
+  | "const"
   | "object"
   | "oneOf"
   | "null"
@@ -78,15 +78,6 @@ export const jsonTypes: JsonType[] = [
     color: "bg-type-boolean/10 text-type-boolean",
   },
   {
-    key: "enum",
-    title: "Choice",
-    description: "Pick one from a fixed list",
-    icon: ListCheckIcon,
-    group: "primitive",
-    schema: { type: "string", enum: [] },
-    color: "bg-type-enum/10 text-type-enum",
-  },
-  {
     key: "object",
     title: "Object",
     description: "Group of named fields",
@@ -97,8 +88,8 @@ export const jsonTypes: JsonType[] = [
   },
   {
     key: "oneOf",
-    title: "One of",
-    description: "Exactly one of several shapes",
+    title: "Choice",
+    description: "One of several options",
     icon: SplitIcon,
     group: "structure",
     schema: { oneOf: [] },
@@ -130,6 +121,15 @@ export const jsonTypes: JsonType[] = [
     group: "format",
     schema: { type: "string", format: "uri" },
     color: "bg-type-url/10 text-type-url",
+  },
+  {
+    key: "const",
+    title: "Fixed value",
+    description: "Always exactly this; the key is the value",
+    icon: EqualIcon,
+    group: "primitive",
+    schema: { const: "" },
+    color: "bg-type-const/10 text-type-const",
   },
   {
     key: "null",

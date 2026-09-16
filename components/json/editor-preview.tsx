@@ -49,15 +49,14 @@ const sample: FieldTree = [
   mk("active", "boolean", "Active", "active", "Whether account can sign in", [
     "true",
   ]),
-  mk(
-    "role",
-    "enum",
-    "Role",
-    "role",
-    "Permission level",
-    ["admin", "editor", "viewer"],
-    { optional: true }
-  ),
+  mk("role", "oneOf", "Role", "role", "Permission level", [], {
+    optional: true,
+    children: [
+      mk("admin", "const", "Admin", "admin", "Full access"),
+      mk("editor", "const", "Editor", "editor", "Can change content"),
+      mk("viewer", "const", "Viewer", "viewer", "Read only"),
+    ],
+  }),
   mk("address", "object", "Address", "address", "Postal address", [], {
     optional: true,
     children: [
@@ -74,7 +73,12 @@ const sample: FieldTree = [
       mk("phone", "string", "Phone", "phone", "E.164 number", ["+41791234567"]),
       mk("handle", "object", "Social", "social", "Network handle", [], {
         children: [
-          mk("network", "enum", "Network", "network", "", ["x", "bluesky"]),
+          mk("network", "oneOf", "Network", "network", "", [], {
+            children: [
+              mk("x", "const", "X", "x", ""),
+              mk("bluesky", "const", "Bluesky", "bluesky", ""),
+            ],
+          }),
           mk("user", "string", "Username", "username", "", ["ada"]),
         ],
       }),
