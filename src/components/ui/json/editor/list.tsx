@@ -6,8 +6,8 @@ import { PlusIcon } from "lucide-react"
 import { useShallow } from "zustand/react/shallow"
 import { Button } from "@/components/ui/button"
 import { OptionMenu, typeSections } from "./menu"
-import { ListProvider, useEditorStore, useList, useVariant } from "./root"
-import { ROOT } from "./store"
+import { ListProvider, useEditorStore, useList, useVariant } from "@/context/editor"
+import { ROOT } from "@/store/editor"
 
 /** creates a field at the end of the enclosing list */
 export function Add({ className }: { className?: string }) {

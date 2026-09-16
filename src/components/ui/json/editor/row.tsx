@@ -28,8 +28,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { slugify, uniqueSlug } from "@/lib/schema-editor/slug"
-import { isGroupType } from "@/lib/schema-editor/tree"
+import { slugify, uniqueSlug } from "@/store/slug"
+import { isGroupType } from "@/store/tree"
 import { Editable } from "./editable"
 import { List } from "./list"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
@@ -49,8 +49,8 @@ import {
   useField,
   useList,
   useVariant,
-} from "./root"
-import { ROOT } from "./store"
+} from "@/context/editor"
+import { ROOT } from "@/store/editor"
 
 const BUTTONS = "button, a, [data-slot=grip]"
 const FIELDS = "input, textarea"
@@ -140,6 +140,8 @@ export function Examples({ className }: { className?: string }) {
   const joined = node.examples.join(", ")
   const [draft, setDraft] = React.useState(joined)
   React.useEffect(() => setDraft(joined), [joined])
+  // a fixed value is its own example
+  if (node.type === "const") return null
   return (
     <Editable
       data-slot="examples"
@@ -300,6 +302,7 @@ function useSettingsSections(): MenuSection[] {
 
 /** labelled fields for text the row hides inline; dialog (compact) / sheet (mobile) */
 function DetailFields({ all }: { all?: boolean }) {
+  const { node } = useField()
   const label = "flex flex-col gap-1 text-2xs text-muted-foreground"
   const field = cn(
     "w-full rounded-md border px-2 py-1.5 text-xs",
@@ -323,10 +326,12 @@ function DetailFields({ all }: { all?: boolean }) {
         Description
         <Description className={field} />
       </label>
-      <label className={label}>
-        Examples
-        <Examples className={field} />
-      </label>
+      {node.type !== "const" && (
+        <label className={label}>
+          Examples
+          <Examples className={field} />
+        </label>
+      )}
     </div>
   )
 }

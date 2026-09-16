@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@source "../../src";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -9,8 +11,8 @@
   --text-3xs--line-height: 0.75rem;
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 0.875rem;
-  /* schema-editor: one accent per JSON type */
-  /* schema-editor: fill behind a group's child rows */
+  /* json editor: one accent per JSON type */
+  /* json editor: fill behind a group's child rows */
   --color-group: var(--group);
   --color-type-string: var(--type-string);
   --color-type-number: var(--type-number);

@@ -19,13 +19,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { useVariant } from "./root"
+import { useVariant } from "@/context/editor"
 import {
   jsonTypeGroups,
   jsonTypeMap,
   jsonTypes,
   type JsonTypeKey,
-} from "./types"
+} from "@/store/types"
 
 /* ---------------------------------- menu --------------------------------- */
 

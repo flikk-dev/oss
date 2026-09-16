@@ -1,4 +1,4 @@
-import { jsonTypeMap } from "@/components/ui/schema-editor/types"
+import { jsonTypeMap } from "@/store/types"
 import type { FieldNode } from "./tree"
 
 type Schema = Record<string, unknown>
@@ -44,7 +44,7 @@ function fieldSchema(n: FieldNode): Schema {
   }
   if (n.title) s.title = n.title
   if (n.description) s.description = n.description
-  if (n.examples.length) s.examples = n.examples
+  if (n.examples.length && n.type !== "const") s.examples = n.examples
   if (n.nullable) {
     if (typeof s.type === "string") s.type = [s.type, "null"]
     else s = { anyOf: [s, { type: "null" }] }

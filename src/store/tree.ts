@@ -1,4 +1,4 @@
-import type { JsonTypeKey } from "@/components/ui/schema-editor/types"
+import type { JsonTypeKey } from "@/store/types"
 
 /** One field. `children` only on group types (object, oneOf). */
 export type FieldMeta = {

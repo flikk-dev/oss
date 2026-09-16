@@ -9,13 +9,8 @@
 import { createElement } from "react"
 import { Add, List } from "./list"
 import { TypePicker } from "./menu"
-import {
-  SchemaEditorRoot,
-  useField,
-  useSchemaEditor,
-  type SchemaEditorProps,
-  type Variant,
-} from "./root"
+import { SchemaEditorRoot, type SchemaEditorProps } from "./root"
+import { useField, useSchemaEditor, type Variant } from "@/context/editor"
 import {
   Actions,
   Description,
@@ -51,4 +46,4 @@ export const SchemaEditor = Object.assign(Root, {
 
 export { useSchemaEditor, useField }
 export type { SchemaEditorProps, Variant }
-export type { FieldTree, FieldNode, FieldMeta } from "@/lib/schema-editor/tree"
+export type { FieldTree, FieldNode, FieldMeta } from "@/store/tree"

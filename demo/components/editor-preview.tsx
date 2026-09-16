@@ -8,9 +8,9 @@ import {
   type FieldNode,
   type FieldTree,
   type Variant,
-} from "@/components/ui/schema-editor"
-import { toExample, toJsonSchema } from "@/lib/schema-editor/schema"
-import { validate } from "@/lib/schema-editor/validate"
+} from "@/components/ui/json/editor"
+import { toExample, toJsonSchema } from "@/store/schema"
+import { validate } from "@/store/validate"
 
 const mk = (
   id: string,

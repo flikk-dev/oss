@@ -1,5 +1,5 @@
-import { EditorPreview } from "@/components/json/editor-preview"
-import type { Variant } from "@/components/ui/schema-editor"
+import { EditorPreview } from "@demo/components/editor-preview"
+import type { Variant } from "@/components/ui/json/editor"
 
 export default async function Page({
   searchParams,

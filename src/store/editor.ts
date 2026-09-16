@@ -1,14 +1,14 @@
 import { createStore } from "zustand/vanilla"
 import { subscribeWithSelector } from "zustand/middleware"
-import { uniqueSlug, type SlugCase } from "@/lib/schema-editor/slug"
+import { uniqueSlug, type SlugCase } from "@/store/slug"
 import {
   isGroupType,
   newId,
   type FieldMeta,
   type FieldNode,
   type FieldTree,
-} from "@/lib/schema-editor/tree"
-import { jsonTypeMap, type JsonTypeKey } from "./types"
+} from "@/store/tree"
+import { jsonTypeMap, type JsonTypeKey } from "@/store/types"
 
 /**
  * Per-editor store, normalized: a row subscribes to its own node only, so a
