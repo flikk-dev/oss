@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { AnimatePresence, Reorder } from "motion/react"
 import { cn } from "cn"
 import { PlusIcon } from "lucide-react"
 import { useShallow } from "zustand/react/shallow"
@@ -36,7 +35,7 @@ export function Add({ className }: { className?: string }) {
   )
 }
 
-/** One Reorder.Group per sibling set. Groups render their own List. */
+/** One sibling set. Groups render their own List. */
 export function List({
   parentId = ROOT,
   depth = 0,
@@ -50,34 +49,44 @@ export function List({
   className?: string
 }) {
   const variant = useVariant()
+  const { ghost } = useList()
   const ids = useEditorStore(useShallow((s) => s.children[parentId] ?? []))
-  const reorder = useEditorStore((s) => s.reorder)
+  // live drag: the slot the dragged row would take in this list
+  const drop = useEditorStore((s) =>
+    !ghost && s.drop?.parentId === parentId ? s.drop : null
+  )
+  const visible = drop ? ids.filter((x) => x !== drop.id) : ids
+  const skeleton = drop && (
+    <div
+      key="__drop"
+      aria-hidden
+      style={{ height: drop.height }}
+      className="rounded-md border-2 border-dashed border-primary/40 bg-primary/5"
+    />
+  )
 
   return (
-    <ListProvider value={{ parentId, depth }}>
+    <ListProvider value={{ parentId, depth, ghost }}>
       <div
         data-slot="list"
         data-depth={depth}
         className={cn("flex min-w-0 flex-col", className)}
       >
-        <Reorder.Group
-          as="div"
-          axis="y"
-          values={ids}
-          onReorder={(next) => reorder(parentId, next)}
+        <div
           className={cn(
             "flex flex-col",
             {
-              compact: "gap-0.5",
-              default: "gap-1.5",
-              wide: "gap-3",
-              mobile: "gap-1",
+              compact: "gap-0.5 [--row-gap:0.125rem]",
+              default: "gap-1.5 [--row-gap:0.375rem]",
+              wide: "gap-3 [--row-gap:0.75rem]",
+              mobile: "gap-1 [--row-gap:0.25rem]",
             }[variant]
           )}
         >
-          <AnimatePresence initial={false}>
-            {ids.map((id, i) => (
-              <Row key={id} id={id}>
+          {ids.map((id, i) => (
+            <React.Fragment key={id}>
+              {drop && visible[drop.index] === id && skeleton}
+              <Row id={id}>
                 {alternatives && i > 0 && (
                   <span className="pointer-events-none absolute inset-x-0 top-0 z-10 flex -translate-y-1/2 justify-center">
                     <span className="rounded-full border border-border bg-background px-1.5 text-2xs text-muted-foreground">
@@ -85,19 +94,20 @@ export function List({
                     </span>
                   </span>
                 )}
-                <Header />
-                <Group />
               </Row>
-            ))}
-          </AnimatePresence>
-        </Reorder.Group>
-        <div className={cn("flex", depth ? "justify-end px-2 py-1" : "pt-1")}>
-          <Add />
+            </React.Fragment>
+          ))}
+          {drop && drop.index >= visible.length && skeleton}
         </div>
+        {!ghost && (
+          <div className={cn("flex", depth ? "justify-end pt-1" : "pt-1")}>
+            <Add />
+          </div>
+        )}
       </div>
     </ListProvider>
   )
 }
 
 // after List so the cycle (row → group → list → row) resolves at call time
-import { Group, Header, Row } from "./row"
+import { Row } from "./row"

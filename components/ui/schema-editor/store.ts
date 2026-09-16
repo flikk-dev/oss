@@ -26,6 +26,8 @@ export type EditorState = {
   parentOf: Record<string, string>
   /** mobile: id whose detail sheet is open */
   sheet: string | null
+  /** live drag: where the row would land; index counts siblings without the dragged row */
+  drop: { id: string; parentId: string; index: number; height: number } | null
   slugCase: SlugCase
 
   replaceTree: (tree: FieldTree) => void
@@ -33,9 +35,9 @@ export type EditorState = {
   remove: (id: string) => void
   duplicate: (id: string) => void
   insert: (parentId: string, type: JsonTypeKey, index?: number) => string
-  reorder: (parentId: string, ids: string[]) => void
-  moveInto: (id: string, groupId: string) => void
-  popOut: (id: string) => void
+  /** reparent + reorder in one step; index is among siblings excluding `id` */
+  move: (id: string, parentId: string, index: number) => void
+  setDrop: (drop: EditorState["drop"]) => void
   openSheet: (id: string | null) => void
   setSlugCase: (c: SlugCase) => void
 }
@@ -127,6 +129,7 @@ export function createEditorStore(initial: FieldTree, slugCase: SlugCase) {
       return {
         ...fromTree(initial),
         sheet: null,
+        drop: null,
         slugCase,
 
         replaceTree: (tree) => set(fromTree(tree)),
@@ -193,33 +196,27 @@ export function createEditorStore(initial: FieldTree, slugCase: SlugCase) {
           return id
         },
 
-        reorder: (parent, ids) =>
-          mutate((s) => void (s.children[parent] = ids)),
-
-        moveInto: (id, groupId) => {
+        move: (id, parentId, index) => {
           const s = get()
-          if (
-            id === groupId ||
-            s.parentOf[id] === groupId ||
-            isDescendant(s, id, groupId)
-          )
-            return
-          if (!s.children[groupId]) return
+          if (id === parentId || isDescendant(s, id, parentId)) return
+          if (parentId !== ROOT && !s.children[parentId]) return
           mutate((s) => {
             detach(s, id)
-            attach(s, id, groupId)
+            attach(s, id, parentId, index)
           })
         },
 
-        popOut: (id) => {
-          const s = get()
-          const parent = s.parentOf[id]
-          if (!parent || parent === ROOT) return
-          const grand = s.parentOf[parent]
-          mutate((s) => {
-            detach(s, id)
-            attach(s, id, grand, s.children[grand].indexOf(parent) + 1)
-          })
+        setDrop: (drop) => {
+          const cur = get().drop
+          if (
+            cur === drop ||
+            (cur &&
+              drop &&
+              cur.parentId === drop.parentId &&
+              cur.index === drop.index)
+          )
+            return
+          set({ drop })
         },
 
         openSheet: (sheet) => set({ sheet }),

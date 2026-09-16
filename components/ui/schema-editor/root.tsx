@@ -20,8 +20,8 @@ export type Variant = "default" | "compact" | "wide" | "mobile"
 type EditorCtx = {
   store: EditorStore
   variant: Variant
-  /** group frames that accept drops, keyed by node id */
-  zones: React.RefObject<Map<string, HTMLElement>>
+  /** editor element; drag hit-tests query rows under it */
+  root: React.RefObject<HTMLDivElement | null>
 }
 const EditorContext = React.createContext<EditorCtx | null>(null)
 
@@ -70,7 +70,12 @@ export function useField() {
   return { ...ctx, node, set }
 }
 
-export type ListCtx = { parentId: string; depth: number }
+export type ListCtx = {
+  parentId: string
+  depth: number
+  /** inside the drag ghost: render only, no drag / hit-test participation */
+  ghost?: boolean
+}
 const ListContext = React.createContext<ListCtx>({ parentId: ROOT, depth: 0 })
 export const ListProvider = ListContext.Provider
 export const useList = () => React.useContext(ListContext)
@@ -109,7 +114,7 @@ export function SchemaEditorRoot({
 }: SchemaEditorProps) {
   const coarse = useCoarsePointer()
   const resolved: Variant = variant ?? (coarse ? "mobile" : "default")
-  const zones = React.useRef(new Map<string, HTMLElement>())
+  const ref = React.useRef<HTMLDivElement>(null)
   const [store] = React.useState(() => createEditorStore(value, slugCase))
 
   // value → store (external change), store → onChange (internal change), no echo
@@ -136,13 +141,14 @@ export function SchemaEditorRoot({
   )
 
   const ctx = React.useMemo(
-    () => ({ store, variant: resolved, zones }),
+    () => ({ store, variant: resolved, root: ref }),
     [store, resolved]
   )
 
   return (
     <EditorContext.Provider value={ctx}>
       <div
+        ref={ref}
         data-slot="schema-editor"
         data-variant={resolved}
         className={cn(

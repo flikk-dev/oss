@@ -10,6 +10,8 @@
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 0.875rem;
   /* schema-editor: one accent per JSON type */
+  /* schema-editor: fill behind a group's child rows */
+  --color-group: var(--group);
   --color-type-string: var(--type-string);
   --color-type-number: var(--type-number);
   --color-type-integer: var(--type-integer);
@@ -88,6 +90,7 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
+  --group: oklch(0.965 0 0);
   --type-string: oklch(0.546 0.245 262.881);
   --type-number: oklch(0.666 0.179 58.318);
   --type-integer: oklch(0.6 0.118 184.704);
@@ -133,6 +136,7 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+  --group: oklch(0.19 0 0);
   --type-string: oklch(0.707 0.165 254.624);
   --type-number: oklch(0.828 0.189 84.429);
   --type-integer: oklch(0.777 0.152 181.912);

@@ -1,14 +1,8 @@
 "use client"
 
 import * as React from "react"
-import {
-  animate,
-  motion,
-  Reorder,
-  useDragControls,
-  useMotionValue,
-  useTransform,
-} from "motion/react"
+import { createPortal } from "react-dom"
+import { animate, motion, useDragControls, useMotionValue } from "motion/react"
 import { cn } from "cn"
 import {
   BracketsIcon,
@@ -49,15 +43,17 @@ import {
 } from "./menu"
 import {
   FieldProvider,
+  ListProvider,
   useEditorCtx,
   useEditorStore,
   useField,
   useList,
   useVariant,
 } from "./root"
-import { isDescendant } from "./store"
+import { ROOT } from "./store"
 
-const INTERACTIVE = "input, textarea, button, a, [role=button]"
+const BUTTONS = "button, a, [data-slot=grip]"
+const FIELDS = "input, textarea"
 
 const DragControlsContext = React.createContext<ReturnType<
   typeof useDragControls
@@ -481,22 +477,25 @@ export function Header({ className }: { className?: string }) {
   return (
     <div
       data-slot="header"
-      onClick={
-        mobile
-          ? (e) => {
-              // a tap opens the editor; not the release of a drag
-              if (
-                !e.currentTarget
-                  .closest("[data-slot=row]")
-                  ?.hasAttribute("data-dragging")
-              )
-                openSheet(node.id)
-            }
-          : undefined
-      }
-      // press and drag from anywhere on the header except inputs / buttons
+      /**
+       * Press and drag from anywhere on the header: buttons excluded, an
+       * unfocused input drags too (a click without movement focuses it below).
+       */
       onPointerDown={(e) => {
-        if (!(e.target as HTMLElement).closest(INTERACTIVE)) controls?.start(e)
+        const t = e.target as HTMLElement
+        if (t.closest(BUTTONS)) return
+        const field = t.closest<HTMLElement>(FIELDS)
+        if (field && field === document.activeElement) return
+        if (field) e.preventDefault()
+        controls?.start(e)
+      }}
+      onClick={(e) => {
+        const dragged = e.currentTarget
+          .closest("[data-slot=row]")
+          ?.hasAttribute("data-dragging")
+        if (dragged) return
+        if (mobile) return openSheet(node.id)
+        ;(e.target as HTMLElement).closest<HTMLElement>(FIELDS)?.focus()
       }}
       className={cn(
         "group/header flex items-start gap-1.5 px-3 py-2",
@@ -534,27 +533,19 @@ export function Header({ className }: { className?: string }) {
 
 /** children frame of an object / oneOf row; registers as a drop zone */
 export function Group({ className }: { className?: string }) {
-  const { zones } = useEditorCtx()
   const { node, depth } = useField()
   const count = useEditorStore((s) => s.children[node.id]?.length ?? 0)
-  const ref = React.useRef<HTMLDivElement>(null)
-
-  // drop zone = the whole group row (header + children), so hovering anywhere over it targets it
-  React.useEffect(() => {
-    const el = ref.current?.closest<HTMLElement>("[data-slot=row]")
-    if (!el || !isGroupType(node.type)) return
-    const map = zones.current
-    map.set(node.id, el)
-    return () => void map.delete(node.id)
-  }, [zones, node.id, node.type])
-
   if (!isGroupType(node.type)) return null
   const alternatives = node.type === "oneOf"
   return (
     <div
-      ref={ref}
       data-slot="group"
-      className={cn("flex min-w-0 flex-col border-t border-border", className)}
+      data-group={node.id}
+      className={cn(
+        "flex min-w-0 flex-col border-t border-border bg-group p-1.5",
+        "group-data-[variant=compact]/editor:p-1 group-data-[variant=wide]/editor:p-2",
+        className
+      )}
     >
       {node.collapsed ? (
         <div className="px-3 py-1 text-2xs text-muted-foreground">
@@ -575,22 +566,96 @@ export function Group({ className }: { className?: string }) {
 
 /* ---------------------------------- row ---------------------------------- */
 
-/** innermost group frame under a point, skipping own subtree */
-function zoneUnder(
-  zones: Map<string, HTMLElement>,
+const inside = (r: DOMRect, x: number, y: number) =>
+  x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
+
+/**
+ * Where a row dragged to (x, y) lands, any depth. Walk every row in document
+ * order (= visual order); the first whose header centre is below the pointer
+ * is the row we insert before. If the pointer is still inside a group frame
+ * whose rows are all above it (its padding / add-field area), append there.
+ */
+function resolveDrop(
+  root: HTMLElement,
+  self: HTMLElement,
   x: number,
-  y: number,
-  skip: (id: string) => boolean
+  y: number
 ) {
-  let best: { id: string; area: number } | null = null
-  for (const [id, el] of zones) {
-    if (skip(id)) continue
-    const r = el.getBoundingClientRect()
-    if (x < r.left || x > r.right || y < r.top || y > r.bottom) continue
-    const area = r.width * r.height
-    if (!best || area < best.area) best = { id, area }
+  const live = (el: Element) =>
+    !self.contains(el) && !el.closest("[data-ghost]")
+  const rows = Array.from(
+    root.querySelectorAll<HTMLElement>("[data-slot=row]")
+  ).filter(live)
+  const before = rows.find((r) => {
+    const h = r.querySelector("[data-slot=header]")!.getBoundingClientRect()
+    return y < h.top + h.height / 2
+  })
+  let frame: HTMLElement | null = null
+  for (const f of root.querySelectorAll<HTMLElement>("[data-slot=group]")) {
+    if (!live(f) || !inside(f.getBoundingClientRect(), x, y)) continue
+    if (!frame || frame.contains(f)) frame = f
   }
-  return best?.id ?? null
+  if (frame && !(before && frame.contains(before)))
+    return { parentId: frame.dataset.group!, beforeId: null }
+  return {
+    parentId: before?.dataset.parent ?? ROOT,
+    beforeId: before?.dataset.id ?? null,
+  }
+}
+
+/** the card: header + children; `children` is extra content (e.g. the "or" seam). Shared by the row and its ghost. */
+function Card({
+  children,
+  className,
+}: {
+  children?: React.ReactNode
+  className?: string
+}) {
+  const mobile = useVariant() === "mobile"
+  const { node } = useField()
+  const swipeX = useMotionValue(0)
+  const SWIPE = 88
+  return (
+    <div
+      data-slot="card"
+      className={cn(
+        "relative flex min-w-0 flex-col rounded-md border bg-background",
+        isGroupType(node.type)
+          ? "border-border"
+          : "border-transparent has-[>[data-slot=header]:hover]:border-border",
+        className
+      )}
+    >
+      {children}
+      {mobile ? (
+        // swipe wrapper holds only the header, so a dragged row is never clipped by an ancestor
+        <div className="relative overflow-hidden rounded-md">
+          <Actions className="absolute inset-y-0 right-0 items-start px-2 py-1 opacity-100" />
+          <motion.div
+            drag="x"
+            dragDirectionLock
+            dragConstraints={{ left: -SWIPE, right: 0 }}
+            dragElastic={0.05}
+            style={{ x: swipeX }}
+            onDragEnd={(_, info) => {
+              const open = info.offset.x < -SWIPE / 2 || info.velocity.x < -200
+              animate(swipeX, open ? -SWIPE : 0, {
+                type: "spring",
+                stiffness: 500,
+                damping: 40,
+              })
+            }}
+            className="relative z-10 flex min-w-0 flex-col bg-background"
+          >
+            <Header />
+          </motion.div>
+        </div>
+      ) : (
+        <Header />
+      )}
+      <Group />
+    </div>
+  )
 }
 
 export function Row({
@@ -602,19 +667,18 @@ export function Row({
   className?: string
   children?: React.ReactNode
 }) {
-  const { store, zones } = useEditorCtx()
+  const { store, root } = useEditorCtx()
   const list = useList()
   const mobile = useVariant() === "mobile"
   const controls = useDragControls()
   const ref = React.useRef<HTMLDivElement>(null)
-  // swipe-to-reveal actions (mobile)
-  const swipeX = useMotionValue(0)
-  // own x/y so the skeleton can counter-translate back to the slot
-  const x = useMotionValue(0)
-  const y = useMotionValue(0)
-  const backX = useTransform(x, (v) => -v)
-  const backY = useTransform(y, (v) => -v)
-  const SWIPE = 88
+  const ghostRef = React.useRef<HTMLDivElement>(null)
+  const grab = React.useRef({ x: 0, y: 0, w: 0, h: 0 })
+  const began = React.useRef(false)
+  const dir = React.useRef<"x" | "y" | null>(null)
+  const [dragging, setDragging] = React.useState(false)
+  // bumped on settle: remounts the element so it appears in the slot with no "from" position to animate
+  const [gen, setGen] = React.useState(0)
   const node = useEditorStore((s) => s.byId[id])
   const taken = useEditorStore(
     useShallow((s) =>
@@ -624,151 +688,111 @@ export function Row({
     )
   )
   const takenSet = React.useMemo(() => new Set(taken), [taken])
-
-  const skip = (zid: string) =>
-    zid === id ||
-    zid === list.parentId ||
-    isDescendant(store.getState(), id, zid)
-  const outside = (r: DOMRect | undefined, x: number, y: number) =>
-    !!r && (x < r.left || x > r.right || y < r.top || y > r.bottom)
-  /**
-   * Paint straight on the DOM — state would re-render the list mid-drag.
-   *  - over:    group row the pointer is on → "drop into" outline
-   *  - popout:  own parent group, pointer left it → dashed slot after the group
-   *  - target:  on the dragged row while either is active → hides its own slot skeleton
-   */
-  const paint = (x: number, y: number) => {
-    const target = zoneUnder(zones.current, x, y, skip)
-    const parent = zones.current.get(list.parentId)
-    const popout = !target && outside(parent?.getBoundingClientRect(), x, y)
-    for (const [zid, el] of zones.current) {
-      el.dataset.over = String(zid === target)
-      el.toggleAttribute("data-popout", popout && el === parent)
-    }
-    ref.current?.toggleAttribute("data-target", !!target || popout)
-    return { target, popout }
-  }
-  const onDragEnd = (x: number, y: number) => {
-    const { target, popout } = paint(x, y)
-    for (const el of zones.current.values()) {
-      el.dataset.over = "false"
-      el.removeAttribute("data-popout")
-    }
-    if (target) store.getState().moveInto(id, target)
-    else if (popout) store.getState().popOut(id)
+  const field = {
+    id,
+    parentId: list.parentId,
+    depth: list.depth,
+    taken: takenSet,
   }
 
-  const group = isGroupType(node.type)
+  const place = (px: number, py: number) => {
+    const el = ref.current
+    if (!el || !root.current) return null
+    const x = px - window.scrollX
+    const y = py - window.scrollY
+    const g = ghostRef.current
+    if (g)
+      g.style.transform = `translate(${x - grab.current.x}px, ${y - grab.current.y}px)`
+    const { parentId, beforeId } = resolveDrop(root.current, el, x, y)
+    const siblings = store.getState().children[parentId].filter((s) => s !== id)
+    const index = beforeId ? siblings.indexOf(beforeId) : siblings.length
+    store.getState().setDrop({ id, parentId, index, height: grab.current.h })
+    return { parentId, index }
+  }
+
+  if (list.ghost)
+    return (
+      <FieldProvider value={field}>
+        <Card>{children}</Card>
+      </FieldProvider>
+    )
 
   return (
-    <FieldProvider
-      value={{
-        id,
-        parentId: list.parentId,
-        depth: list.depth,
-        taken: takenSet,
-      }}
-    >
+    <FieldProvider value={field}>
       <DragControlsContext.Provider value={controls}>
-        <Reorder.Item
+        <motion.div
+          key={gen}
           ref={ref}
-          as="div"
-          value={id}
-          layout="position"
+          // y only: leaves motion's x lock to the mobile swipe layer; the ghost follows the pointer on both axes anyway
+          drag="y"
           dragListener={false}
           dragControls={controls}
-          whileDrag={{ opacity: 0.9 }}
-          style={{ x, y }}
-          onDragStart={() => {
-            const el = ref.current
-            if (!el) return
-            el.setAttribute("data-dragging", "")
-            document.body.style.userSelect = "none"
-            // pop-out placeholder takes the dragged row's height
-            zones.current
-              .get(list.parentId)
-              ?.style.setProperty("--drag-h", `${el.offsetHeight}px`)
+          dragSnapToOrigin
+          dragMomentum={false}
+          dragElastic={0}
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragDirectionLock={mobile}
+          layout="position"
+          onDirectionLock={(axis) => (dir.current = axis)}
+          onDrag={(_, info) => {
+            // mobile: a horizontal gesture is a swipe, not a drag
+            if (mobile && dir.current !== "y") return
+            if (!began.current) {
+              began.current = true
+              const r = ref.current!.getBoundingClientRect()
+              grab.current = {
+                x: info.point.x - window.scrollX - r.left,
+                y: info.point.y - window.scrollY - r.top,
+                w: r.width,
+                h: r.height,
+              }
+              document.body.style.userSelect = "none"
+              setDragging(true)
+            }
+            place(info.point.x, info.point.y)
           }}
-          onDrag={(_, info) => paint(info.point.x, info.point.y)}
           onDragEnd={(_, info) => {
-            requestAnimationFrame(() =>
-              ref.current?.removeAttribute("data-dragging")
-            )
+            dir.current = null
+            if (!began.current) return
+            began.current = false
+            const at = place(info.point.x, info.point.y)
             document.body.style.userSelect = ""
-            onDragEnd(info.point.x, info.point.y)
+            setDragging(false)
+            setGen((g) => g + 1)
+            store.getState().setDrop(null)
+            if (at) store.getState().move(id, at.parentId, at.index)
           }}
-          exit={{ opacity: 0, x: -12, transition: { duration: 0.15 } }}
           data-slot="row"
+          data-id={id}
+          data-parent={list.parentId}
           data-type={node.type}
           data-depth={list.depth}
           className={cn(
-            // isolate: a card's z-10 stays inside its row, so the dragging row (z-1 from Reorder) is above every sibling's children
-            "relative isolate flex min-w-0 flex-col",
-            // pop-out placeholder: dashed slot right after this group, above later siblings
-            "data-popout:z-20 data-popout:after:pointer-events-none data-popout:after:absolute data-popout:after:inset-x-0 data-popout:after:top-[calc(100%+0.375rem)] data-popout:after:h-(--drag-h) data-popout:after:rounded-md data-popout:after:border-2 data-popout:after:border-dashed data-popout:after:border-primary/40 data-popout:after:bg-primary/5 data-popout:after:content-['']",
+            "relative flex min-w-0 flex-col",
+            // collapsed, not display:none: motion keeps a sane layout snapshot, so no fly-in on settle
+            dragging &&
+              "invisible [margin-top:calc(var(--row-gap)*-1)] h-0 overflow-hidden",
             className
           )}
         >
-          {/* skeleton at the drop slot: item is translated, this translates back */}
-          <motion.div
-            aria-hidden
-            style={{ x: backX, y: backY }}
-            className="pointer-events-none absolute inset-0 hidden rounded-md border-2 border-dashed border-primary/40 bg-primary/5 [[data-dragging]:not([data-target])>&]:block"
-          />
-          {/* the card; positioned so it paints above the skeleton */}
-          <div
-            data-slot="card"
-            className={cn(
-              "relative z-10 flex min-w-0 flex-col rounded-md border bg-background",
-              "[[data-over=true]>&]:bg-primary/5 [[data-over=true]>&]:outline-2 [[data-over=true]>&]:outline-offset-2 [[data-over=true]>&]:outline-primary/50 [[data-over=true]>&]:outline-dashed",
-              group
-                ? "border-border"
-                : "border-transparent has-[>[data-slot=header]:hover]:border-border",
-              mobile && "overflow-hidden"
-            )}
-          >
-            {mobile ? (
-              <>
-                <Actions className="absolute inset-y-0 right-0 items-start px-2 py-1 opacity-100" />
-                <motion.div
-                  drag="x"
-                  dragDirectionLock
-                  dragConstraints={{ left: -SWIPE, right: 0 }}
-                  dragElastic={0.05}
-                  style={{ x: swipeX }}
-                  onDragEnd={(_, info) => {
-                    const open =
-                      info.offset.x < -SWIPE / 2 || info.velocity.x < -200
-                    animate(swipeX, open ? -SWIPE : 0, {
-                      type: "spring",
-                      stiffness: 500,
-                      damping: 40,
-                    })
-                  }}
-                  className="relative z-10 flex min-w-0 flex-col bg-background"
-                >
-                  {children ?? (
-                    <>
-                      <Header />
-                      <Group />
-                    </>
-                  )}
-                </motion.div>
-              </>
-            ) : (
-              (children ?? (
-                <>
-                  <Header />
-                  <Group />
-                </>
-              ))
-            )}
-          </div>
-          {/* sibling of Header: React events bubble through portals, so a click
-              inside the sheet must not reach the header's open handler */}
-          {mobile && <FieldSheet />}
-        </Reorder.Item>
+          <Card>{children}</Card>
+        </motion.div>
       </DragControlsContext.Provider>
+      {dragging &&
+        createPortal(
+          <div
+            ref={ghostRef}
+            data-ghost
+            aria-hidden
+            style={{ width: grab.current.w }}
+            className="pointer-events-none fixed top-0 left-0 z-50 opacity-90 shadow-lg"
+          >
+            <ListProvider value={{ ...list, ghost: true }}>
+              <Row id={id}>{children}</Row>
+            </ListProvider>
+          </div>,
+          document.body
+        )}
     </FieldProvider>
   )
 }
