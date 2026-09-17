@@ -353,6 +353,51 @@ describe("overrides", () => {
 /* -------------------------------- selection ------------------------------ */
 
 describe("selection + toolbar", () => {
+  test("MoveInto lists groups, moves the selection into the pick", async () => {
+    const schema = createJsonSchema(user)
+    render(
+      <Schema.Root store={schema}>
+        <Schema.Toolbar>
+          <SchemaAction.MoveInto />
+        </Schema.Toolbar>
+        <Schema.List
+          render={(n) => (
+            <SchemaField.Row>
+              <SchemaField.Select />
+              <SchemaField.Title />
+              {n.isGroup && <SchemaField.Nested />}
+            </SchemaField.Row>
+          )}
+        />
+      </Schema.Root>
+    )
+    await userEvent.click(within(row(titleOf("ID"))).getByRole("checkbox"))
+    await userEvent.click(within(row(titleOf("Name"))).getByRole("checkbox"))
+    await userEvent.click(screen.getByRole("button", { name: /move into/i }))
+    const menu = await screen.findByRole("menu")
+    // top level + the one other group; selected rows and leaves are not targets
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((i) => i.textContent)
+    ).toEqual(["Top level", "Address"])
+    await userEvent.click(
+      within(menu).getByRole("menuitem", { name: "Address" })
+    )
+    const json = schema.toJSON() as any
+    expect(Object.keys(json.properties)).toEqual(["address"])
+    expect(Object.keys(json.properties.address.properties)).toEqual([
+      "street",
+      "zip",
+      "id",
+      "name",
+    ])
+    expect(schema.selected()).toEqual([
+      schema.find("address.id")!,
+      schema.find("address.name")!,
+    ])
+  })
+
   test("Select in rows, bulk actions in Toolbar", async () => {
     const schema = createJsonSchema(user)
     render(

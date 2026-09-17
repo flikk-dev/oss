@@ -48,6 +48,7 @@ export const SchemaAction = {
   Duplicate: ActionParts.Duplicate,
   Remove: ActionParts.Remove,
   EditDetails: ActionParts.EditDetails,
+  MoveInto: ActionParts.MoveInto,
 }
 
 export { JsonSchemaEditor, useJsonSchema, useJsonSchemaValue } from "./presets"

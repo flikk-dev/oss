@@ -9,6 +9,7 @@ import {
   CircleDashedIcon,
   CircleSlashIcon,
   CopyIcon,
+  FolderInputIcon,
   PencilLineIcon,
   Trash2Icon,
 } from "lucide-react"
@@ -26,10 +27,19 @@ import {
   useEditor,
   useEditorStore,
   useFieldOptional,
+  useTypeModule,
   useVariant,
 } from "@/context/editor"
+import { isDescendant } from "@/store/editor"
 import { DetailFields } from "./field"
-import { MenuContext, MenuItem, menuStyle, sheetClass } from "./menu"
+import {
+  IconTile,
+  Menu,
+  MenuContext,
+  MenuItem,
+  menuStyle,
+  sheetClass,
+} from "./menu"
 
 type RenderProp = Parameters<typeof useRender>[0]["render"]
 
@@ -41,6 +51,7 @@ export type ActionProps = {
   /** replaces the element; behaviour and `data-state` are merged onto it */
   render?: RenderProp
   className?: string
+  ref?: React.Ref<HTMLButtonElement>
 }
 
 /**
@@ -59,6 +70,8 @@ export function ActionPrimitive({
   onClick,
   render,
   className,
+  ref,
+  ...rest
 }: ActionProps & {
   icon: React.ComponentType<{ className?: string }>
   label: string
@@ -69,6 +82,8 @@ export function ActionPrimitive({
   /** menu stays open after click (toggles) */
   keepOpen?: boolean
 }) {
+  // `rest` is what a popup trigger merges in (aria-haspopup, data-popup-open…)
+  const pass = { ref, ...(rest as object) }
   const scope = useActionScope()
   const variant = useVariant()
   const menu = React.useContext(MenuContext)
@@ -100,6 +115,7 @@ export function ActionPrimitive({
       onClick: handle,
       className,
       ...stateProps,
+      ...pass,
     },
   })
   if (render) return custom
@@ -111,6 +127,7 @@ export function ActionPrimitive({
         onClick={handle}
         className={className}
         {...stateProps}
+        {...pass}
       >
         <Icon
           className={cn(
@@ -143,6 +160,7 @@ export function ActionPrimitive({
         onClick={handle}
         className={cn(destructive && "text-destructive", className)}
         {...stateProps}
+        {...pass}
       >
         <Icon /> {text}
       </Button>
@@ -161,7 +179,6 @@ export function ActionPrimitive({
       aria-label={name}
       title={name}
       onClick={handle}
-
       className={cn(
         size,
         "text-muted-foreground",
@@ -169,6 +186,7 @@ export function ActionPrimitive({
         className
       )}
       {...stateProps}
+      {...pass}
     >
       <Icon />
     </Button>
@@ -263,6 +281,80 @@ export function Remove(props: ActionProps) {
       run={() => store.getState().remove(ids)}
       {...props}
     />
+  )
+}
+
+/**
+ * Moves the targets to the end of a picked group. Targets, their subtrees and
+ * leaves are not offered. Bulk-only by design, but works in a row too.
+ */
+export function MoveInto({
+  topLabel = "Top level",
+  ...props
+}: ActionProps & { topLabel?: string }) {
+  const { store, types } = useEditor()
+  const ids = useActionTargets()
+  const groups = useEditorStore(
+    useShallow((s) =>
+      Object.keys(s.byId).filter(
+        (id) =>
+          s.byId[id].isGroup &&
+          !ids.includes(id) &&
+          !ids.some((x) => isDescendant(s, x, id))
+      )
+    )
+  )
+  const s = store.getState()
+  const label = (id: string) =>
+    id === s.root ? topLabel : s.byId[id].title || s.byId[id].key
+  return (
+    <Menu
+      title="Move into"
+      trigger={
+        <ActionPrimitive
+          icon={FolderInputIcon}
+          label="Move into"
+          run={() => {}}
+          {...props}
+        />
+      }
+    >
+      {groups.map((id) => (
+        <MoveTarget
+          key={id}
+          id={id}
+          label={label(id)}
+          onPick={() => {
+            for (const x of ids)
+              store.getState().move(x, id, store.getState().children[id].length)
+          }}
+        />
+      ))}
+    </Menu>
+  )
+}
+
+function MoveTarget({
+  id,
+  label,
+  onPick,
+}: {
+  id: string
+  label: string
+  onPick: () => void
+}) {
+  const mod = useTypeModule(useEditorStore((s) => s.byId[id].type))
+  const menu = React.useContext(MenuContext)
+  return (
+    <MenuItem
+      onClick={() => {
+        onPick()
+        menu?.close()
+      }}
+    >
+      <IconTile icon={mod.icon} color={mod.color} size="sm" />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+    </MenuItem>
   )
 }
 
