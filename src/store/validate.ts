@@ -1,4 +1,4 @@
-import { isGroupType, type FieldTree } from "./tree"
+import type { SchemaNode } from "./tree"
 
 export type Issue = {
   id: string
@@ -7,22 +7,35 @@ export type Issue = {
 }
 
 /** structural problems a consumer would refuse to save */
-export function validate(tree: FieldTree): { ok: boolean; issues: Issue[] } {
+export function validate(root: SchemaNode): { ok: boolean; issues: Issue[] } {
   const issues: Issue[] = []
-  const walk = (nodes: FieldTree) => {
+  const walk = (nodes: SchemaNode[]) => {
     const seen = new Map<string, string>()
     for (const n of nodes) {
-      if (!n.slug) issues.push({ id: n.id, code: "empty-slug", message: `"${n.title || "Untitled"}" has no key` })
-      else if (seen.has(n.slug))
-        issues.push({ id: n.id, code: "duplicate-slug", message: `key "${n.slug}" used twice` })
-      else seen.set(n.slug, n.id)
-      if (isGroupType(n.type)) {
+      if (!n.key)
+        issues.push({
+          id: n.id,
+          code: "empty-slug",
+          message: `"${n.title || "Untitled"}" has no key`,
+        })
+      else if (seen.has(n.key))
+        issues.push({
+          id: n.id,
+          code: "duplicate-slug",
+          message: `key "${n.key}" used twice`,
+        })
+      else seen.set(n.key, n.id)
+      if (n.isGroup) {
         if (!n.children?.length)
-          issues.push({ id: n.id, code: "empty-group", message: `"${n.title || n.slug}" has no fields` })
+          issues.push({
+            id: n.id,
+            code: "empty-group",
+            message: `"${n.title || n.key}" has no fields`,
+          })
         else walk(n.children)
       }
     }
   }
-  walk(tree)
+  walk(root.children ?? [])
   return { ok: issues.length === 0, issues }
 }

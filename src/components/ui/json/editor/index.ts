@@ -1,49 +1,54 @@
 /**
- * SchemaEditor — compound editor for a field tree that compiles to JSON Schema.
+ * JSON Schema editor — parts + presets.
  *
- *   <SchemaEditor value={tree} onChange={setTree} variant="compact" />
+ *   const schema = useJsonSchema(json)
+ *   <JsonSchemaEditor schema={schema} variant="compact" />
  *
- * Variants: default · compact · wide · mobile (auto on coarse pointer).
- * Compose your own rows with the parts.
+ * Or compose: <Schema.Root store={schema}><Schema.List render={row} /></Schema.Root>
+ * with SchemaField.* / SchemaAction.* inside `row`.
  */
-import { createElement } from "react"
-import { Add, List } from "./list"
-import { TypePicker } from "./menu"
-import { SchemaEditorRoot, type SchemaEditorProps } from "./root"
-import { useField, useSchemaEditor, type Variant } from "@/context/editor"
-import {
-  Actions,
-  Description,
-  Examples,
-  Group,
-  Header,
-  Row,
-  Slug,
-  Title,
-} from "./row"
+import * as SchemaParts from "./schema"
+import * as FieldParts from "./field"
+import * as ActionParts from "./action"
 
-function Root(props: SchemaEditorProps) {
-  return createElement(
-    SchemaEditorRoot,
-    props,
-    props.children ?? createElement(List)
-  )
+export const Schema = {
+  Root: SchemaParts.Root,
+  List: SchemaParts.List,
+  Skeleton: SchemaParts.Skeleton,
+  AddField: SchemaParts.AddField,
+  Toolbar: SchemaParts.Toolbar,
+  SelectAll: SchemaParts.SelectAll,
+  SelectionCount: SchemaParts.SelectionCount,
 }
 
-export const SchemaEditor = Object.assign(Root, {
-  List,
-  Row,
-  Header,
-  Group,
-  TypePicker,
-  Title,
-  Slug,
-  Description,
-  Examples,
-  Actions,
-  Add,
-})
+export const SchemaField = {
+  Row: FieldParts.Row,
+  Handle: FieldParts.Handle,
+  Select: FieldParts.Select,
+  Type: FieldParts.Type,
+  Title: FieldParts.Title,
+  Key: FieldParts.Key,
+  Description: FieldParts.Description,
+  Examples: FieldParts.Examples,
+  Optional: FieldParts.Optional,
+  Repeated: FieldParts.Repeated,
+  Nullable: FieldParts.Nullable,
+  ChildrenCount: FieldParts.ChildrenCount,
+  Extra: FieldParts.Extra,
+  Menu: FieldParts.MenuPart,
+  Nested: FieldParts.Nested,
+  NestedToggle: FieldParts.NestedToggle,
+}
 
-export { useSchemaEditor, useField }
-export type { SchemaEditorProps, Variant }
-export type { FieldTree, FieldNode, FieldMeta } from "@/store/tree"
+export const SchemaAction = {
+  Primitive: ActionParts.ActionPrimitive,
+  Optional: ActionParts.Optional,
+  Repeated: ActionParts.Repeated,
+  Nullable: ActionParts.Nullable,
+  Duplicate: ActionParts.Duplicate,
+  Remove: ActionParts.Remove,
+  EditDetails: ActionParts.EditDetails,
+}
+
+export { JsonSchemaEditor, useJsonSchema, useJsonSchemaValue } from "./presets"
+export type { Variant } from "@/context/editor"

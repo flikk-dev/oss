@@ -1,72 +1,68 @@
 import { createStore } from "zustand/vanilla"
 import { subscribeWithSelector } from "zustand/middleware"
-import { uniqueSlug, type SlugCase } from "@/store/slug"
-import {
-  isGroupType,
-  newId,
-  type FieldMeta,
-  type FieldNode,
-  type FieldTree,
-} from "@/store/tree"
-import { jsonTypeMap, type JsonTypeKey } from "@/store/types"
+import { slugify, uniqueSlug, type SlugCase } from "./slug"
+import { blankNode, newId, type NodePatch, type SchemaNode } from "./tree"
+import { defaultTypes, type TypeModule } from "./types"
 
 /**
- * Per-editor store, normalized: a row subscribes to its own node only, so a
- * keystroke re-renders one row, not the tree. `value`/`onChange` sync at the
- * boundary (root.tsx).
+ * Normalized tree: a row subscribes to its own node only, so a keystroke
+ * re-renders one row. The root is a node like any other (type object, key "").
  */
 
-export const ROOT = "__root__"
-
-export type Field = FieldMeta & { id: string }
+export type Field = Omit<SchemaNode, "children">
 
 export type EditorState = {
+  root: string
   byId: Record<string, Field>
   children: Record<string, string[]>
   parentOf: Record<string, string>
-  /** mobile: id whose detail sheet is open */
-  sheet: string | null
+  types: TypeModule[]
+  slugCase: SlugCase
+  /** ids currently selected */
+  selected: string[]
   /** live drag: where the row would land; index counts siblings without the dragged row */
   drop: { id: string; parentId: string; index: number; height: number } | null
-  slugCase: SlugCase
+  /** mobile: id whose detail sheet is open */
+  sheet: string | null
 
-  replaceTree: (tree: FieldTree) => void
-  update: (id: string, patch: Partial<FieldMeta>) => void
-  remove: (id: string) => void
-  duplicate: (id: string) => void
-  insert: (parentId: string, type: JsonTypeKey, index?: number) => string
+  replace: (root: SchemaNode) => void
+  update: (id: string, patch: NodePatch) => void
+  remove: (ids: string | string[]) => void
+  duplicate: (id: string) => string
+  insert: (parentId: string, type: string, index?: number) => string
   /** reparent + reorder in one step; index is among siblings excluding `id` */
   move: (id: string, parentId: string, index: number) => void
+  select: (ids: string[]) => void
+  toggleSelect: (id: string, on?: boolean) => void
   setDrop: (drop: EditorState["drop"]) => void
   openSheet: (id: string | null) => void
-  setSlugCase: (c: SlugCase) => void
 }
 
-export function fromTree(tree: FieldTree) {
+export function fromNode(root: SchemaNode) {
   const byId: EditorState["byId"] = {}
-  const children: EditorState["children"] = { [ROOT]: [] }
+  const children: EditorState["children"] = {}
   const parentOf: EditorState["parentOf"] = {}
-  const walk = (nodes: FieldNode[], parent: string) => {
-    children[parent] = nodes.map((n) => n.id)
-    for (const n of nodes) {
-      const { children: kids, ...meta } = n
-      byId[n.id] = meta
-      parentOf[n.id] = parent
-      if (isGroupType(n.type)) walk(kids ?? [], n.id)
+  const walk = (n: SchemaNode, parent: string | null) => {
+    const { children: kids, ...field } = n
+    byId[n.id] = field
+    if (parent) parentOf[n.id] = parent
+    if (n.isGroup) {
+      children[n.id] = (kids ?? []).map((c) => c.id)
+      for (const c of kids ?? []) walk(c, n.id)
     }
   }
-  walk(tree, ROOT)
-  return { byId, children, parentOf }
+  walk(root, null)
+  return { root: root.id, byId, children, parentOf }
 }
 
-export function toTree(
+export function toNode(
   s: Pick<EditorState, "byId" | "children">,
-  parent = ROOT
-): FieldTree {
-  return (s.children[parent] ?? []).map((id) => {
-    const n = s.byId[id]
-    return isGroupType(n.type) ? { ...n, children: toTree(s, id) } : { ...n }
-  })
+  id: string
+): SchemaNode {
+  const n = s.byId[id]
+  return n.isGroup
+    ? { ...n, children: (s.children[id] ?? []).map((c) => toNode(s, c)) }
+    : { ...n }
 }
 
 export function isDescendant(
@@ -74,22 +70,24 @@ export function isDescendant(
   ancestor: string,
   id: string
 ): boolean {
-  let p = s.parentOf[id]
-  while (p && p !== ROOT) {
+  for (let p = s.parentOf[id]; p; p = s.parentOf[p])
     if (p === ancestor) return true
-    p = s.parentOf[p]
-  }
   return false
 }
 
-export function createEditorStore(initial: FieldTree, slugCase: SlugCase) {
+export function createEditorStore(
+  root: SchemaNode,
+  types: TypeModule[] = defaultTypes,
+  slugCase: SlugCase = "camel"
+) {
   return createStore<EditorState>()(
     subscribeWithSelector((set, get) => {
-      const taken = (parent: string, except?: string) =>
+      const mod = (type: string) => get().types.find((t) => t.key === type)
+      const taken = (s: EditorState, parent: string, except?: string) =>
         new Set(
-          (get().children[parent] ?? [])
+          (s.children[parent] ?? [])
             .filter((id) => id !== except)
-            .map((id) => get().byId[id].slug)
+            .map((id) => s.byId[id].key)
         )
 
       const detach = (s: EditorState, id: string) => {
@@ -106,6 +104,9 @@ export function createEditorStore(initial: FieldTree, slugCase: SlugCase) {
         list.splice(index ?? list.length, 0, id)
         s.children[parent] = list
         s.parentOf[id] = parent
+        const n = s.byId[id]
+        const key = uniqueSlug(n.key, taken(s, parent, id), s.slugCase)
+        if (key !== n.key) s.byId[id] = { ...n, key }
       }
       const drop = (s: EditorState, id: string) => {
         for (const c of s.children[id] ?? []) drop(s, c)
@@ -123,88 +124,118 @@ export function createEditorStore(initial: FieldTree, slugCase: SlugCase) {
             parentOf: { ...prev.parentOf },
           }
           fn(s)
+          s.selected = s.selected.filter((id) => s.byId[id])
           return s
         })
 
       return {
-        ...fromTree(initial),
-        sheet: null,
-        drop: null,
+        ...fromNode(root),
+        types,
         slugCase,
+        selected: [],
+        drop: null,
+        sheet: null,
 
-        replaceTree: (tree) => set(fromTree(tree)),
+        replace: (root) =>
+          set({ ...fromNode(root), selected: [], drop: null, sheet: null }),
 
         update: (id, patch) =>
           mutate((s) => {
-            s.byId[id] = { ...s.byId[id], ...patch }
-            // becoming a group needs a child list; leaving one drops the subtree
-            if (patch.type && isGroupType(patch.type) && !s.children[id])
-              s.children[id] = []
-            if (patch.type && !isGroupType(patch.type) && s.children[id]) {
-              for (const c of s.children[id]) drop(s, c)
-              delete s.children[id]
+            const prev = s.byId[id]
+            const next = { ...prev, ...patch }
+            if (patch.title !== undefined && !next.keyEdited && id !== s.root)
+              next.key = uniqueSlug(
+                slugify(next.title, s.slugCase),
+                taken(s, s.parentOf[id], id),
+                s.slugCase
+              )
+            if (patch.key !== undefined) next.keyEdited = patch.key.length > 0
+            if (patch.type && patch.type !== prev.type) {
+              const m = mod(patch.type)
+              if (!m) return
+              next.isGroup = m.children
+              if (!m.examples) next.examples = []
+              // becoming a group needs a child list; leaving one drops the subtree
+              if (m.children && !s.children[id]) s.children[id] = []
+              if (!m.children && s.children[id]) {
+                for (const c of s.children[id]) drop(s, c)
+                delete s.children[id]
+              }
+            }
+            s.byId[id] = next
+          }),
+
+        remove: (ids) =>
+          mutate((s) => {
+            for (const id of [ids].flat()) {
+              if (id === s.root || !s.byId[id]) continue
+              detach(s, id)
+              drop(s, id)
             }
           }),
 
-        remove: (id) =>
-          mutate((s) => {
-            detach(s, id)
-            drop(s, id)
-          }),
-
-        duplicate: (id) =>
+        duplicate: (id) => {
+          const nid = newId()
           mutate((s) => {
             const parent = s.parentOf[id]
-            const clone = (x: string, into: string): string => {
-              const nid = newId()
-              s.byId[nid] = { ...s.byId[x], id: nid }
-              s.parentOf[nid] = into
+            const clone = (
+              x: string,
+              into: string,
+              forced?: string
+            ): string => {
+              const cid = forced ?? newId()
+              s.byId[cid] = { ...s.byId[x], id: cid }
+              s.parentOf[cid] = into
               if (s.children[x])
-                s.children[nid] = s.children[x].map((c) => clone(c, nid))
-              return nid
+                s.children[cid] = s.children[x].map((c) => clone(c, cid))
+              return cid
             }
-            const nid = clone(id, parent)
-            s.byId[nid].slug = uniqueSlug(
-              s.byId[nid].slug,
-              taken(parent),
-              s.slugCase
-            )
-            s.byId[nid].slugEdited = true
+            clone(id, parent, nid)
+            s.byId[nid] = { ...s.byId[nid], keyEdited: true }
             attach(s, nid, parent, s.children[parent].indexOf(id) + 1)
-          }),
-
-        insert: (parent, type, index) => {
-          const id = newId()
-          mutate((s) => {
-            const base = jsonTypeMap[type].title
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, "")
-            s.byId[id] = {
-              id,
-              type,
-              title: "",
-              slug: uniqueSlug(base || "field", taken(parent), s.slugCase),
-              slugEdited: false,
-              description: "",
-              examples: [],
-              optional: false,
-              nullable: false,
-            }
-            if (isGroupType(type)) s.children[id] = []
-            attach(s, id, parent, index)
           })
-          return id
+          return nid
+        },
+
+        insert: (parentId, type, index) => {
+          const m = mod(type)
+          if (!m) throw new Error(`unknown type "${type}"`)
+          const node = blankNode(type, m.children, {
+            key: slugify(m.label, get().slugCase) || "field",
+          })
+          mutate((s) => {
+            const { children: _c, ...field } = node
+            s.byId[node.id] = field
+            if (m.children) s.children[node.id] = []
+            attach(s, node.id, parentId, index)
+          })
+          return node.id
         },
 
         move: (id, parentId, index) => {
           const s = get()
-          if (id === parentId || isDescendant(s, id, parentId)) return
-          if (parentId !== ROOT && !s.children[parentId]) return
+          if (id === parentId || id === s.root || isDescendant(s, id, parentId))
+            return
+          if (!s.children[parentId]) return
           mutate((s) => {
             detach(s, id)
             attach(s, id, parentId, index)
           })
         },
+
+        select: (selected) => set({ selected }),
+        toggleSelect: (id, on) =>
+          set((s) => {
+            const has = s.selected.includes(id)
+            const next = on ?? !has
+            return {
+              selected: next
+                ? has
+                  ? s.selected
+                  : [...s.selected, id]
+                : s.selected.filter((x) => x !== id),
+            }
+          }),
 
         setDrop: (drop) => {
           const cur = get().drop
@@ -218,9 +249,7 @@ export function createEditorStore(initial: FieldTree, slugCase: SlugCase) {
             return
           set({ drop })
         },
-
         openSheet: (sheet) => set({ sheet }),
-        setSlugCase: (slugCase) => set({ slugCase }),
       }
     })
   )

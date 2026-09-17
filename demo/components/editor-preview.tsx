@@ -4,109 +4,152 @@ import * as React from "react"
 import { cn } from "cn"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
-  SchemaEditor,
-  type FieldNode,
-  type FieldTree,
+  JsonSchemaEditor,
+  useJsonSchema,
+  useJsonSchemaValue,
   type Variant,
 } from "@/components/ui/json/editor"
-import { toExample, toJsonSchema } from "@/store/schema"
-import { validate } from "@/store/validate"
+import {
+  fromJsonSchema,
+  toExample,
+  validate,
+  type Json,
+  type JsonSchema,
+} from "@/store"
 
-const mk = (
-  id: string,
-  type: FieldNode["type"],
-  title: string,
-  slug: string,
-  description: string,
-  examples: string[] = [],
-  extra: Partial<FieldNode> = {}
-): FieldNode => ({
-  id,
-  type,
-  title,
-  slug,
-  slugEdited: false,
-  description,
-  examples,
-  optional: false,
-  nullable: false,
-  ...extra,
-})
-
-const sample: FieldTree = [
-  mk("id", "integer", "ID", "id", "Unique numeric identifier", ["1042"]),
-  mk(
-    "name",
-    "string",
-    "Full name",
+const sample: Json = {
+  type: "object",
+  properties: {
+    id: {
+      type: "integer",
+      title: "ID",
+      description: "Unique numeric identifier",
+      examples: ["1042"],
+    },
+    fullName: {
+      type: "string",
+      title: "Full name",
+      description: "Display name shown in the app",
+      examples: ["Ada Lovelace"],
+    },
+    email: {
+      type: "string",
+      format: "email",
+      title: "Email",
+      description: "Primary contact address",
+      examples: ["ada@example.com"],
+    },
+    active: {
+      type: "boolean",
+      title: "Active",
+      description: "Whether account can sign in",
+      examples: ["true"],
+    },
+    role: {
+      type: "string",
+      title: "Role",
+      description: "Permission level",
+      oneOf: [
+        { const: "admin", title: "Admin", description: "Full access" },
+        { const: "editor", title: "Editor", description: "Can change content" },
+        { const: "viewer", title: "Viewer", description: "Read only" },
+      ],
+    },
+    address: {
+      type: "object",
+      title: "Address",
+      description: "Postal address",
+      properties: {
+        street: {
+          type: "string",
+          title: "Street",
+          examples: ["12 Grimmauld Place"],
+        },
+        zip: {
+          type: "string",
+          title: "ZIP",
+          description: "Postal code",
+          examples: ["10115"],
+        },
+      },
+      required: ["street", "zip"],
+      additionalProperties: false,
+    },
+    tags: {
+      type: "array",
+      title: "Tags",
+      items: {
+        type: "string",
+        title: "Tags",
+        description: "Free-form labels",
+        examples: ["vip"],
+      },
+    },
+    contact: {
+      title: "Contact",
+      description: "How to reach them",
+      oneOf: [
+        {
+          type: "string",
+          title: "Phone",
+          description: "E.164 number",
+          examples: ["+41791234567"],
+        },
+        {
+          type: "object",
+          title: "Social",
+          description: "Network handle",
+          properties: {
+            network: {
+              type: "string",
+              title: "Network",
+              oneOf: [
+                { const: "x", title: "X" },
+                { const: "bluesky", title: "Bluesky" },
+              ],
+            },
+            username: { type: "string", title: "Username", examples: ["ada"] },
+          },
+          required: ["network", "username"],
+          additionalProperties: false,
+        },
+      ],
+    },
+    createdAt: {
+      type: "string",
+      format: "date-time",
+      title: "Created at",
+      description: "When record was created",
+      examples: ["2026-09-14T10:00:00Z"],
+    },
+  },
+  required: [
+    "id",
     "fullName",
-    "Display name shown in the app",
-    ["Ada Lovelace"]
-  ),
-  mk("email", "email", "Email", "email", "Primary contact address", [
-    "ada@example.com",
-  ]),
-  mk("active", "boolean", "Active", "active", "Whether account can sign in", [
-    "true",
-  ]),
-  mk("role", "oneOf", "Role", "role", "Permission level", [], {
-    optional: true,
-    children: [
-      mk("admin", "const", "Admin", "admin", "Full access"),
-      mk("editor", "const", "Editor", "editor", "Can change content"),
-      mk("viewer", "const", "Viewer", "viewer", "Read only"),
-    ],
-  }),
-  mk("address", "object", "Address", "address", "Postal address", [], {
-    optional: true,
-    children: [
-      mk("street", "string", "Street", "street", "", ["12 Grimmauld Place"]),
-      mk("zip", "string", "ZIP", "zip", "Postal code", ["10115"]),
-    ],
-  }),
-  mk("tags", "string", "Tags", "tags", "Free-form labels", ["vip"], {
-    optional: true,
-    isArray: true,
-  }),
-  mk("contact", "oneOf", "Contact", "contact", "How to reach them", [], {
-    children: [
-      mk("phone", "string", "Phone", "phone", "E.164 number", ["+41791234567"]),
-      mk("handle", "object", "Social", "social", "Network handle", [], {
-        children: [
-          mk("network", "oneOf", "Network", "network", "", [], {
-            children: [
-              mk("x", "const", "X", "x", ""),
-              mk("bluesky", "const", "Bluesky", "bluesky", ""),
-            ],
-          }),
-          mk("user", "string", "Username", "username", "", ["ada"]),
-        ],
-      }),
-    ],
-  }),
-  mk(
+    "email",
+    "active",
+    "address",
+    "contact",
     "createdAt",
-    "date",
-    "Created at",
-    "createdAt",
-    "When record was created",
-    ["2026-09-14T10:00:00Z"]
-  ),
-]
+  ],
+  additionalProperties: false,
+}
 
 type Shape = "off" | "schema" | "example"
 
-function ShapePanel({ tree, shape }: { tree: FieldTree; shape: Shape }) {
-  const json = React.useMemo(
+/** the one reactive consumer: opts in with useJsonSchemaValue */
+function ShapePanel({ schema, shape }: { schema: JsonSchema; shape: Shape }) {
+  const json = useJsonSchemaValue(schema)
+  const text = React.useMemo(
     () =>
       JSON.stringify(
-        shape === "schema" ? toJsonSchema(tree) : toExample(tree),
+        shape === "schema" ? json : toExample(fromJsonSchema(json)),
         null,
         2
       ),
-    [tree, shape]
+    [json, shape]
   )
-  const { issues } = React.useMemo(() => validate(tree), [tree])
+  const { issues } = React.useMemo(() => validate(fromJsonSchema(json)), [json])
   return (
     <div className="flex min-w-0 flex-col gap-2">
       {issues.length > 0 && (
@@ -117,22 +160,20 @@ function ShapePanel({ tree, shape }: { tree: FieldTree; shape: Shape }) {
         </ul>
       )}
       <pre className="max-h-[80vh] overflow-auto rounded-xl border bg-muted/40 p-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
-        {json}
+        {text}
       </pre>
     </div>
   )
 }
 
 export function EditorPreview({ variant }: { variant: Variant }) {
-  const [tree, setTree] = React.useState<FieldTree>(sample)
+  const schema = useJsonSchema(sample)
   const [shape, setShape] = React.useState<Shape>("off")
   const mobile = variant === "mobile"
 
   const editor = (
     <div className={cn("rounded-xl border bg-card", mobile ? "p-2" : "p-3")}>
-      <SchemaEditor value={tree} onChange={setTree} variant={variant}>
-        <SchemaEditor.List />
-      </SchemaEditor>
+      <JsonSchemaEditor schema={schema} variant={variant} />
     </div>
   )
 
@@ -179,7 +220,7 @@ export function EditorPreview({ variant }: { variant: Variant }) {
         ) : (
           editor
         )}
-        {shape !== "off" && <ShapePanel tree={tree} shape={shape} />}
+        {shape !== "off" && <ShapePanel schema={schema} shape={shape} />}
       </div>
     </div>
   )

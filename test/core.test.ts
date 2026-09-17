@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test"
-import { createJsonSchema, defineType, fromJsonSchema, toJsonSchema, types } from "@/store"
+import {
+  createJsonSchema,
+  defineType,
+  fromJsonSchema,
+  toJsonSchema,
+  types,
+} from "@/store"
 
 /**
  * Target behaviour for the core. Written before the implementation — every
@@ -15,9 +21,24 @@ import { createJsonSchema, defineType, fromJsonSchema, toJsonSchema, types } fro
 const user = {
   type: "object",
   properties: {
-    id: { type: "integer", title: "ID", description: "Unique numeric identifier", examples: ["1042"] },
-    fullName: { type: "string", title: "Full name", description: "Display name shown in the app", examples: ["Ada Lovelace"] },
-    email: { type: "string", format: "email", title: "Email", examples: ["ada@example.com"] },
+    id: {
+      type: "integer",
+      title: "ID",
+      description: "Unique numeric identifier",
+      examples: ["1042"],
+    },
+    fullName: {
+      type: "string",
+      title: "Full name",
+      description: "Display name shown in the app",
+      examples: ["Ada Lovelace"],
+    },
+    email: {
+      type: "string",
+      format: "email",
+      title: "Email",
+      examples: ["ada@example.com"],
+    },
     active: { type: "boolean", title: "Active", examples: ["true"] },
     role: {
       type: "string",
@@ -34,23 +55,53 @@ const user = {
       title: "Address",
       description: "Postal address",
       properties: {
-        street: { type: "string", title: "Street", examples: ["12 Grimmauld Place"] },
-        zip: { type: "string", title: "ZIP", description: "Postal code", examples: ["10115"] },
+        street: {
+          type: "string",
+          title: "Street",
+          examples: ["12 Grimmauld Place"],
+        },
+        zip: {
+          type: "string",
+          title: "ZIP",
+          description: "Postal code",
+          examples: ["10115"],
+        },
       },
       required: ["street", "zip"],
       additionalProperties: false,
     },
-    tags: { type: "array", title: "Tags", items: { type: "string", title: "Tags", description: "Free-form labels", examples: ["vip"] } },
+    tags: {
+      type: "array",
+      title: "Tags",
+      items: {
+        type: "string",
+        title: "Tags",
+        description: "Free-form labels",
+        examples: ["vip"],
+      },
+    },
     contact: {
       title: "Contact",
       description: "How to reach them",
       oneOf: [
-        { type: "string", title: "Phone", description: "E.164 number", examples: ["+41791234567"] },
+        {
+          type: "string",
+          title: "Phone",
+          description: "E.164 number",
+          examples: ["+41791234567"],
+        },
         {
           type: "object",
           title: "Social",
           properties: {
-            network: { type: "string", title: "Network", oneOf: [{ const: "x", title: "X" }, { const: "bluesky", title: "Bluesky" }] },
+            network: {
+              type: "string",
+              title: "Network",
+              oneOf: [
+                { const: "x", title: "X" },
+                { const: "bluesky", title: "Bluesky" },
+              ],
+            },
             username: { type: "string", title: "Username", examples: ["ada"] },
           },
           required: ["network", "username"],
@@ -58,7 +109,12 @@ const user = {
         },
       ],
     },
-    createdAt: { type: "string", format: "date-time", title: "Created at", examples: ["2026-09-14T10:00:00Z"] },
+    createdAt: {
+      type: "string",
+      format: "date-time",
+      title: "Created at",
+      examples: ["2026-09-14T10:00:00Z"],
+    },
   },
   required: ["id", "fullName", "email", "active", "contact", "createdAt"],
   additionalProperties: false,
@@ -70,7 +126,13 @@ const withForeignKeywords = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://flikk.dev/user.json",
   properties: {
-    name: { type: "string", title: "Name", minLength: 1, maxLength: 80, "x-ui": { widget: "big" } },
+    name: {
+      type: "string",
+      title: "Name",
+      minLength: 1,
+      maxLength: 80,
+      "x-ui": { widget: "big" },
+    },
     age: { type: "integer", title: "Age", minimum: 0 },
   },
   required: ["name", "age"],
@@ -81,7 +143,13 @@ const nullable = {
   type: "object",
   properties: {
     nick: { type: ["string", "null"], title: "Nick" },
-    home: { anyOf: [{ type: "object", title: "Home", properties: {}, additionalProperties: false }, { type: "null" }], title: "Home" },
+    home: {
+      anyOf: [
+        { type: "object", properties: {}, additionalProperties: false },
+        { type: "null" },
+      ],
+      title: "Home",
+    },
   },
   required: ["nick", "home"],
   additionalProperties: false,
@@ -95,28 +163,40 @@ describe("fromJsonSchema → toJsonSchema", () => {
   })
 
   test("unknown keywords ride along on the node and are written back", () => {
-    expect(toJsonSchema(fromJsonSchema(withForeignKeywords))).toEqual(withForeignKeywords)
+    expect(toJsonSchema(fromJsonSchema(withForeignKeywords))).toEqual(
+      withForeignKeywords
+    )
   })
 
   test("nullable primitives and nullable objects", () => {
     expect(toJsonSchema(fromJsonSchema(nullable))).toEqual(nullable)
   })
 
-  test("an empty object schema is the empty tree", () => {
-    const empty = { type: "object", properties: {}, additionalProperties: false }
-    expect(fromJsonSchema(empty)).toEqual([])
-    expect(toJsonSchema([])).toEqual(empty)
+  test("the root is an object node; an empty schema is a root with no children", () => {
+    const empty = {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    }
+    const root = fromJsonSchema(empty)
+    expect(root).toMatchObject({ type: "object", key: "", children: [] })
+    expect(toJsonSchema(root)).toEqual(empty)
   })
 })
 
 /* ---------------------------------- tree --------------------------------- */
 
 describe("tree shape", () => {
-  const tree = fromJsonSchema(user)
+  const tree = fromJsonSchema(user).children!
 
   test("property key is the node key; title and description come along", () => {
     const id = tree.find((n) => n.key === "id")!
-    expect(id).toMatchObject({ type: "integer", title: "ID", description: "Unique numeric identifier", examples: ["1042"] })
+    expect(id).toMatchObject({
+      type: "integer",
+      title: "ID",
+      description: "Unique numeric identifier",
+      examples: ["1042"],
+    })
   })
 
   test("required ↔ optional", () => {
@@ -130,7 +210,10 @@ describe("tree shape", () => {
   })
 
   test("array of X is X with repeated: true", () => {
-    expect(tree.find((n) => n.key === "tags")!).toMatchObject({ type: "string", repeated: true })
+    expect(tree.find((n) => n.key === "tags")!).toMatchObject({
+      type: "string",
+      repeated: true,
+    })
   })
 
   test("a choice of only fixed values is a choice with const children", () => {
@@ -149,8 +232,17 @@ describe("tree shape", () => {
   })
 
   test("unknown keywords land in node.extra", () => {
-    const name = fromJsonSchema(withForeignKeywords).find((n) => n.key === "name")!
-    expect(name.extra).toEqual({ minLength: 1, maxLength: 80, "x-ui": { widget: "big" } })
+    const root = fromJsonSchema(withForeignKeywords)
+    expect(root.extra).toEqual({
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://flikk.dev/user.json",
+    })
+    const name = root.children!.find((n) => n.key === "name")!
+    expect(name.extra).toEqual({
+      minLength: 1,
+      maxLength: 80,
+      "x-ui": { widget: "big" },
+    })
   })
 })
 
@@ -172,7 +264,11 @@ describe("createJsonSchema handle", () => {
   test("insert with a type creates a node keyed from the type", () => {
     const schema = createJsonSchema({ type: "object", properties: {} })
     const id = schema.insert(schema.root, "string")
-    expect(schema.get(id)).toMatchObject({ type: "string", key: "text", title: "" })
+    expect(schema.get(id)).toMatchObject({
+      type: "string",
+      key: "text",
+      title: "",
+    })
     expect(Object.keys(schema.toJSON().properties as object)).toEqual(["text"])
   })
 
@@ -188,10 +284,17 @@ describe("createJsonSchema handle", () => {
   test("a moved key that collides with a sibling is suffixed", () => {
     const schema = createJsonSchema({
       type: "object",
-      properties: { a: { type: "string" }, g: { type: "object", properties: { a: { type: "string" } } } },
+      properties: {
+        a: { type: "string" },
+        g: { type: "object", properties: { a: { type: "string" } } },
+      },
     })
     schema.move(schema.find("g.a")!, schema.root, 1)
-    expect(Object.keys(schema.toJSON().properties as object)).toEqual(["a", "a2", "g"])
+    expect(Object.keys(schema.toJSON().properties as object)).toEqual([
+      "a",
+      "a2",
+      "g",
+    ])
   })
 
   test("subscribe fires once per change with the new JSON", () => {
@@ -217,7 +320,9 @@ describe("createJsonSchema handle", () => {
     schema.select([schema.find("id")!, schema.find("email")!])
     expect(schema.selected().length).toBe(2)
     schema.removeSelected()
-    expect(Object.keys(schema.toJSON().properties as object)).not.toContain("id")
+    expect(Object.keys(schema.toJSON().properties as object)).not.toContain(
+      "id"
+    )
     expect(schema.selected()).toEqual([])
   })
 })
@@ -236,15 +341,27 @@ describe("type modules", () => {
       example: () => "abc",
       matches: (s) => s.type === "string" && typeof s.pattern === "string",
     })
-    const schema = createJsonSchema({ type: "object", properties: {} }, { types: [...Object.values(types), regex] })
+    const schema = createJsonSchema(
+      { type: "object", properties: {} },
+      { types: [...Object.values(types), regex] }
+    )
     const id = schema.insert(schema.root, "regex")
     schema.update(id, { extra: { pattern: "^[a-z]+$" } })
-    expect((schema.toJSON().properties as any).regex).toMatchObject({ type: "string", pattern: "^[a-z]+$" })
+    expect((schema.toJSON().properties as any).pattern).toMatchObject({
+      type: "string",
+      pattern: "^[a-z]+$",
+    })
   })
 
   test("parsing picks the most specific matching type", () => {
-    const tree = fromJsonSchema({ type: "object", properties: { e: { type: "string", format: "email" }, s: { type: "string" } } })
-    expect(tree.map((n) => n.type)).toEqual(["email", "string"])
+    const root = fromJsonSchema({
+      type: "object",
+      properties: {
+        e: { type: "string", format: "email" },
+        s: { type: "string" },
+      },
+    })
+    expect(root.children!.map((n) => n.type)).toEqual(["email", "string"])
   })
 
   test("groups declare what they accept", () => {

@@ -1,9 +1,17 @@
-import { describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, test } from "bun:test"
 import * as React from "react"
-import { render, screen, within } from "@testing-library/react"
+import { cleanup, render, screen, within } from "@testing-library/react"
+
+afterEach(cleanup)
 import userEvent from "@testing-library/user-event"
 import { createJsonSchema, defineType, types, type SchemaNode } from "@/store"
-import { JsonSchemaEditor, Schema, SchemaAction, SchemaField, useJsonSchema } from "@/components/ui/json/editor"
+import {
+  JsonSchemaEditor,
+  Schema,
+  SchemaAction,
+  SchemaField,
+  useJsonSchema,
+} from "@/components/ui/json/editor"
 
 /**
  * The DX contract. Each test is a composition a consumer would actually write,
@@ -18,7 +26,10 @@ const user = {
     address: {
       type: "object",
       title: "Address",
-      properties: { street: { type: "string", title: "Street" }, zip: { type: "string", title: "ZIP" } },
+      properties: {
+        street: { type: "string", title: "Street" },
+        zip: { type: "string", title: "ZIP" },
+      },
       required: ["street", "zip"],
       additionalProperties: false,
     },
@@ -41,13 +52,11 @@ describe("preset", () => {
       return <JsonSchemaEditor schema={schema} variant="default" />
     }
     render(<Owner />)
-    expect(screen.getAllByRole("textbox", { name: "Title" }).map((e) => (e as HTMLInputElement).value)).toEqual([
-      "ID",
-      "Name",
-      "Address",
-      "Street",
-      "ZIP",
-    ])
+    expect(
+      screen
+        .getAllByRole("textbox", { name: "Title" })
+        .map((e) => (e as HTMLInputElement).value)
+    ).toEqual(["ID", "Name", "Address", "Street", "ZIP"])
     await userEvent.type(titleOf("Name"), " 2")
     // the owner never re-rendered: the handle is a ref, not state
     expect(renders).toBe(1)
@@ -56,25 +65,46 @@ describe("preset", () => {
   test("the handle sees every edit", async () => {
     const schema = createJsonSchema(user)
     render(<JsonSchemaEditor schema={schema} />)
-    await userEvent.clear(titleOf("Name"))
-    await userEvent.type(titleOf("Name"), "Full name")
+    const name = titleOf("Name")
+    await userEvent.clear(name)
+    await userEvent.type(name, "Full name")
     const json = schema.toJSON() as any
-    expect(json.properties.fullName.title).toBe("Full name") // key follows title until edited by hand
+    expect(json.properties.name.title).toBe("Full name") // keys parsed from JSON stay put; only new fields follow the title
   })
 
   test("variant goes on the list; rows carry it; nested inherit", () => {
-    render(<JsonSchemaEditor schema={createJsonSchema(user)} variant="compact" />)
+    render(
+      <JsonSchemaEditor schema={createJsonSchema(user)} variant="compact" />
+    )
     expect(row(titleOf("ID")).dataset.variant).toBe("compact")
     expect(row(titleOf("Street")).dataset.variant).toBe("compact")
   })
 
   test("mobile is automatic on a coarse pointer, overridable", () => {
-    window.matchMedia = ((q: string) => ({ matches: q.includes("coarse"), addEventListener() {}, removeEventListener() {} })) as any
-    const { unmount } = render(<JsonSchemaEditor schema={createJsonSchema(user)} />)
-    expect(screen.getAllByText("ID")[0].closest("[data-slot=row]")!.getAttribute("data-variant")).toBe("mobile")
-    unmount()
-    render(<JsonSchemaEditor schema={createJsonSchema(user)} variant="wide" />)
-    expect(row(titleOf("ID")).dataset.variant).toBe("wide")
+    const real = window.matchMedia
+    window.matchMedia = ((q: string) => ({
+      matches: q.includes("coarse"),
+      addEventListener() {},
+      removeEventListener() {},
+    })) as any
+    try {
+      const { unmount } = render(
+        <JsonSchemaEditor schema={createJsonSchema(user)} />
+      )
+      expect(
+        screen
+          .getAllByText("ID")[0]
+          .closest("[data-slot=row]")!
+          .getAttribute("data-variant")
+      ).toBe("mobile")
+      unmount()
+      render(
+        <JsonSchemaEditor schema={createJsonSchema(user)} variant="wide" />
+      )
+      expect(row(titleOf("ID")).dataset.variant).toBe("wide")
+    } finally {
+      window.matchMedia = real
+    }
   })
 })
 
@@ -156,7 +186,9 @@ describe("composing parts", () => {
     )
     const name = row(titleOf("Name"))
     expect(within(name).getByText("optional")).toBeTruthy()
-    await userEvent.click(within(name).getByRole("button", { name: /optional/i }))
+    await userEvent.click(
+      within(name).getByRole("button", { name: /optional/i })
+    )
     expect(within(name).queryByText("optional")).toBeNull()
     expect((schema.toJSON() as any).required).toContain("name")
   })
@@ -165,9 +197,13 @@ describe("composing parts", () => {
     render(<JsonSchemaEditor schema={createJsonSchema(user)} />)
     const address = row(titleOf("Address"))
     expect(within(address).getByDisplayValue("Street")).toBeTruthy()
-    await userEvent.click(within(address).getByRole("button", { name: /collapse/i }))
+    await userEvent.click(
+      within(address).getByRole("button", { name: /collapse/i })
+    )
     expect(within(address).queryByDisplayValue("Street")).toBeNull()
-    expect(address.querySelector("[data-slot=nested]")!.getAttribute("data-state")).toBe("closed")
+    expect(
+      address.querySelector("[data-slot=nested]")!.getAttribute("data-state")
+    ).toBe("closed")
   })
 
   test("Handle is the only drag start when present", () => {
@@ -206,12 +242,18 @@ describe("overrides", () => {
   )
 
   test("children replace the label", () => {
-    render(withAction(<SchemaAction.Optional>Facultatif</SchemaAction.Optional>))
-    expect(within(row(titleOf("ID"))).getByRole("button", { name: "Facultatif" })).toBeTruthy()
+    render(
+      withAction(<SchemaAction.Optional>Facultatif</SchemaAction.Optional>)
+    )
+    expect(
+      within(row(titleOf("ID"))).getByRole("button", { name: "Facultatif" })
+    ).toBeTruthy()
   })
 
   test("render swaps the element and merges behaviour + state onto it", async () => {
-    render(withAction(<SchemaAction.Optional render={<button data-mine="" />} />))
+    render(
+      withAction(<SchemaAction.Optional render={<button data-mine="" />} />)
+    )
     const btn = within(row(titleOf("ID"))).getByRole("button")
     expect(btn.hasAttribute("data-mine")).toBe(true)
     expect(btn.getAttribute("data-state")).toBe("off")
@@ -229,18 +271,32 @@ describe("overrides", () => {
             <SchemaField.Row>
               <SchemaField.Title />
               <SchemaAction.Remove onClick={() => seen++} />
-              <SchemaAction.Duplicate onClick={(e) => { e.preventDefault(); seen += 10 }} />
+              <SchemaAction.Duplicate
+                onClick={(e) => {
+                  e.preventDefault()
+                  seen += 10
+                }}
+              />
             </SchemaField.Row>
           )}
         />
       </Schema.Root>
     )
-    await userEvent.click(within(row(titleOf("Name"))).getByRole("button", { name: /remove/i }))
+    await userEvent.click(
+      within(row(titleOf("Name"))).getByRole("button", { name: /remove/i })
+    )
     expect(seen).toBe(1)
-    expect(Object.keys((schema.toJSON() as any).properties)).not.toContain("name")
-    await userEvent.click(within(row(titleOf("ID"))).getByRole("button", { name: /duplicate/i }))
+    expect(Object.keys((schema.toJSON() as any).properties)).not.toContain(
+      "name"
+    )
+    await userEvent.click(
+      within(row(titleOf("ID"))).getByRole("button", { name: /duplicate/i })
+    )
     expect(seen).toBe(11)
-    expect(Object.keys((schema.toJSON() as any).properties)).toEqual(["id", "address"]) // not duplicated
+    expect(Object.keys((schema.toJSON() as any).properties)).toEqual([
+      "id",
+      "address",
+    ]) // not duplicated
   })
 
   test("render function gets state: ChildrenCount", () => {
@@ -251,19 +307,30 @@ describe("overrides", () => {
             <SchemaField.Row>
               <SchemaField.Title />
               {node.isGroup && (
-                <SchemaField.ChildrenCount render={(props, { count }) => <b {...props}>{count} champs</b>} />
+                <SchemaField.ChildrenCount
+                  render={(props, { count }) => (
+                    <b {...props}>{String(count)} champs</b>
+                  )}
+                />
               )}
             </SchemaField.Row>
           )}
         />
       </Schema.Root>
     )
-    expect(within(row(titleOf("Address"))).getByText("2 champs").tagName).toBe("B")
+    expect(within(row(titleOf("Address"))).getByText("2 champs").tagName).toBe(
+      "B"
+    )
   })
 
   test("localisation is per part, at the use site", () => {
     render(
-      <Schema.Root store={createJsonSchema({ type: "object", properties: { a: { type: "string" } } })}>
+      <Schema.Root
+        store={createJsonSchema({
+          type: "object",
+          properties: { a: { type: "string" } },
+        })}
+      >
         <Schema.List
           render={() => (
             <SchemaField.Row>
@@ -277,7 +344,9 @@ describe("overrides", () => {
     )
     expect(screen.getByPlaceholderText("Sans titre")).toBeTruthy()
     expect(screen.getByPlaceholderText("Ajouter une description")).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Ajouter un champ" })).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: "Ajouter un champ" })
+    ).toBeTruthy()
   })
 })
 
@@ -311,10 +380,16 @@ describe("selection + toolbar", () => {
     expect(toolbar.dataset.state).toBe("active")
     expect(within(toolbar).getByText("2 selected")).toBeTruthy()
     expect(row(titleOf("ID")).dataset.selected).toBe("")
-    await userEvent.click(within(toolbar).getByRole("button", { name: /optional/i }))
+    await userEvent.click(
+      within(toolbar).getByRole("button", { name: /optional/i })
+    )
     expect((schema.toJSON() as any).required).toEqual(["address"])
-    await userEvent.click(within(toolbar).getByRole("button", { name: /remove/i }))
-    expect(Object.keys((schema.toJSON() as any).properties)).toEqual(["address"])
+    await userEvent.click(
+      within(toolbar).getByRole("button", { name: /remove/i })
+    )
+    expect(Object.keys((schema.toJSON() as any).properties)).toEqual([
+      "address",
+    ])
     expect(toolbar.dataset.state).toBe("empty")
   })
 })
@@ -336,19 +411,26 @@ describe("type modules in the UI", () => {
         <input
           aria-label="Pattern"
           value={(node.extra?.pattern as string) ?? ""}
-          onChange={(e) => set({ extra: { ...node.extra, pattern: e.target.value } })}
+          onChange={(e) =>
+            set({ extra: { ...node.extra, pattern: e.target.value } })
+          }
         />
       ),
     })
     const schema = createJsonSchema(
-      { type: "object", properties: { code: { type: "string", pattern: "^[A-Z]+$" } } },
+      {
+        type: "object",
+        properties: { code: { type: "string", pattern: "^[A-Z]+$" } },
+      },
       { types: [...Object.values(types), regex] }
     )
     render(<JsonSchemaEditor schema={schema} />)
     const code = row(screen.getByDisplayValue("^[A-Z]+$"))
-    expect(within(code).getByRole("button", { name: /type: pattern/i })).toBeTruthy()
+    expect(
+      within(code).getByRole("button", { name: /type: pattern/i })
+    ).toBeTruthy()
     await userEvent.clear(within(code).getByLabelText("Pattern"))
-    await userEvent.type(within(code).getByLabelText("Pattern"), "^[a-z]+$")
+    await userEvent.type(within(code).getByLabelText("Pattern"), "^[[a-z]+$") // `[[` = literal `[` for user-event
     expect((schema.toJSON() as any).properties.code.pattern).toBe("^[a-z]+$")
   })
 })
