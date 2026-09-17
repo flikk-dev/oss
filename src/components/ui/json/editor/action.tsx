@@ -117,6 +117,8 @@ export function ActionPrimitive({
       title: name,
       onClick: handle,
       className,
+      // your children win over the element's own; none → the element's stay
+      ...(children !== undefined ? { children } : {}),
       ...stateProps,
       ...pass,
     },
@@ -198,8 +200,16 @@ export function ActionPrimitive({
 
 /* ------------------------------ row gestures ----------------------------- */
 
-/** drag handle; when mounted the row drags only from here */
-export function Drag({ className }: { className?: string }) {
+/** drag handle; when mounted the row drags only from here. `render` swaps the element, children the icon */
+export function Drag({
+  className,
+  children,
+  render,
+}: {
+  className?: string
+  children?: React.ReactNode
+  render?: RenderProp
+}) {
   const { startDrag, setHasHandle } = useField()
   const v = useVariant()
   React.useEffect(() => {
@@ -212,41 +222,69 @@ export function Drag({ className }: { className?: string }) {
     wide: "h-7 w-5",
     mobile: "h-6 w-5",
   }[v]
-  return (
-    <div
-      data-slot="drag"
-      role="button"
-      aria-label="Drag to reorder"
-      tabIndex={-1}
-      onPointerDown={(e) => startDrag(e)}
-      className={cn(
-        "flex shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground active:cursor-grabbing",
-        size,
-        className
-      )}
-    >
-      <GripVerticalIcon className="size-3" />
-    </div>
-  )
+  return useRender({
+    render,
+    defaultTagName: "div",
+    props: {
+      "data-slot": "drag",
+      role: "button",
+      "aria-label": "Drag to reorder",
+      tabIndex: -1,
+      onPointerDown: (e: React.PointerEvent) => startDrag(e),
+      children: children ?? <GripVerticalIcon className="size-3" />,
+      className: render
+        ? cn("cursor-grab touch-none active:cursor-grabbing", className)
+        : cn(
+            "flex shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground active:cursor-grabbing",
+            size,
+            className
+          ),
+    },
+  })
 }
 
-/** selection checkbox; shift-click extends in document order */
-export function Select({ className }: { className?: string }) {
+/**
+ * Selection checkbox; shift-click extends in document order. `render` takes a
+ * Base UI style checkbox (`checked` / `onCheckedChange`), e.g. shadcn <Checkbox />.
+ */
+export function Select({
+  className,
+  render,
+}: {
+  className?: string
+  render?: RenderProp
+}) {
   const { id } = useField()
   const { store } = useEditor()
   const on = useEditorStore((s) => s.selected.includes(id))
+  const pick = (checked: boolean, e: Event | React.SyntheticEvent) => {
+    // React's checkbox onChange is backed by the click event → modifiers are there
+    const shift = ((e as React.SyntheticEvent).nativeEvent ?? e) as MouseEvent
+    if (shift.shiftKey) store.getState().selectRange(id)
+    else store.getState().toggleSelect(id, checked)
+  }
+  const custom = useRender({
+    render,
+    enabled: !!render,
+    defaultTagName: "input",
+    props: {
+      "data-slot": "select",
+      "aria-label": "Select field",
+      checked: on,
+      onCheckedChange: (checked: boolean, e: { event: Event }) =>
+        pick(checked, e.event),
+      onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+      className,
+    },
+  })
+  if (render) return custom
   return (
     <input
       data-slot="select"
       type="checkbox"
       aria-label="Select field"
       checked={on}
-      onChange={(e) => {
-        // React's checkbox onChange is backed by the click event → modifiers are there
-        const shift = (e.nativeEvent as MouseEvent).shiftKey
-        if (shift) store.getState().selectRange(id)
-        else store.getState().toggleSelect(id, e.target.checked)
-      }}
+      onChange={(e) => pick(e.target.checked, e)}
       onPointerDown={(e) => e.stopPropagation()}
       className={cn("size-3.5 shrink-0 accent-primary", className)}
     />

@@ -21,7 +21,7 @@ import {
   useVariant,
   type Variant,
 } from "@/context/editor"
-import { Editable, type EditableProps } from "./editable"
+import { Editable, type EditableProps, type RenderProp } from "./editable"
 import { IconTile, Menu, TypeMenu } from "./menu"
 
 type Size = Record<Variant, string>
@@ -51,7 +51,9 @@ const tile: Record<Variant, "xs" | "sm" | "md" | "lg"> = {
 }
 
 type Part = { className?: string }
-type Field = Part & Pick<EditableProps, "placeholder" | "readOnly">
+/** `render` swaps the element for yours (Base UI style); behaviour is merged in, our styling is not */
+type Rendered = Part & { render?: RenderProp }
+type Field = Rendered & Pick<EditableProps, "placeholder" | "readOnly">
 
 /* --------------------------------- text ---------------------------------- */
 
@@ -59,6 +61,7 @@ export function Title({
   className,
   placeholder = "Untitled",
   readOnly,
+  render,
 }: Field) {
   const { node, set } = useField()
   const v = useVariant()
@@ -67,15 +70,23 @@ export function Title({
       data-slot="title"
       aria-label="Title"
       readOnly={readOnly}
+      render={render}
       value={node.title}
       onChange={(title) => set({ title })}
       placeholder={placeholder}
-      className={cn("truncate text-foreground", text[v], className)}
+      className={
+        render ? className : cn("truncate text-foreground", text[v], className)
+      }
     />
   )
 }
 
-export function Key({ className, placeholder = "key", readOnly }: Field) {
+export function Key({
+  className,
+  placeholder = "key",
+  readOnly,
+  render,
+}: Field) {
   const { node, set, id } = useField()
   const v = useVariant()
   const { store } = useEditor()
@@ -86,6 +97,39 @@ export function Key({ className, placeholder = "key", readOnly }: Field) {
       siblings.some((x) => x !== id && s.byId[x].key === node.key)
     )
   })
+  const conflictTitle = conflict
+    ? `"${node.key}" already used by a sibling`
+    : undefined
+  const input = (
+    <Editable
+      aria-label="Key"
+      readOnly={readOnly}
+      render={render}
+      value={node.key}
+      onChange={(key) => set({ key })}
+      onCommit={(key) => {
+        // conflicts are marked live; on commit, resolve by suffix
+        const s = store.getState()
+        const taken = new Set(
+          (s.children[s.parentOf[id]] ?? [])
+            .filter((x) => x !== id)
+            .map((x) => s.byId[x].key)
+        )
+        if (taken.has(key)) set({ key: uniqueSlug(key, taken, s.slugCase) })
+      }}
+      placeholder={placeholder}
+      {...(render
+        ? {
+            "data-slot": "key",
+            className,
+            title: conflictTitle,
+            "aria-invalid": conflict || undefined,
+          }
+        : {})}
+    />
+  )
+  // your element stands alone; ours gets the "@" prefix and the conflict tint
+  if (render) return input
   return (
     <span
       data-slot="key"
@@ -95,27 +139,11 @@ export function Key({ className, placeholder = "key", readOnly }: Field) {
         conflict && "text-destructive [&_input]:text-destructive",
         className
       )}
-      title={conflict ? `"${node.key}" already used by a sibling` : undefined}
+      title={conflictTitle}
       aria-invalid={conflict || undefined}
     >
       <span className="select-none">@</span>
-      <Editable
-        aria-label="Key"
-        readOnly={readOnly}
-        value={node.key}
-        onChange={(key) => set({ key })}
-        onCommit={(key) => {
-          // conflicts are marked live; on commit, resolve by suffix
-          const s = store.getState()
-          const taken = new Set(
-            (s.children[s.parentOf[id]] ?? [])
-              .filter((x) => x !== id)
-              .map((x) => s.byId[x].key)
-          )
-          if (taken.has(key)) set({ key: uniqueSlug(key, taken, s.slugCase) })
-        }}
-        placeholder={placeholder}
-      />
+      {input}
     </span>
   )
 }
@@ -125,6 +153,7 @@ export function Description({
   placeholder = "Add description",
   readOnly,
   multiline,
+  render,
 }: Field & { multiline?: boolean }) {
   const { node, set } = useField()
   const v = useVariant()
@@ -134,14 +163,15 @@ export function Description({
       aria-label="Description"
       readOnly={readOnly}
       multiline={multiline}
+      render={render}
       value={node.description}
       onChange={(description) => set({ description })}
       placeholder={placeholder}
-      className={cn(
-        "min-w-0 self-start text-muted-foreground",
-        small[v],
-        className
-      )}
+      className={
+        render
+          ? className
+          : cn("min-w-0 self-start text-muted-foreground", small[v], className)
+      }
     />
   )
 }
@@ -151,6 +181,7 @@ export function Examples({
   className,
   placeholder = "Add examples",
   readOnly,
+  render,
 }: Field) {
   const { node, set } = useField()
   const v = useVariant()
@@ -164,6 +195,7 @@ export function Examples({
       data-slot="examples"
       aria-label="Examples"
       readOnly={readOnly}
+      render={render}
       value={draft}
       onChange={setDraft}
       onCommit={(s) =>
@@ -175,11 +207,15 @@ export function Examples({
         })
       }
       placeholder={placeholder}
-      className={cn(
-        "min-w-0 self-start text-muted-foreground/70",
-        small[v],
-        className
-      )}
+      className={
+        render
+          ? className
+          : cn(
+              "min-w-0 self-start text-muted-foreground/70",
+              small[v],
+              className
+            )
+      }
     />
   )
 }
@@ -215,51 +251,64 @@ export function DetailFields({
 
 /* -------------------------------- badges --------------------------------- */
 
-function Badge({ className, children, ...rest }: React.ComponentProps<"span">) {
+type BadgeProps = Rendered & { children?: React.ReactNode; title?: string }
+
+/** flag badge; `render` swaps the element (shadcn <Badge />), children the text */
+function Badge({
+  on,
+  slot,
+  label,
+  className,
+  children,
+  title,
+  render,
+}: BadgeProps & { on: boolean; slot: string; label: string }) {
   const v = useVariant()
+  return useRender({
+    render,
+    enabled: on,
+    defaultTagName: "span",
+    props: {
+      "data-slot": slot,
+      title,
+      children: children ?? label,
+      className: render
+        ? className
+        : cn(
+            "shrink-0 rounded bg-muted px-1 text-muted-foreground",
+            tiny[v],
+            className
+          ),
+    },
+  })
+}
+
+export function Optional(props: BadgeProps) {
+  const { node } = useField()
   return (
-    <span
-      {...rest}
-      className={cn(
-        "shrink-0 rounded bg-muted px-1 text-muted-foreground",
-        tiny[v],
-        className
-      )}
-    >
-      {children}
-    </span>
+    <Badge on={node.optional} slot="optional" label="optional" {...props} />
   )
 }
 
-export function Optional({ className }: Part) {
+export function Repeated(props: BadgeProps) {
   const { node } = useField()
-  return node.optional ? (
-    <Badge data-slot="optional" className={className}>
-      optional
-    </Badge>
-  ) : null
-}
-
-export function Repeated({ className }: Part) {
-  const { node } = useField()
-  return node.repeated ? (
+  return (
     <Badge
-      data-slot="repeated"
+      on={node.repeated}
+      slot="repeated"
+      label="[ ]"
       title="Repeated: list of this field"
-      className={cn("font-mono", className)}
-    >
-      [ ]
-    </Badge>
-  ) : null
+      {...props}
+      className={cn(!props.render && "font-mono", props.className)}
+    />
+  )
 }
 
-export function Nullable({ className }: Part) {
+export function Nullable(props: BadgeProps) {
   const { node } = useField()
-  return node.nullable ? (
-    <Badge data-slot="nullable" className={className}>
-      nullable
-    </Badge>
-  ) : null
+  return (
+    <Badge on={node.nullable} slot="nullable" label="nullable" {...props} />
+  )
 }
 
 export function ChildrenCount({
@@ -291,24 +340,37 @@ export function ChildrenCount({
 /* --------------------------------- type ---------------------------------- */
 
 /** the field's type as icon (+ label); pick with <SchemaAction.ChangeType> */
-export function Type({ className, label }: Part & { label?: boolean }) {
+export function Type({
+  className,
+  label,
+  render,
+}: Rendered & { label?: boolean }) {
   const { node } = useField()
   const mod = useTypeModule(node.type)
   const v = useVariant()
-  return (
-    <span
-      data-slot="type"
-      title={mod.label}
-      className={cn("flex shrink-0 items-center gap-1.5", className)}
-    >
-      <IconTile
-        icon={mod.icon}
-        color={v === "compact" ? mod.color.replace(/bg-\S+/, "") : mod.color}
-        size={label ? "md" : tile[v]}
-      />
-      {label && mod.label}
-    </span>
-  )
+  return useRender({
+    render,
+    defaultTagName: "span",
+    props: {
+      "data-slot": "type",
+      title: mod.label,
+      className: render
+        ? className
+        : cn("flex shrink-0 items-center gap-1.5", className),
+      children: (
+        <>
+          <IconTile
+            icon={mod.icon}
+            color={
+              v === "compact" ? mod.color.replace(/bg-\S+/, "") : mod.color
+            }
+            size={label ? "md" : tile[v]}
+          />
+          {label && mod.label}
+        </>
+      ),
+    },
+  })
 }
 
 /** the type module's own UI, if it has one */
@@ -719,7 +781,7 @@ function RowImpl({
             data-ghost
             aria-hidden
             style={{ width: grab.current.w }}
-            className="pointer-events-none fixed top-0 left-0 z-50 opacity-90 shadow-lg"
+            className="pointer-events-none fixed top-0 left-0 z-100 opacity-90 shadow-lg"
           >
             <ListContext.Provider value={{ ...list, ghost: true }}>
               <RowImpl id={id} className={className}>

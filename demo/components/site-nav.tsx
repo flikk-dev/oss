@@ -6,15 +6,18 @@ import { cn } from "cn"
 
 const variants = ["default", "compact", "wide", "mobile"] as const
 const groupModes = ["nested", "accordion"] as const
+const skins = ["editor", "shadcn"] as const
 
 export function SiteNav() {
   const params = useSearchParams()
   const current = params.get("variant") ?? "default"
   const groups = params.get("groups") ?? "nested"
-  const href = (variant: string, g: string) => {
+  const skin = params.get("skin") ?? "editor"
+  const href = (variant: string, g: string, s = skin) => {
     const q = new URLSearchParams()
     if (variant !== "default") q.set("variant", variant)
     if (g !== "nested") q.set("groups", g)
+    if (s !== "editor") q.set("skin", s)
     const qs = q.toString()
     return qs ? `/?${qs}` : "/"
   }
@@ -46,6 +49,20 @@ export function SiteNav() {
             )}
           >
             {g}
+          </Link>
+        ))}
+      </div>
+      <div className="flex gap-1">
+        {skins.map((s) => (
+          <Link
+            key={s}
+            href={href(current, groups, s)}
+            className={cn(
+              "rounded-md px-2 py-1 text-muted-foreground hover:text-foreground",
+              skin === s && "bg-muted text-foreground"
+            )}
+          >
+            {s}
           </Link>
         ))}
       </div>

@@ -2,6 +2,9 @@
 
 import * as React from "react"
 import { cn } from "cn"
+import { useRender } from "@base-ui/react/use-render"
+
+export type RenderProp = Parameters<typeof useRender>[0]["render"]
 
 export type EditableProps = Omit<
   React.ComponentProps<"input">,
@@ -14,6 +17,8 @@ export type EditableProps = Omit<
   multiline?: boolean
   /** render as plain text (mobile summaries) */
   readOnly?: boolean
+  /** your own element (e.g. shadcn <Input />); value / handlers merged in, none of our styling */
+  render?: RenderProp
 }
 
 /** Inline text edit: an input styled as plain text, sized to its content. */
@@ -24,8 +29,34 @@ export function Editable({
   multiline,
   readOnly,
   className,
+  render,
   ...rest
 }: EditableProps) {
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (
+      (e.key === "Enter" && !(multiline && e.shiftKey)) ||
+      e.key === "Escape"
+    ) {
+      e.preventDefault()
+      e.currentTarget.blur()
+    }
+  }
+  const custom = useRender({
+    render,
+    enabled: !!render,
+    defaultTagName: multiline ? "textarea" : "input",
+    props: {
+      ...(rest as object),
+      value,
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+        onChange(e.target.value),
+      onBlur: (e: React.FocusEvent<HTMLInputElement>) =>
+        onCommit?.(e.target.value),
+      onKeyDown,
+      className,
+    },
+  })
+  if (render && !readOnly) return custom
   if (readOnly)
     return (
       <span
@@ -47,15 +78,7 @@ export function Editable({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onBlur={(e) => onCommit?.(e.target.value)}
-      onKeyDown={(e) => {
-        if (
-          (e.key === "Enter" && !(multiline && e.shiftKey)) ||
-          e.key === "Escape"
-        ) {
-          e.preventDefault()
-          e.currentTarget.blur()
-        }
-      }}
+      onKeyDown={onKeyDown}
       className={cn(
         // padding with matching negative margins: breathing room on hover / focus, no layout shift.
         // max width includes the margins, else a percentage clamp eats the last character

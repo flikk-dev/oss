@@ -3,11 +3,27 @@
 import * as React from "react"
 import { cn } from "cn"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import {
   JsonSchemaEditor,
   useJsonSchema,
   useJsonSchemaValue,
   type Groups,
+  type Skin,
   type Variant,
 } from "@/components/ui/json/editor"
 import {
@@ -170,9 +186,11 @@ function ShapePanel({ schema, shape }: { schema: JsonSchema; shape: Shape }) {
 export function EditorPreview({
   variant,
   groups,
+  skin,
 }: {
   variant: Variant
   groups: Groups
+  skin: Skin
 }) {
   const schema = useJsonSchema(sample)
   const [shape, setShape] = React.useState<Shape>("off")
@@ -180,37 +198,96 @@ export function EditorPreview({
 
   const editor = (
     <div className={cn("rounded-xl border bg-card", mobile ? "p-2" : "p-3")}>
-      <JsonSchemaEditor schema={schema} variant={variant} groups={groups} />
+      <JsonSchemaEditor
+        schema={schema}
+        variant={variant}
+        groups={groups}
+        skin={skin}
+      />
     </div>
   )
 
   return (
     <div className="flex flex-col gap-3">
-      <ToggleGroup
-        variant="outline"
-        size="sm"
-        spacing={0}
-        aria-label="Shape preview"
-        value={[shape]}
-        onValueChange={(v) => v[0] && setShape(v[0] as Shape)}
-        className="w-fit"
-      >
-        {(["off", "schema", "example"] as const).map((v) => (
-          <ToggleGroupItem
-            key={v}
-            value={v}
-            className="h-6 px-2 text-[11px] font-normal data-pressed:bg-muted"
-          >
-            {
+      <div className="flex flex-wrap items-center gap-2">
+        <ToggleGroup
+          variant="outline"
+          size="sm"
+          spacing={0}
+          aria-label="Shape preview"
+          value={[shape]}
+          onValueChange={(v) => v[0] && setShape(v[0] as Shape)}
+          className="w-fit"
+        >
+          {(["off", "schema", "example"] as const).map((v) => (
+            <ToggleGroupItem
+              key={v}
+              value={v}
+              className="h-6 px-2 text-[11px] font-normal data-pressed:bg-muted"
+            >
               {
-                off: "Editor only",
-                schema: "JSON Schema",
-                example: "Example JSON",
-              }[v]
+                {
+                  off: "Editor only",
+                  schema: "JSON Schema",
+                  example: "Example JSON",
+                }[v]
+              }
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+        {/* trial: the same handle, inside overlays */}
+        <Sheet>
+          <SheetTrigger
+            render={
+              <Button
+                variant="outline"
+                size="xs"
+                className="text-[11px] font-normal"
+              />
             }
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
+          >
+            Open in sheet
+          </SheetTrigger>
+          <SheetContent
+            side="right"
+            className="w-full overflow-y-auto p-4 sm:max-w-2xl"
+          >
+            <SheetHeader className="p-0">
+              <SheetTitle className="text-sm">Schema</SheetTitle>
+            </SheetHeader>
+            <JsonSchemaEditor
+              schema={schema}
+              variant={variant}
+              groups={groups}
+              skin={skin}
+            />
+          </SheetContent>
+        </Sheet>
+        <Dialog>
+          <DialogTrigger
+            render={
+              <Button
+                variant="outline"
+                size="xs"
+                className="text-[11px] font-normal"
+              />
+            }
+          >
+            Open in dialog
+          </DialogTrigger>
+          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
+            <DialogHeader>
+              <DialogTitle className="text-sm">Schema</DialogTitle>
+            </DialogHeader>
+            <JsonSchemaEditor
+              schema={schema}
+              variant={variant}
+              groups={groups}
+              skin={skin}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
       <div
         className={cn(
           "grid gap-4",
