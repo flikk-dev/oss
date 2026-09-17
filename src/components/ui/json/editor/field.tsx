@@ -5,7 +5,7 @@ import { createPortal } from "react-dom"
 import { cn } from "cn"
 import { motion, useDragControls } from "motion/react"
 import { useRender } from "@base-ui/react/use-render"
-import { ChevronDownIcon, EllipsisIcon, GripVerticalIcon } from "lucide-react"
+import { ChevronDownIcon, EllipsisIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { uniqueSlug } from "@/store/slug"
 import {
@@ -26,19 +26,19 @@ import { IconTile, Menu, TypeMenu } from "./menu"
 
 type Size = Record<Variant, string>
 const text: Size = {
-  compact: "text-xs",
+  compact: "text-sm",
   default: "text-sm",
   wide: "text-base",
   mobile: "text-sm",
 }
 const small: Size = {
-  compact: "text-2xs",
+  compact: "text-xs",
   default: "text-xs",
   wide: "text-sm",
   mobile: "text-xs",
 }
 const tiny: Size = {
-  compact: "text-3xs",
+  compact: "text-2xs",
   default: "text-2xs",
   wide: "text-xs",
   mobile: "text-2xs",
@@ -290,40 +290,24 @@ export function ChildrenCount({
 
 /* --------------------------------- type ---------------------------------- */
 
+/** the field's type as icon (+ label); pick with <SchemaAction.ChangeType> */
 export function Type({ className, label }: Part & { label?: boolean }) {
-  const { node, set } = useField()
+  const { node } = useField()
   const mod = useTypeModule(node.type)
   const v = useVariant()
   return (
-    <TypeMenu
-      title="Field type"
-      current={node.type}
-      onPick={(type) => set({ type })}
-      trigger={
-        <Button
-          data-slot="type"
-          variant={label ? "outline" : "ghost"}
-          size={label ? "sm" : "icon-xs"}
-          aria-label={`Type: ${mod.label}`}
-          title={mod.label}
-          onPointerDown={(e) => e.stopPropagation()}
-          className={cn(
-            !label && "size-auto p-0 hover:bg-transparent",
-            label && "gap-1.5 pl-1",
-            className
-          )}
-        >
-          <IconTile
-            icon={mod.icon}
-            color={
-              v === "compact" ? mod.color.replace(/bg-\S+/, "") : mod.color
-            }
-            size={label ? "md" : tile[v]}
-          />
-          {label && mod.label}
-        </Button>
-      }
-    />
+    <span
+      data-slot="type"
+      title={mod.label}
+      className={cn("flex shrink-0 items-center gap-1.5", className)}
+    >
+      <IconTile
+        icon={mod.icon}
+        color={v === "compact" ? mod.color.replace(/bg-\S+/, "") : mod.color}
+        size={label ? "md" : tile[v]}
+      />
+      {label && mod.label}
+    </span>
   )
 }
 
@@ -379,13 +363,44 @@ export function MenuPart({
   )
 }
 
+/** set inside <SchemaField.Nested>; NestedToggle / NestedList refuse to render outside it */
+const NestedContext = React.createContext(false)
+const useNested = (part: string) => {
+  if (!React.useContext(NestedContext))
+    throw new Error(`<SchemaField.${part}> must be inside <SchemaField.Nested>`)
+}
+
+/**
+ * The accordion of a group row: owns open / closed, hosts the toggle and the
+ * list. Null on leaves. Free-form children — put the toggle where you like.
+ */
+export function Nested({
+  className,
+  children,
+}: Part & { children: React.ReactNode }) {
+  const { node } = useField()
+  if (!node.isGroup) return null
+  return (
+    <NestedContext.Provider value={true}>
+      <div
+        data-slot="nested"
+        data-state={node.collapsed ? "closed" : "open"}
+        className={cn("flex min-w-0 flex-col", className)}
+      >
+        {children}
+      </div>
+    </NestedContext.Provider>
+  )
+}
+
+/** the chevron that opens / closes NestedList */
 export function NestedToggle({
   className,
   render,
 }: Part & { render?: React.ComponentProps<typeof Button>["render"] }) {
+  useNested("NestedToggle")
   const { node, set } = useField()
   const v = useVariant()
-  if (!node.isGroup) return null
   const open = !node.collapsed
   const size = {
     compact: "size-4",
@@ -414,19 +429,23 @@ export function NestedToggle({
 }
 
 /**
- * Children frame of a group row. Empty → recurses with the enclosing list's
+ * Children frame of a group. Empty → recurses with the enclosing list's
  * render. Give it a <Schema.List> to change template / variant from here down.
  */
-export function Nested({
+export function NestedList({
   className,
   children,
-}: Part & { children?: React.ReactNode }) {
+  open: forced,
+}: Part & {
+  children?: React.ReactNode
+  /** always draw the rows — when something else (an accordion panel) hides the list */
+  open?: boolean
+}) {
+  useNested("NestedList")
   const { node, id } = useField()
   const list = useList()
   const v = useVariant()
-  const count = useEditorStore((s) => s.children[id]?.length ?? 0)
-  if (!node.isGroup) return null
-  const open = !node.collapsed
+  const open = forced || !node.collapsed
   const pad = {
     compact: "p-1",
     default: "p-1.5",
@@ -435,9 +454,8 @@ export function Nested({
   }[v]
   return (
     <div
-      data-slot="nested"
+      data-slot="nested-list"
       data-state={open ? "open" : "closed"}
-      data-drop={undefined}
       className={cn(
         "flex min-w-0 flex-col border-t border-border bg-group",
         pad,
@@ -452,67 +470,32 @@ export function Nested({
           {children ?? <List />}
         </ListContext.Provider>
       ) : (
-        <div className={cn("px-2 py-1 text-muted-foreground", tiny[v])}>
-          {count ? `${count} hidden` : "empty — drop fields here"}
-        </div>
+        <NestedSummary />
       )}
     </div>
   )
 }
 
-/* ------------------------------ handle / select --------------------------- */
-
-export function Handle({ className }: Part) {
-  const { startDrag, setHasHandle } = useField()
+/** "3 hidden" / "empty" line of a collapsed group; null while open */
+export function NestedSummary({ className }: Part) {
+  useNested("NestedSummary")
+  const { node, id } = useField()
   const v = useVariant()
-  React.useEffect(() => {
-    setHasHandle(true)
-    return () => setHasHandle(false)
-  }, [setHasHandle])
-  const size = {
-    compact: "h-4 w-3",
-    default: "h-5 w-4",
-    wide: "h-7 w-5",
-    mobile: "h-6 w-5",
-  }[v]
+  const count = useEditorStore((s) => s.children[id]?.length ?? 0)
+  if (!node.collapsed) return null
   return (
     <div
-      data-slot="handle"
-      role="button"
-      aria-label="Drag to reorder"
-      tabIndex={-1}
-      onPointerDown={(e) => startDrag(e)}
-      className={cn(
-        "flex shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground active:cursor-grabbing",
-        size,
-        className
-      )}
+      data-slot="nested-summary"
+      className={cn("px-2 py-1 text-muted-foreground", tiny[v], className)}
     >
-      <GripVerticalIcon className="size-3" />
+      {count ? `${count} hidden` : "empty — drop fields here"}
     </div>
-  )
-}
-
-export function Select({ className }: Part) {
-  const { id } = useField()
-  const { store } = useEditor()
-  const on = useEditorStore((s) => s.selected.includes(id))
-  return (
-    <input
-      data-slot="select"
-      type="checkbox"
-      aria-label="Select field"
-      checked={on}
-      onChange={(e) => store.getState().toggleSelect(id, e.target.checked)}
-      onPointerDown={(e) => e.stopPropagation()}
-      className={cn("size-3.5 shrink-0 accent-primary", className)}
-    />
   )
 }
 
 /* ---------------------------------- row ---------------------------------- */
 
-const BUTTONS = "button, a, [data-slot=handle], [data-slot=select]"
+const BUTTONS = "button, a, [data-slot=drag], [data-slot=select]"
 const FIELDS = "input, textarea"
 
 const inside = (r: DOMRect, x: number, y: number) =>
@@ -521,7 +504,9 @@ const inside = (r: DOMRect, x: number, y: number) =>
 /** a row's "head" = its box minus its nested frame, if any */
 function headCentre(row: HTMLElement) {
   const r = row.getBoundingClientRect()
-  const nested = row.querySelector<HTMLElement>(":scope [data-slot=nested]")
+  const nested = row.querySelector<HTMLElement>(
+    ":scope [data-slot=nested-list]"
+  )
   const bottom =
     nested && row.contains(nested) && nested.closest("[data-slot=row]") === row
       ? nested.getBoundingClientRect().top
@@ -550,7 +535,7 @@ function resolveDrop(
   const before = rows.find((r) => y < headCentre(r))
   let frame: HTMLElement | null = null
   for (const f of root.querySelectorAll<HTMLElement>(
-    "[data-slot=nested][data-state=open]"
+    "[data-slot=nested-list][data-state=open]"
   )) {
     if (!live(f) || !inside(f.getBoundingClientRect(), x, y)) continue
     if (!frame || frame.contains(f)) frame = f
@@ -569,7 +554,7 @@ function resolveDrop(
 export type RowProps = {
   className?: string
   children?: React.ReactNode
-  /** default: only from a mounted <SchemaField.Handle>, else anywhere on the row */
+  /** default: only from a mounted <SchemaAction.Drag>, else anywhere on the row */
   dragFrom?: "handle" | "anywhere"
 }
 
@@ -688,7 +673,7 @@ function RowImpl({
           store.getState().setDrop(null)
           if (at) store.getState().move(id, at.parentId, at.index)
         }}
-        // press and drag from anywhere unless a Handle is mounted; buttons excluded, an unfocused input drags too
+        // press and drag from anywhere unless a Drag handle is mounted; buttons excluded, an unfocused input drags too
         onPointerDown={(e) => {
           if (hasHandle) return
           const t = e.target as HTMLElement

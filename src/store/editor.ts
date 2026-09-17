@@ -20,6 +20,8 @@ export type EditorState = {
   slugCase: SlugCase
   /** ids currently selected */
   selected: string[]
+  /** last id toggled by hand; shift-select ranges from it */
+  anchor: string | null
   /** live drag: where the row would land; index counts siblings without the dragged row */
   drop: { id: string; parentId: string; index: number; height: number } | null
   /** mobile: id whose detail sheet is open */
@@ -34,6 +36,8 @@ export type EditorState = {
   move: (id: string, parentId: string, index: number) => void
   select: (ids: string[]) => void
   toggleSelect: (id: string, on?: boolean) => void
+  /** add every node between the anchor and `id` (document order) to the selection */
+  selectRange: (id: string) => void
   setDrop: (drop: EditorState["drop"]) => void
   openSheet: (id: string | null) => void
 }
@@ -133,11 +137,18 @@ export function createEditorStore(
         types,
         slugCase,
         selected: [],
+        anchor: null,
         drop: null,
         sheet: null,
 
         replace: (root) =>
-          set({ ...fromNode(root), selected: [], drop: null, sheet: null }),
+          set({
+            ...fromNode(root),
+            selected: [],
+            anchor: null,
+            drop: null,
+            sheet: null,
+          }),
 
         update: (id, patch) =>
           mutate((s) => {
@@ -229,6 +240,7 @@ export function createEditorStore(
             const has = s.selected.includes(id)
             const next = on ?? !has
             return {
+              anchor: id,
               selected: next
                 ? has
                   ? s.selected
@@ -236,6 +248,27 @@ export function createEditorStore(
                 : s.selected.filter((x) => x !== id),
             }
           }),
+
+        selectRange: (id) => {
+          const s = get()
+          if (!s.anchor || !s.byId[s.anchor]) return s.toggleSelect(id, true)
+          const order: string[] = []
+          const walk = (x: string) => {
+            if (x !== s.root) order.push(x)
+            for (const c of s.children[x] ?? []) walk(c)
+          }
+          walk(s.root)
+          const [a, b] = [order.indexOf(s.anchor), order.indexOf(id)].sort(
+            (x, y) => x - y
+          )
+          const range = order.slice(a, b + 1)
+          set({
+            selected: [
+              ...s.selected,
+              ...range.filter((x) => !s.selected.includes(x)),
+            ],
+          })
+        },
 
         setDrop: (drop) => {
           const cur = get().drop

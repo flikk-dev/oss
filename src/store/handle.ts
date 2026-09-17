@@ -24,6 +24,14 @@ export function createJsonSchema(
   )
   const s = () => store.getState()
   const node = (id: string) => (s().byId[id] ? toNode(s(), id) : undefined)
+  // same tree → same JSON object, so useSyncExternalStore sees a stable snapshot
+  let cache: { byId: unknown; children: unknown; json: Json } | null = null
+  const toJSON = (): Json => {
+    const { byId, children, root } = s()
+    if (!cache || cache.byId !== byId || cache.children !== children)
+      cache = { byId, children, json: toJsonSchema(toNode(s(), root), types) }
+    return cache.json
+  }
 
   return {
     store,
@@ -31,13 +39,13 @@ export function createJsonSchema(
     get root() {
       return s().root
     },
-    toJSON: (): Json => toJsonSchema(toNode(s(), s().root), types),
+    toJSON,
     toExample: () => example(toNode(s(), s().root), types),
     /** fires after every tree change with the new JSON */
     subscribe: (fn: (json: Json) => void) =>
       store.subscribe(
         (st) => [st.byId, st.children] as const,
-        () => fn(toJsonSchema(toNode(s(), s().root), types)),
+        () => fn(toJSON()),
         { equalityFn: (a, b) => a[0] === b[0] && a[1] === b[1] }
       ),
     reset: (json: Json) => s().replace(fromJsonSchema(json, types)),

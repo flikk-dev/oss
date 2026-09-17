@@ -61,11 +61,14 @@ Three namespaces. Display and mutation are separate; every name carries its obje
 | Namespace | Parts |
 |---|---|
 | `Schema` | `Root`, `List`, `Skeleton`, `Ghost`, `AddField`, `Toolbar`, `SelectAll`, `SelectionCount` |
-| `SchemaField` | `Row`, `Handle`, `Select`, `Type`, `Title`, `Key`, `Description`, `Examples`, `Optional`, `Repeated`, `Nullable`, `ChildrenCount`, `Menu`, `Nested`, `NestedToggle` |
-| `SchemaAction` | `Optional`, `Repeated`, `Nullable`, `Duplicate`, `Remove`, `EditDetails`, `MoveInto` |
+| `SchemaField` | `Row`, `Type`, `Title`, `Key`, `Description`, `Examples`, `Optional`, `Repeated`, `Nullable`, `ChildrenCount`, `Extra`, `Menu`, `Nested`, `NestedToggle`, `NestedList` |
+| `SchemaAction` | `Drag`, `Select`, `ChangeType`, `Optional`, `Repeated`, `Nullable`, `Duplicate`, `Remove`, `EditDetails`, `MoveInto`, `Primitive` |
 
-`SchemaField.Optional` *shows* the state (a badge). `SchemaAction.Optional`
-*changes* it (a menu item, or a chip anywhere). Same for the other flags.
+`SchemaField` = bound to node data: editors (Title, Key…) and displays (badges,
+Type icon, ChildrenCount). `SchemaAction` = commands: a click or gesture that
+mutates (Drag → move, Select → selection, ChangeType → type, Remove…).
+`SchemaField.Optional` *shows* the state; `SchemaAction.Optional` *changes* it.
+`NestedToggle` stays a field part: `collapsed` is view state, never in the JSON.
 
 Rules:
 
@@ -77,23 +80,33 @@ Rules:
   the list sets (`--gap`, `--pad`).
 - No separator part. `Menu` takes any children; use the menu primitive's own.
 
-## Recursion
+## Groups and recursion
 
-One template, referenced by itself:
+A group row is an accordion, shaped like shadcn's: `Nested` (item, owns
+open/closed, `data-state`) hosts `NestedToggle` (trigger, the chevron) and
+`NestedList` (content). The template branches on `isGroup`:
 
 ```tsx
+const Head = () => (<div>…<SchemaAction.Drag /><SchemaField.Title />…</div>)
+
 const row = (node) => (
   <SchemaField.Row>
-    …
-    {node.isGroup && <SchemaField.Nested />}   // renders <Schema.List render={row}> — same template, next level
+    {node.isGroup ? (
+      <SchemaField.Nested>
+        <div className="flex"><Head /><SchemaField.NestedToggle /></div>
+        <SchemaField.NestedList />          // renders <Schema.List render={row}> — same template, next level
+      </SchemaField.Nested>
+    ) : (
+      <Head />
+    )}
   </SchemaField.Row>
 )
 <Schema.List variant="default" render={row} />
 ```
 
-`Nested` reuses the enclosing list's `render` from context. No depth limit,
-nothing repeated. Give `Nested` its own `<Schema.List …>` child to change the
-template from that level down.
+`NestedList` reuses the enclosing list's `render` from context. No depth limit,
+nothing repeated. Give it its own `<Schema.List …>` child to change the template
+from that level down. Toggle and list throw outside `Nested`.
 
 ## Overrides
 
@@ -128,7 +141,7 @@ reused recursively, localising a head means editing that function.
 
 One tree-wide model, owned by `Schema.Root`:
 
-- Starts from `SchemaField.Handle` when present, else from anywhere on the row
+- Starts from `SchemaAction.Drag` when present, else from anywhere on the row
   (buttons excluded; an unfocused input drags, a click still focuses it).
 - The dragged row collapses in place; a ghost follows the pointer (portal, never
   clipped, always on top).
@@ -149,7 +162,7 @@ One tree-wide model, owned by `Schema.Root`:
 </Schema.Toolbar>
 ```
 
-`SchemaField.Select` in a row; selection lives in the store. The same
+`SchemaAction.Select` in a row (shift-click = range); selection lives in the store. The same
 `SchemaAction.*` components apply to the field when inside a `Row` and to the
 selection when inside a `Toolbar`. Mixed toggles show `aria-checked="mixed"`.
 Dragging a selected row moves the selection.

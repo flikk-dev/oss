@@ -35,8 +35,8 @@ export const menuStyle: Record<
 > = {
   compact: {
     content: "w-36 p-0.5",
-    label: "px-1.5 py-0.5 text-3xs",
-    item: "gap-1.5 px-1.5 py-0.5 text-2xs",
+    label: "px-1.5 py-0.5 text-2xs",
+    item: "gap-1.5 px-1.5 py-0.5 text-xs",
     icon: "size-3.5",
     svg: "size-2.5",
   },

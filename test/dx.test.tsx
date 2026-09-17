@@ -111,24 +111,33 @@ describe("preset", () => {
 /* ------------------------------ composition ------------------------------ */
 
 describe("composing parts", () => {
+  const Head = () => (
+    <div className="head">
+      <SchemaAction.Drag />
+      <SchemaAction.ChangeType />
+      <SchemaField.Title />
+      <SchemaField.Key />
+      <SchemaField.Optional />
+      <SchemaField.ChildrenCount />
+      <SchemaAction.Remove />
+      <SchemaField.Menu>
+        <SchemaAction.Optional />
+        <SchemaAction.Duplicate />
+      </SchemaField.Menu>
+      <SchemaField.Description />
+    </div>
+  )
   const template = (node: SchemaNode) => (
     <SchemaField.Row className="my-row">
-      <div className="head">
-        <SchemaField.Handle />
-        <SchemaField.Type />
-        <SchemaField.Title />
-        <SchemaField.Key />
-        <SchemaField.Optional />
-        {node.isGroup && <SchemaField.ChildrenCount />}
-        {node.isGroup && <SchemaField.NestedToggle />}
-        <SchemaAction.Remove />
-        <SchemaField.Menu>
-          <SchemaAction.Optional />
-          <SchemaAction.Duplicate />
-        </SchemaField.Menu>
-      </div>
-      <SchemaField.Description />
-      {node.isGroup && <SchemaField.Nested />}
+      {node.isGroup ? (
+        <SchemaField.Nested>
+          <Head />
+          <SchemaField.NestedToggle />
+          <SchemaField.NestedList />
+        </SchemaField.Nested>
+      ) : (
+        <Head />
+      )}
     </SchemaField.Row>
   )
 
@@ -152,11 +161,11 @@ describe("composing parts", () => {
     const outer = (node: SchemaNode) => (
       <SchemaField.Row className="outer">
         <SchemaField.Title />
-        {node.isGroup && (
-          <SchemaField.Nested>
+        <SchemaField.Nested>
+          <SchemaField.NestedList>
             <Schema.List variant="compact" render={leaf} />
-          </SchemaField.Nested>
-        )}
+          </SchemaField.NestedList>
+        </SchemaField.Nested>
       </SchemaField.Row>
     )
     render(
@@ -206,13 +215,35 @@ describe("composing parts", () => {
     ).toBe("closed")
   })
 
-  test("Handle is the only drag start when present", () => {
+  test("NestedToggle / NestedList refuse to render outside Nested", () => {
+    const err = console.error
+    console.error = () => {}
+    try {
+      expect(() =>
+        render(
+          <Schema.Root store={createJsonSchema(user)}>
+            <Schema.List
+              render={() => (
+                <SchemaField.Row>
+                  <SchemaField.NestedList />
+                </SchemaField.Row>
+              )}
+            />
+          </Schema.Root>
+        )
+      ).toThrow(/inside <SchemaField.Nested>/)
+    } finally {
+      console.error = err
+    }
+  })
+
+  test("Drag is the only drag start when present", () => {
     render(
       <Schema.Root store={createJsonSchema(user)}>
         <Schema.List
           render={() => (
             <SchemaField.Row>
-              <SchemaField.Handle />
+              <SchemaAction.Drag />
               <SchemaField.Title />
             </SchemaField.Row>
           )}
@@ -353,6 +384,45 @@ describe("overrides", () => {
 /* -------------------------------- selection ------------------------------ */
 
 describe("selection + toolbar", () => {
+  test("shift-click on Select extends the selection in document order", async () => {
+    const schema = createJsonSchema(user)
+    render(
+      <Schema.Root store={schema}>
+        <Schema.List
+          render={(n) => (
+            <SchemaField.Row>
+              <SchemaAction.Select />
+              <SchemaField.Title />
+              <SchemaField.Nested>
+                <SchemaField.NestedList />
+              </SchemaField.Nested>
+            </SchemaField.Row>
+          )}
+        />
+      </Schema.Root>
+    )
+    const ue = userEvent.setup()
+    const box = (t: string) => within(row(titleOf(t))).getByRole("checkbox")
+    await ue.click(box("Name"))
+    await ue.keyboard("{Shift>}")
+    await ue.click(box("ZIP"))
+    await ue.keyboard("{/Shift}")
+    expect(schema.selected()).toEqual(
+      ["name", "address", "address.street", "address.zip"].map((p) =>
+        schema.find(p)!
+      )
+    )
+    // range from the anchor backwards, on top of what is selected
+    await ue.keyboard("{Shift>}")
+    await ue.click(box("ID"))
+    await ue.keyboard("{/Shift}")
+    expect(schema.selected()).toContain(schema.find("id")!)
+    expect(schema.selected()).toHaveLength(5)
+    // plain click still toggles one
+    await ue.click(box("Street"))
+    expect(schema.selected()).not.toContain(schema.find("address.street")!)
+  })
+
   test("MoveInto lists groups, moves the selection into the pick", async () => {
     const schema = createJsonSchema(user)
     render(
@@ -363,9 +433,11 @@ describe("selection + toolbar", () => {
         <Schema.List
           render={(n) => (
             <SchemaField.Row>
-              <SchemaField.Select />
+              <SchemaAction.Select />
               <SchemaField.Title />
-              {n.isGroup && <SchemaField.Nested />}
+              <SchemaField.Nested>
+                <SchemaField.NestedList />
+              </SchemaField.Nested>
             </SchemaField.Row>
           )}
         />
@@ -411,7 +483,7 @@ describe("selection + toolbar", () => {
         <Schema.List
           render={() => (
             <SchemaField.Row>
-              <SchemaField.Select />
+              <SchemaAction.Select />
               <SchemaField.Title />
             </SchemaField.Row>
           )}

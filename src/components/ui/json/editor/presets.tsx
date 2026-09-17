@@ -10,7 +10,13 @@ import {
   type JsonSchemaOptions,
   type SchemaNode,
 } from "@/store"
-import { useEditor, useVariant, type Variant } from "@/context/editor"
+import { useEditor, useField, useVariant, type Variant } from "@/context/editor"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import * as Schema from "./schema"
 import * as SchemaField from "./field"
 import * as SchemaAction from "./action"
@@ -42,10 +48,68 @@ const pad: Record<Variant, string> = {
   mobile: "gap-2 px-3 py-2",
 }
 
-/** one template for default / compact / wide; compact moves description + examples into the menu */
-const desktop = (node: SchemaNode) => <DesktopRow node={node} />
+/** how a group row folds: our Nested parts, or shadcn's Accordion (A/B) */
+export type Groups = "nested" | "accordion"
 
-function DesktopRow({ node }: { node: SchemaNode }) {
+/**
+ * Group frame around a head. `nested`: chevron inside the head, our frame.
+ * `accordion`: shadcn Accordion — its trigger is the chevron, its panel
+ * animates the list.
+ */
+function GroupFrame({
+  node,
+  groups,
+  head,
+}: {
+  node: SchemaNode
+  groups: Groups
+  head: React.ReactNode
+}) {
+  const { set } = useField()
+  if (!node.isGroup) return head
+  if (groups === "nested")
+    return (
+      <SchemaField.Nested>
+        {head}
+        <SchemaField.NestedList>
+          <Schema.List />
+          <Schema.AddField className="self-end" />
+        </SchemaField.NestedList>
+      </SchemaField.Nested>
+    )
+  return (
+    <SchemaField.Nested>
+      <Accordion
+        value={node.collapsed ? [] : [node.id]}
+        onValueChange={(v) => set({ collapsed: v.length === 0 })}
+      >
+        <AccordionItem value={node.id} className="border-0">
+          <div className="flex items-start">
+            <div className="min-w-0 flex-1">{head}</div>
+            <AccordionTrigger
+              aria-label={node.collapsed ? "Expand" : "Collapse"}
+              className="m-1 size-6 flex-none items-center justify-center rounded-md p-0 text-muted-foreground hover:bg-muted hover:no-underline **:data-[slot=accordion-trigger-icon]:m-0"
+            />
+          </div>
+          <AccordionContent className="p-0">
+            <SchemaField.NestedList open>
+              <Schema.List />
+              <Schema.AddField className="self-end" />
+            </SchemaField.NestedList>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+      <SchemaField.NestedSummary className="border-t border-border bg-group" />
+    </SchemaField.Nested>
+  )
+}
+
+/** one template for default / compact / wide; compact moves description + examples into the menu */
+const desktop = (groups: Groups) => (node: SchemaNode) => (
+  <DesktopRow node={node} groups={groups} />
+)
+
+function DesktopRow({ node, groups }: { node: SchemaNode; groups: Groups }) {
   return (
     <SchemaField.Row
       dragFrom="anywhere"
@@ -56,19 +120,22 @@ function DesktopRow({ node }: { node: SchemaNode }) {
           : "border-transparent has-[>[data-slot=head]:hover]:border-border"
       )}
     >
-      <Head node={node} />
-      {node.isGroup && <SchemaField.Nested />}
+      <GroupFrame
+        node={node}
+        groups={groups}
+        head={<Head node={node} toggle={groups === "nested"} />}
+      />
     </SchemaField.Row>
   )
 }
 
-function Head(_: { node: SchemaNode }) {
+function Head({ node, toggle }: { node: SchemaNode; toggle: boolean }) {
   const v = useVariant()
   const compact = v === "compact"
   return (
     <div data-slot="head" className={cn("group/head flex items-start", pad[v])}>
-      <SchemaField.Handle className="opacity-0 group-hover/head:opacity-100" />
-      <SchemaField.Type />
+      <SchemaAction.Drag className="opacity-0 group-hover/head:opacity-100" />
+      <SchemaAction.ChangeType />
       <div
         className={cn(
           "flex min-w-0 flex-1 flex-col",
@@ -86,7 +153,9 @@ function Head(_: { node: SchemaNode }) {
           <SchemaField.Repeated />
           <SchemaField.ChildrenCount />
           <SchemaField.Optional />
-          <SchemaField.NestedToggle className="ml-auto" />
+          {toggle && node.isGroup && (
+            <SchemaField.NestedToggle className="ml-auto" />
+          )}
         </div>
         {!compact && (
           <>
@@ -122,10 +191,67 @@ function Head(_: { node: SchemaNode }) {
 const SWIPE = 88
 
 /** read-only summary; tap opens the sheet, swipe left reveals actions, press-and-drag reorders */
-const mobile = (node: SchemaNode) => <MobileRow node={node} />
+const mobile = (groups: Groups) => (node: SchemaNode) => (
+  <MobileRow node={node} groups={groups} />
+)
 
-function MobileRow({ node }: { node: SchemaNode }) {
+function MobileRow({ node, groups }: { node: SchemaNode; groups: Groups }) {
   const x = useMotionValue(0)
+  const head = (
+    <div className="relative overflow-hidden rounded-md">
+      <div className="absolute inset-y-0 right-0 flex items-start gap-0.5 px-2 py-1">
+        <SchemaAction.Remove />
+        <SchemaField.MenuPart>
+          <SchemaAction.Optional />
+          <SchemaAction.Repeated />
+          <SchemaAction.Nullable />
+          <SchemaAction.Duplicate />
+          <SchemaAction.Remove />
+        </SchemaField.MenuPart>
+      </div>
+      <motion.div
+        drag="x"
+        dragDirectionLock
+        dragConstraints={{ left: -SWIPE, right: 0 }}
+        dragElastic={0.05}
+        style={{ x }}
+        onDragEnd={(_, info) => {
+          const open = info.offset.x < -SWIPE / 2 || info.velocity.x < -200
+          animate(x, open ? -SWIPE : 0, {
+            type: "spring",
+            stiffness: 500,
+            damping: 40,
+          })
+        }}
+        className="relative z-10 bg-background"
+      >
+        <SchemaAction.EditDetails
+          render={
+            <div
+              data-slot="head"
+              className={cn("flex items-start active:bg-muted/60", pad.mobile)}
+            >
+              <SchemaField.Type />
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <div className="flex min-h-5 min-w-0 items-center gap-1.5">
+                  <SchemaField.Title readOnly />
+                  <SchemaField.Key readOnly />
+                  <SchemaField.Repeated />
+                  <SchemaField.ChildrenCount />
+                  <SchemaField.Optional />
+                  {node.isGroup && (
+                    <SchemaField.NestedToggle className="ml-auto" />
+                  )}
+                </div>
+                <SchemaField.Description readOnly />
+                <SchemaField.Examples readOnly />
+              </div>
+            </div>
+          }
+        />
+      </motion.div>
+    </div>
+  )
   return (
     <SchemaField.Row
       dragFrom="anywhere"
@@ -134,61 +260,7 @@ function MobileRow({ node }: { node: SchemaNode }) {
         node.isGroup ? "border-border" : "border-transparent"
       )}
     >
-      <div className="relative overflow-hidden rounded-md">
-        <div className="absolute inset-y-0 right-0 flex items-start gap-0.5 px-2 py-1">
-          <SchemaAction.Remove />
-          <SchemaField.MenuPart>
-            <SchemaAction.Optional />
-            <SchemaAction.Repeated />
-            <SchemaAction.Nullable />
-            <SchemaAction.Duplicate />
-            <SchemaAction.Remove />
-          </SchemaField.MenuPart>
-        </div>
-        <motion.div
-          drag="x"
-          dragDirectionLock
-          dragConstraints={{ left: -SWIPE, right: 0 }}
-          dragElastic={0.05}
-          style={{ x }}
-          onDragEnd={(_, info) => {
-            const open = info.offset.x < -SWIPE / 2 || info.velocity.x < -200
-            animate(x, open ? -SWIPE : 0, {
-              type: "spring",
-              stiffness: 500,
-              damping: 40,
-            })
-          }}
-          className="relative z-10 bg-background"
-        >
-          <SchemaAction.EditDetails
-            render={
-              <div
-                data-slot="head"
-                className={cn(
-                  "flex items-start active:bg-muted/60",
-                  pad.mobile
-                )}
-              >
-                <SchemaField.Type />
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <div className="flex min-h-5 min-w-0 items-center gap-1.5">
-                    <SchemaField.Title readOnly />
-                    <SchemaField.Key readOnly />
-                    <SchemaField.Repeated />
-                    <SchemaField.ChildrenCount />
-                    <SchemaField.Optional />
-                    <SchemaField.NestedToggle className="ml-auto" />
-                  </div>
-                  <SchemaField.Description readOnly />
-                  <SchemaField.Examples readOnly />
-                </div>
-              </div>
-            }
-          />
-        </motion.div>
-      </div>
-      {node.isGroup && <SchemaField.Nested />}
+      <GroupFrame node={node} groups={groups} head={head} />
     </SchemaField.Row>
   )
 }
@@ -198,27 +270,33 @@ function MobileRow({ node }: { node: SchemaNode }) {
 export function JsonSchemaEditor({
   schema,
   variant,
+  groups = "nested",
   className,
 }: {
   schema: JsonSchema
   /** default: `mobile` on a coarse pointer, else `default` */
   variant?: Variant
+  groups?: Groups
   className?: string
 }) {
   return (
     <Schema.Root store={schema} className={className}>
-      <Preset variant={variant} />
+      <Preset variant={variant} groups={groups} />
     </Schema.Root>
   )
 }
 
-function Preset({ variant }: { variant?: Variant }) {
+function Preset({ variant, groups }: { variant?: Variant; groups: Groups }) {
   const { coarse } = useEditor()
   const v: Variant = variant ?? (coarse ? "mobile" : "default")
+  const render = React.useMemo(
+    () => (v === "mobile" ? mobile(groups) : desktop(groups)),
+    [v, groups]
+  )
   return (
     <>
-      <Schema.List variant={v} render={v === "mobile" ? mobile : desktop} />
-      <div className="flex pt-1">
+      <Schema.List variant={v} render={render} />
+      <div className="flex justify-end pt-1">
         <Schema.AddField />
       </div>
     </>

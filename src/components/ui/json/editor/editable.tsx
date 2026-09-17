@@ -57,8 +57,9 @@ export function Editable({
         }
       }}
       className={cn(
-        // padding with matching negative margins: breathing room on hover / focus, no layout shift
-        "-mx-1.5 -my-0.5 field-sizing-content max-w-full min-w-6 resize-none rounded-md bg-transparent px-1.5 py-0.5 outline-none",
+        // padding with matching negative margins: breathing room on hover / focus, no layout shift.
+        // max width includes the margins, else a percentage clamp eats the last character
+        "-mx-1.5 -my-0.5 field-sizing-content max-w-[calc(100%+--spacing(3))] min-w-6 resize-none rounded-md bg-transparent px-1.5 py-0.5 outline-none",
         "placeholder:text-muted-foreground/60 hover:bg-muted/50 focus:bg-muted/70",
         className
       )}

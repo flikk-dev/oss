@@ -10,6 +10,7 @@ import {
   CircleSlashIcon,
   CopyIcon,
   FolderInputIcon,
+  GripVerticalIcon,
   PencilLineIcon,
   Trash2Icon,
 } from "lucide-react"
@@ -26,12 +27,13 @@ import {
   useActionTargets,
   useEditor,
   useEditorStore,
+  useField,
   useFieldOptional,
   useTypeModule,
   useVariant,
 } from "@/context/editor"
 import { isDescendant } from "@/store/editor"
-import { DetailFields } from "./field"
+import { DetailFields, Type } from "./field"
 import {
   IconTile,
   Menu,
@@ -39,6 +41,7 @@ import {
   MenuItem,
   menuStyle,
   sheetClass,
+  TypeMenu,
 } from "./menu"
 
 type RenderProp = Parameters<typeof useRender>[0]["render"]
@@ -190,6 +193,94 @@ export function ActionPrimitive({
     >
       <Icon />
     </Button>
+  )
+}
+
+/* ------------------------------ row gestures ----------------------------- */
+
+/** drag handle; when mounted the row drags only from here */
+export function Drag({ className }: { className?: string }) {
+  const { startDrag, setHasHandle } = useField()
+  const v = useVariant()
+  React.useEffect(() => {
+    setHasHandle(true)
+    return () => setHasHandle(false)
+  }, [setHasHandle])
+  const size = {
+    compact: "h-4 w-3",
+    default: "h-5 w-4",
+    wide: "h-7 w-5",
+    mobile: "h-6 w-5",
+  }[v]
+  return (
+    <div
+      data-slot="drag"
+      role="button"
+      aria-label="Drag to reorder"
+      tabIndex={-1}
+      onPointerDown={(e) => startDrag(e)}
+      className={cn(
+        "flex shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground active:cursor-grabbing",
+        size,
+        className
+      )}
+    >
+      <GripVerticalIcon className="size-3" />
+    </div>
+  )
+}
+
+/** selection checkbox; shift-click extends in document order */
+export function Select({ className }: { className?: string }) {
+  const { id } = useField()
+  const { store } = useEditor()
+  const on = useEditorStore((s) => s.selected.includes(id))
+  return (
+    <input
+      data-slot="select"
+      type="checkbox"
+      aria-label="Select field"
+      checked={on}
+      onChange={(e) => {
+        // React's checkbox onChange is backed by the click event → modifiers are there
+        const shift = (e.nativeEvent as MouseEvent).shiftKey
+        if (shift) store.getState().selectRange(id)
+        else store.getState().toggleSelect(id, e.target.checked)
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className={cn("size-3.5 shrink-0 accent-primary", className)}
+    />
+  )
+}
+
+/** type picker; trigger shows <SchemaField.Type> unless given children */
+export function ChangeType({
+  className,
+  children,
+}: {
+  className?: string
+  children?: React.ReactNode
+}) {
+  const { node, set } = useField()
+  const mod = useTypeModule(node.type)
+  return (
+    <TypeMenu
+      title="Field type"
+      current={node.type}
+      onPick={(type) => set({ type })}
+      trigger={
+        <Button
+          data-slot="change-type"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={`Type: ${mod.label}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          className={cn("size-auto p-0 hover:bg-transparent", className)}
+        >
+          {children ?? <Type />}
+        </Button>
+      }
+    />
   )
 }
 

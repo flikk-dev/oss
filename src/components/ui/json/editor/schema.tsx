@@ -16,6 +16,7 @@ import {
   useList,
   type RenderRow,
   type Variant,
+  useVariant,
 } from "@/context/editor"
 import { TypeMenu } from "./menu"
 import { Row } from "./field"
@@ -208,6 +209,13 @@ export function AddField({
   const { store } = useEditor()
   const list = React.useContext(ListContext)
   const parentId = list?.parentId ?? store.getState().root
+  // one step under the field title of the variant
+  const size = {
+    compact: "h-4 gap-1 px-1 text-2xs [&_svg]:size-2.5",
+    default: "h-5 gap-1 px-1.5 text-2xs [&_svg]:size-3",
+    wide: "h-7 gap-1.5 px-2 text-xs [&_svg]:size-3.5",
+    mobile: "h-8 gap-1.5 px-2 text-xs [&_svg]:size-3.5",
+  }[useVariant()]
   return (
     <TypeMenu
       title="New field type"
@@ -219,6 +227,7 @@ export function AddField({
           size="xs"
           className={cn(
             "text-muted-foreground hover:text-foreground",
+            size,
             className
           )}
         >

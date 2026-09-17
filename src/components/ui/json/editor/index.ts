@@ -23,8 +23,6 @@ export const Schema = {
 
 export const SchemaField = {
   Row: FieldParts.Row,
-  Handle: FieldParts.Handle,
-  Select: FieldParts.Select,
   Type: FieldParts.Type,
   Title: FieldParts.Title,
   Key: FieldParts.Key,
@@ -38,10 +36,15 @@ export const SchemaField = {
   Menu: FieldParts.MenuPart,
   Nested: FieldParts.Nested,
   NestedToggle: FieldParts.NestedToggle,
+  NestedList: FieldParts.NestedList,
+  NestedSummary: FieldParts.NestedSummary,
 }
 
 export const SchemaAction = {
   Primitive: ActionParts.ActionPrimitive,
+  Drag: ActionParts.Drag,
+  Select: ActionParts.Select,
+  ChangeType: ActionParts.ChangeType,
   Optional: ActionParts.Optional,
   Repeated: ActionParts.Repeated,
   Nullable: ActionParts.Nullable,
@@ -51,5 +54,10 @@ export const SchemaAction = {
   MoveInto: ActionParts.MoveInto,
 }
 
-export { JsonSchemaEditor, useJsonSchema, useJsonSchemaValue } from "./presets"
+export {
+  JsonSchemaEditor,
+  useJsonSchema,
+  useJsonSchemaValue,
+  type Groups,
+} from "./presets"
 export type { Variant } from "@/context/editor"
