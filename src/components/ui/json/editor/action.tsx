@@ -15,13 +15,6 @@ import {
   Trash2Icon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
 import {
   useActionScope,
   useActionTargets,
@@ -32,15 +25,14 @@ import {
   useTypeModule,
   useVariant,
 } from "@/context/editor"
-import { isDescendant } from "@/store/editor"
-import { DetailFields, Type } from "./field"
+import { isDescendant, type DetailField } from "@/store/editor"
+import { Type } from "./field"
 import {
   IconTile,
   Menu,
   MenuContext,
   MenuItem,
   menuStyle,
-  sheetClass,
   TypeMenu,
 } from "./menu"
 
@@ -487,48 +479,24 @@ function MoveTarget({
   )
 }
 
-/** opens the field's details (title, key, description, examples) in a dialog, or a sheet on mobile */
+/**
+ * Opens the field's details (title, key, description, examples) in a dialog,
+ * or a sheet on mobile. The overlay is mounted by the row, so this works from
+ * inside a menu that closes on click.
+ */
 export function EditDetails({
   fields,
   ...props
-}: ActionProps & {
-  fields?: ("title" | "key" | "description" | "examples")[]
-}) {
+}: ActionProps & { fields?: DetailField[] }) {
+  const { store } = useEditor()
   const field = useFieldOptional()
-  const title = useEditorStore((s) => (field ? s.byId[field.id]?.title : ""))
-  const mobile = useVariant() === "mobile"
-  const [open, setOpen] = React.useState(false)
   if (!field) throw new Error("<SchemaAction.EditDetails> must be inside a row")
-  const body = <DetailFields fields={fields} />
   return (
-    <>
-      <ActionPrimitive
-        icon={PencilLineIcon}
-        label="Edit details"
-        run={() => setOpen(true)}
-        {...props}
-      />
-      {mobile ? (
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent side="bottom" className={sheetClass}>
-            <SheetHeader className="p-0">
-              <SheetTitle className="text-sm font-normal">
-                {title || "Edit field"}
-              </SheetTitle>
-            </SheetHeader>
-            {body}
-          </SheetContent>
-        </Sheet>
-      ) : (
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-w-sm gap-3 p-4">
-            <DialogTitle className="text-xs font-medium">
-              {title || "Untitled"}
-            </DialogTitle>
-            {body}
-          </DialogContent>
-        </Dialog>
-      )}
-    </>
+    <ActionPrimitive
+      icon={PencilLineIcon}
+      label="Edit details"
+      run={() => store.getState().openDetails(field.id, fields)}
+      {...props}
+    />
   )
 }

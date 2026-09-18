@@ -19,6 +19,8 @@ export type EditableProps = Omit<
   readOnly?: boolean
   /** your own element (e.g. shadcn <Input />); value / handlers merged in, none of our styling */
   render?: RenderProp
+  /** `inline`: plain text until hover / focus. `input`: a bordered field */
+  variant?: "inline" | "input"
 }
 
 /** Inline text edit: an input styled as plain text, sized to its content. */
@@ -30,6 +32,7 @@ export function Editable({
   readOnly,
   className,
   render,
+  variant = "inline",
   ...rest
 }: EditableProps) {
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -75,15 +78,18 @@ export function Editable({
     <Tag
       {...(rest as React.ComponentProps<"input">)}
       {...(multiline ? { rows: 1 } : {})}
+      data-variant={variant}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onBlur={(e) => onCommit?.(e.target.value)}
       onKeyDown={onKeyDown}
       className={cn(
-        // padding with matching negative margins: breathing room on hover / focus, no layout shift.
-        // max width includes the margins, else a percentage clamp eats the last character
-        "-mx-1.5 -my-0.5 field-sizing-content max-w-[calc(100%+--spacing(3))] min-w-6 resize-none rounded-md bg-transparent px-1.5 py-0.5 outline-none",
-        "placeholder:text-muted-foreground/60 hover:bg-muted/50 focus:bg-muted/70",
+        "resize-none rounded-md outline-none placeholder:text-muted-foreground/60",
+        variant === "inline"
+          ? // padding with matching negative margins: breathing room on hover / focus, no layout shift.
+            // max width includes the margins, else a percentage clamp eats the last character
+            "-mx-1.5 -my-0.5 field-sizing-content max-w-[calc(100%+--spacing(3))] min-w-6 bg-transparent px-1.5 py-0.5 hover:bg-muted/50 focus:bg-muted/70"
+          : "w-full border border-input bg-background px-2 py-1 shadow-xs focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
         className
       )}
     />

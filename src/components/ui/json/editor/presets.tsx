@@ -17,13 +17,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { GripVerticalIcon, Trash2Icon } from "lucide-react"
 import * as Schema from "./schema"
 import * as SchemaField from "./field"
 import * as SchemaAction from "./action"
@@ -272,114 +265,33 @@ function MobileRow({ node, groups }: { node: SchemaNode; groups: Groups }) {
   )
 }
 
-/* --------------------------------- shadcn -------------------------------- */
-
-/**
- * A/B: the same parts, every element swapped for a stock shadcn component via
- * `render`. Card per row, Input / Textarea for text, Badge for flags, Checkbox
- * for selection, Button for actions, Accordion for groups.
- */
-const shadcn = (node: SchemaNode) => <ShadcnRow node={node} />
-
-function ShadcnRow({ node }: { node: SchemaNode }) {
-  const head = (
-    <>
-      <CardHeader className="flex flex-row flex-wrap items-center gap-2 px-3">
-        <SchemaAction.Drag render={<Button variant="ghost" size="icon-xs" />}>
-          <GripVerticalIcon />
-        </SchemaAction.Drag>
-        <SchemaAction.Select render={<Checkbox />} />
-        <SchemaAction.ChangeType>
-          <SchemaField.Type label render={<Badge variant="outline" />} />
-        </SchemaAction.ChangeType>
-        <SchemaField.Title render={<Input className="h-7 w-44 text-sm" />} />
-        <SchemaField.Key
-          render={<Input className="h-7 w-36 font-mono text-xs" />}
-        />
-        <SchemaField.Optional render={<Badge variant="secondary" />} />
-        <SchemaField.Repeated render={<Badge variant="secondary" />}>
-          list
-        </SchemaField.Repeated>
-        <SchemaField.Nullable render={<Badge variant="secondary" />} />
-        <SchemaField.ChildrenCount render={<Badge variant="outline" />} />
-        <div className="ml-auto flex items-center gap-1">
-          <SchemaAction.Remove
-            render={<Button variant="ghost" size="icon-xs" />}
-          >
-            <Trash2Icon />
-          </SchemaAction.Remove>
-          <SchemaField.MenuPart>
-            <SchemaAction.Optional />
-            <SchemaAction.Repeated />
-            <SchemaAction.Nullable />
-            <SchemaAction.Duplicate />
-            <SchemaAction.Remove />
-          </SchemaField.MenuPart>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2 px-3">
-        <SchemaField.Description
-          multiline
-          render={<Textarea className="min-h-0 text-xs" rows={1} />}
-        />
-        <SchemaField.Examples render={<Input className="h-7 text-xs" />} />
-      </CardContent>
-    </>
-  )
-  return (
-    <SchemaField.Row dragFrom="handle">
-      <Card size="sm" className="gap-2 py-2">
-        <GroupFrame node={node} groups="accordion" head={head} />
-      </Card>
-    </SchemaField.Row>
-  )
-}
-
 /* --------------------------------- preset -------------------------------- */
-
-/** which head draws the rows: ours, or the stock-shadcn A/B */
-export type Skin = "editor" | "shadcn"
 
 export function JsonSchemaEditor({
   schema,
   variant,
   groups = "nested",
-  skin = "editor",
   className,
 }: {
   schema: JsonSchema
   /** default: `mobile` on a coarse pointer, else `default` */
   variant?: Variant
   groups?: Groups
-  skin?: Skin
   className?: string
 }) {
   return (
     <Schema.Root store={schema} className={className}>
-      <Preset variant={variant} groups={groups} skin={skin} />
+      <Preset variant={variant} groups={groups} />
     </Schema.Root>
   )
 }
 
-function Preset({
-  variant,
-  groups,
-  skin,
-}: {
-  variant?: Variant
-  groups: Groups
-  skin: Skin
-}) {
+function Preset({ variant, groups }: { variant?: Variant; groups: Groups }) {
   const { coarse } = useEditor()
   const v: Variant = variant ?? (coarse ? "mobile" : "default")
   const render = React.useMemo(
-    () =>
-      skin === "shadcn"
-        ? shadcn
-        : v === "mobile"
-          ? mobile(groups)
-          : desktop(groups),
-    [v, groups, skin]
+    () => (v === "mobile" ? mobile(groups) : desktop(groups)),
+    [v, groups]
   )
   return (
     <>

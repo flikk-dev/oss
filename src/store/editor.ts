@@ -10,6 +10,7 @@ import { defaultTypes, type TypeModule } from "./types"
  */
 
 export type Field = Omit<SchemaNode, "children">
+export type DetailField = "title" | "key" | "description" | "examples"
 
 export type EditorState = {
   root: string
@@ -24,8 +25,8 @@ export type EditorState = {
   anchor: string | null
   /** live drag: where the row would land; index counts siblings without the dragged row */
   drop: { id: string; parentId: string; index: number; height: number } | null
-  /** mobile: id whose detail sheet is open */
-  sheet: string | null
+  /** details dialog / sheet: which field, and which of its fields to show (all when omitted) */
+  details: { id: string; fields?: DetailField[] } | null
 
   replace: (root: SchemaNode) => void
   update: (id: string, patch: NodePatch) => void
@@ -39,7 +40,7 @@ export type EditorState = {
   /** add every node between the anchor and `id` (document order) to the selection */
   selectRange: (id: string) => void
   setDrop: (drop: EditorState["drop"]) => void
-  openSheet: (id: string | null) => void
+  openDetails: (id: string | null, fields?: DetailField[]) => void
 }
 
 export function fromNode(root: SchemaNode) {
@@ -139,7 +140,7 @@ export function createEditorStore(
         selected: [],
         anchor: null,
         drop: null,
-        sheet: null,
+        details: null,
 
         replace: (root) =>
           set({
@@ -147,7 +148,7 @@ export function createEditorStore(
             selected: [],
             anchor: null,
             drop: null,
-            sheet: null,
+            details: null,
           }),
 
         update: (id, patch) =>
@@ -282,7 +283,8 @@ export function createEditorStore(
             return
           set({ drop })
         },
-        openSheet: (sheet) => set({ sheet }),
+        openDetails: (id, fields) =>
+          set({ details: id ? { id, fields } : null }),
       }
     })
   )

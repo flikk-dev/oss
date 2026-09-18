@@ -59,6 +59,5 @@ export {
   useJsonSchema,
   useJsonSchemaValue,
   type Groups,
-  type Skin,
 } from "./presets"
 export type { Variant } from "@/context/editor"

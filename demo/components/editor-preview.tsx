@@ -23,7 +23,6 @@ import {
   useJsonSchema,
   useJsonSchemaValue,
   type Groups,
-  type Skin,
   type Variant,
 } from "@/components/ui/json/editor"
 import {
@@ -186,11 +185,9 @@ function ShapePanel({ schema, shape }: { schema: JsonSchema; shape: Shape }) {
 export function EditorPreview({
   variant,
   groups,
-  skin,
 }: {
   variant: Variant
   groups: Groups
-  skin: Skin
 }) {
   const schema = useJsonSchema(sample)
   const [shape, setShape] = React.useState<Shape>("off")
@@ -198,12 +195,7 @@ export function EditorPreview({
 
   const editor = (
     <div className={cn("rounded-xl border bg-card", mobile ? "p-2" : "p-3")}>
-      <JsonSchemaEditor
-        schema={schema}
-        variant={variant}
-        groups={groups}
-        skin={skin}
-      />
+      <JsonSchemaEditor schema={schema} variant={variant} groups={groups} />
     </div>
   )
 
@@ -259,7 +251,6 @@ export function EditorPreview({
               schema={schema}
               variant={variant}
               groups={groups}
-              skin={skin}
             />
           </SheetContent>
         </Sheet>
@@ -283,7 +274,6 @@ export function EditorPreview({
               schema={schema}
               variant={variant}
               groups={groups}
-              skin={skin}
             />
           </DialogContent>
         </Dialog>

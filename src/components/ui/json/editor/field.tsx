@@ -7,7 +7,15 @@ import { motion, useDragControls } from "motion/react"
 import { useRender } from "@base-ui/react/use-render"
 import { ChevronDownIcon, EllipsisIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { uniqueSlug } from "@/store/slug"
+import type { DetailField } from "@/store/editor"
 import {
   ActionScopeContext,
   FieldContext,
@@ -22,7 +30,7 @@ import {
   type Variant,
 } from "@/context/editor"
 import { Editable, type EditableProps, type RenderProp } from "./editable"
-import { IconTile, Menu, TypeMenu } from "./menu"
+import { IconTile, Menu, sheetClass, TypeMenu } from "./menu"
 
 type Size = Record<Variant, string>
 const text: Size = {
@@ -53,7 +61,15 @@ const tile: Record<Variant, "xs" | "sm" | "md" | "lg"> = {
 type Part = { className?: string }
 /** `render` swaps the element for yours (Base UI style); behaviour is merged in, our styling is not */
 type Rendered = Part & { render?: RenderProp }
-type Field = Rendered & Pick<EditableProps, "placeholder" | "readOnly">
+type Field = Rendered &
+  Pick<EditableProps, "placeholder" | "readOnly" | "variant">
+/** flag / count badges */
+type BadgeVariant = "muted" | "outline" | "secondary"
+const badgeLook: Record<BadgeVariant, string> = {
+  muted: "bg-muted text-muted-foreground",
+  outline: "border border-border text-muted-foreground",
+  secondary: "bg-secondary text-secondary-foreground",
+}
 
 /* --------------------------------- text ---------------------------------- */
 
@@ -62,6 +78,7 @@ export function Title({
   placeholder = "Untitled",
   readOnly,
   render,
+  variant,
 }: Field) {
   const { node, set } = useField()
   const v = useVariant()
@@ -71,6 +88,7 @@ export function Title({
       aria-label="Title"
       readOnly={readOnly}
       render={render}
+      variant={variant}
       value={node.title}
       onChange={(title) => set({ title })}
       placeholder={placeholder}
@@ -86,6 +104,7 @@ export function Key({
   placeholder = "key",
   readOnly,
   render,
+  variant,
 }: Field) {
   const { node, set, id } = useField()
   const v = useVariant()
@@ -105,6 +124,7 @@ export function Key({
       aria-label="Key"
       readOnly={readOnly}
       render={render}
+      variant={variant}
       value={node.key}
       onChange={(key) => set({ key })}
       onCommit={(key) => {
@@ -118,18 +138,22 @@ export function Key({
         if (taken.has(key)) set({ key: uniqueSlug(key, taken, s.slugCase) })
       }}
       placeholder={placeholder}
-      {...(render
+      {...(render || variant === "input"
         ? {
             "data-slot": "key",
-            className,
+            className: cn(
+              variant === "input" && "font-mono",
+              conflict && "text-destructive",
+              className
+            ),
             title: conflictTitle,
             "aria-invalid": conflict || undefined,
           }
         : {})}
     />
   )
-  // your element stands alone; ours gets the "@" prefix and the conflict tint
-  if (render) return input
+  // your element and the input variant stand alone; inline gets the "@" prefix
+  if (render || variant === "input") return input
   return (
     <span
       data-slot="key"
@@ -154,6 +178,7 @@ export function Description({
   readOnly,
   multiline,
   render,
+  variant,
 }: Field & { multiline?: boolean }) {
   const { node, set } = useField()
   const v = useVariant()
@@ -164,6 +189,7 @@ export function Description({
       readOnly={readOnly}
       multiline={multiline}
       render={render}
+      variant={variant}
       value={node.description}
       onChange={(description) => set({ description })}
       placeholder={placeholder}
@@ -182,6 +208,7 @@ export function Examples({
   placeholder = "Add examples",
   readOnly,
   render,
+  variant,
 }: Field) {
   const { node, set } = useField()
   const v = useVariant()
@@ -196,6 +223,7 @@ export function Examples({
       aria-label="Examples"
       readOnly={readOnly}
       render={render}
+      variant={variant}
       value={draft}
       onChange={setDraft}
       onCommit={(s) =>
@@ -224,18 +252,17 @@ export function Examples({
 export function DetailFields({
   fields = ["title", "key", "description", "examples"],
 }: {
-  fields?: ("title" | "key" | "description" | "examples")[]
+  fields?: DetailField[]
 }) {
   const label = "flex flex-col gap-1 text-2xs text-muted-foreground"
-  const field = "w-full rounded-md border px-2 py-1.5 text-xs"
   const parts = {
-    title: ["Title", <Title key="t" className={field} />],
-    key: ["Key", <Key key="k" className={field} />],
+    title: ["Title", <Title key="t" variant="input" />],
+    key: ["Key", <Key key="k" variant="input" />],
     description: [
       "Description",
-      <Description key="d" multiline className={field} />,
+      <Description key="d" multiline variant="input" />,
     ],
-    examples: ["Examples", <Examples key="e" className={field} />],
+    examples: ["Examples", <Examples key="e" variant="input" />],
   } as const
   return (
     <div className="flex flex-col gap-3">
@@ -249,9 +276,50 @@ export function DetailFields({
   )
 }
 
+/** the row's details overlay: dialog, or a bottom sheet on mobile; opened by <SchemaAction.EditDetails> */
+function DetailsOverlay() {
+  const { id } = useField()
+  const { store } = useEditor()
+  const details = useEditorStore((s) =>
+    s.details?.id === id ? s.details : null
+  )
+  const title = useEditorStore((s) => s.byId[id]?.title)
+  const mobile = useVariant() === "mobile"
+  const onOpenChange = (o: boolean) => {
+    if (!o) store.getState().openDetails(null)
+  }
+  if (!details) return null
+  const body = <DetailFields fields={details.fields} />
+  return mobile ? (
+    <Sheet open onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className={sheetClass}>
+        <SheetHeader className="p-0">
+          <SheetTitle className="text-sm font-normal">
+            {title || "Edit field"}
+          </SheetTitle>
+        </SheetHeader>
+        {body}
+      </SheetContent>
+    </Sheet>
+  ) : (
+    <Dialog open onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm gap-3 p-4">
+        <DialogTitle className="text-xs font-medium">
+          {title || "Untitled"}
+        </DialogTitle>
+        {body}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 /* -------------------------------- badges --------------------------------- */
 
-type BadgeProps = Rendered & { children?: React.ReactNode; title?: string }
+type BadgeProps = Rendered & {
+  children?: React.ReactNode
+  title?: string
+  variant?: BadgeVariant
+}
 
 /** flag badge; `render` swaps the element (shadcn <Badge />), children the text */
 function Badge({
@@ -262,6 +330,7 @@ function Badge({
   children,
   title,
   render,
+  variant = "muted",
 }: BadgeProps & { on: boolean; slot: string; label: string }) {
   const v = useVariant()
   return useRender({
@@ -270,15 +339,12 @@ function Badge({
     defaultTagName: "span",
     props: {
       "data-slot": slot,
+      "data-variant": variant,
       title,
       children: children ?? label,
       className: render
         ? className
-        : cn(
-            "shrink-0 rounded bg-muted px-1 text-muted-foreground",
-            tiny[v],
-            className
-          ),
+        : cn("shrink-0 rounded px-1", badgeLook[variant], tiny[v], className),
     },
   })
 }
@@ -314,7 +380,8 @@ export function Nullable(props: BadgeProps) {
 export function ChildrenCount({
   className,
   render,
-}: Part & { render?: Parameters<typeof useRender>[0]["render"] }) {
+  variant = "muted",
+}: Rendered & { variant?: BadgeVariant }) {
   const { node, id } = useField()
   const mod = useTypeModule(node.type)
   const count = useEditorStore((s) => s.children[id]?.length ?? 0)
@@ -325,11 +392,10 @@ export function ChildrenCount({
     defaultTagName: "span",
     props: {
       "data-slot": "children-count",
-      className: cn(
-        "shrink-0 rounded bg-muted px-1 text-muted-foreground",
-        tiny[v],
-        className
-      ),
+      "data-variant": variant,
+      className: render
+        ? className
+        : cn("shrink-0 rounded px-1", badgeLook[variant], tiny[v], className),
       children: mod.countLabel ? mod.countLabel(count) : String(count),
     },
     enabled: node.isGroup,
@@ -339,24 +405,44 @@ export function ChildrenCount({
 
 /* --------------------------------- type ---------------------------------- */
 
-/** the field's type as icon (+ label); pick with <SchemaAction.ChangeType> */
+const typeBadge: Size = {
+  compact: "h-4 gap-1 pr-1.5 text-2xs",
+  default: "h-5 gap-1 pr-1.5 text-xs",
+  wide: "h-7 gap-1.5 pr-2 text-sm",
+  mobile: "h-6 gap-1 pr-2 text-xs",
+}
+
+/**
+ * The field's type. `icon` (default): the tile alone. `badge`: tile + label in
+ * an outlined pill. Pick with <SchemaAction.ChangeType>.
+ */
 export function Type({
   className,
-  label,
   render,
-}: Rendered & { label?: boolean }) {
+  variant = "icon",
+}: Rendered & { variant?: "icon" | "badge" }) {
   const { node } = useField()
   const mod = useTypeModule(node.type)
   const v = useVariant()
+  const badge = variant === "badge"
   return useRender({
     render,
     defaultTagName: "span",
     props: {
       "data-slot": "type",
+      "data-variant": variant,
       title: mod.label,
       className: render
         ? className
-        : cn("flex shrink-0 items-center gap-1.5", className),
+        : cn(
+            "flex shrink-0 items-center",
+            badge &&
+              cn(
+                "rounded-md border border-border text-foreground",
+                typeBadge[v]
+              ),
+            className
+          ),
       children: (
         <>
           <IconTile
@@ -364,9 +450,9 @@ export function Type({
             color={
               v === "compact" ? mod.color.replace(/bg-\S+/, "") : mod.color
             }
-            size={label ? "md" : tile[v]}
+            size={tile[v]}
           />
-          {label && mod.label}
+          {badge && mod.label}
         </>
       ),
     },
@@ -774,6 +860,7 @@ function RowImpl({
       >
         {children}
       </motion.div>
+      {!list.ghost && <DetailsOverlay />}
       {dragging &&
         createPortal(
           <div

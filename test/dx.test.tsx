@@ -215,6 +215,49 @@ describe("composing parts", () => {
     ).toBe("closed")
   })
 
+  test("parts take a look variant: Type badge, input fields, badge looks", () => {
+    render(
+      <Schema.Root store={createJsonSchema(user)}>
+        <Schema.List
+          render={() => (
+            <SchemaField.Row>
+              <SchemaField.Type variant="badge" />
+              <SchemaField.Title variant="input" />
+              <SchemaField.Key variant="input" />
+              <SchemaField.Optional variant="outline" />
+              <SchemaField.ChildrenCount variant="secondary" />
+            </SchemaField.Row>
+          )}
+        />
+      </Schema.Root>
+    )
+    const name = row(titleOf("Name"))
+    expect(within(name).getByText("Text")).toBeTruthy()
+    expect(within(name).getByDisplayValue("Name").dataset.variant).toBe("input")
+    // input variant: key stands alone, no "@" prefix
+    expect(within(name).queryByText("@")).toBeNull()
+    expect(within(name).getByDisplayValue("name").dataset.slot).toBe("key")
+    expect(within(name).getByText("optional").dataset.variant).toBe("outline")
+    expect(
+      within(row(titleOf("Address"))).getByText("2 fields").dataset.variant
+    ).toBe("secondary")
+  })
+
+  test("EditDetails from a closing menu still opens the dialog", async () => {
+    render(
+      <JsonSchemaEditor schema={createJsonSchema(user)} variant="compact" />
+    )
+    const name = row(titleOf("Name"))
+    await userEvent.click(
+      within(name).getByRole("button", { name: /field settings/i })
+    )
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: /edit details/i })
+    )
+    const dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getByDisplayValue("Display name")).toBeTruthy()
+  })
+
   test("NestedToggle / NestedList refuse to render outside Nested", () => {
     const err = console.error
     console.error = () => {}
