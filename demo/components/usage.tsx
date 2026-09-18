@@ -8,11 +8,11 @@ const tabs = [
   {
     key: "preset",
     label: "Preset",
-    blurb: "One line. Real JSON Schema in, real JSON Schema out.",
+    blurb: "One line. JSON Schema in, JSON Schema out.",
     code: `import { JsonSchemaEditor, useJsonSchema } from "@/components/ui/json/editor"
 
 function SchemaPage({ initial }) {
-  const schema = useJsonSchema(initial)          // a handle, like react-hook-form: never re-renders you
+  const schema = useJsonSchema(initial)          // a handle; it never re-renders the owner
   return (
     <>
       <JsonSchemaEditor schema={schema} variant="compact" />
@@ -24,8 +24,7 @@ function SchemaPage({ initial }) {
   {
     key: "parts",
     label: "Parts",
-    blurb:
-      "Compound components. Write the row template once; groups recurse through it.",
+    blurb: "You write the row once. Groups reuse it for their children.",
     code: `import { Schema, SchemaField, SchemaAction } from "@/components/ui/json/editor"
 
 const row = (field) => (
@@ -43,7 +42,7 @@ const row = (field) => (
     {field.isGroup && (
       <SchemaField.Nested>
         <SchemaField.NestedToggle />
-        <SchemaField.NestedList />          {/* same template, next level */}
+        <SchemaField.NestedList />          {/* the same row, one level down */}
       </SchemaField.Nested>
     )}
   </SchemaField.Row>
@@ -62,7 +61,7 @@ const row = (field) => (
   {
     key: "hooks",
     label: "Hooks",
-    blurb: "Headless. Two hooks, your own markup.",
+    blurb: "Two hooks, your own markup.",
     code: `import { useSchema, useField } from "@/components/ui/json/editor"
 
 function MyRow() {

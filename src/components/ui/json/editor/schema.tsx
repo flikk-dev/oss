@@ -47,7 +47,7 @@ export function Root({
   children,
 }: {
   store: JsonSchema
-  /** where popups render — hand it a frame to keep sheets and menus inside (a phone mock, a panel) */
+  /** where popups render; hand it a frame to keep sheets and menus inside (a phone mock, a panel) */
   portalContainer?: React.RefObject<HTMLElement | null>
   className?: string
   children: React.ReactNode

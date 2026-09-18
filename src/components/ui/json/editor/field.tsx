@@ -526,7 +526,7 @@ const useNested = (part: string) => {
 
 /**
  * The accordion of a group row: owns open / closed, hosts the toggle and the
- * list. Null on leaves. Free-form children — put the toggle where you like.
+ * list. Null on leaves. Free-form children: put the toggle where you like.
  */
 export function Nested({
   className,
@@ -595,7 +595,7 @@ export function NestedList({
   open: forced,
 }: Part & {
   children?: React.ReactNode
-  /** always draw the rows — when something else (an accordion panel) hides the list */
+  /** always draw the rows, for when something else (a panel) hides the list */
   open?: boolean
 }) {
   useNested("NestedList")
@@ -625,7 +625,7 @@ export function NestedList({
       <div
         aria-hidden
         data-slot="nested-frame"
-        // absolute inside its grid area: the content column (both lines explicit — `auto` would mean the container's edge), full height, no row of its own
+        // absolute inside its grid area: the content column (both lines explicit, `auto` would mean the container's edge), full height, no row of its own
         className="absolute! inset-0 [grid-column:var(--content-col)/calc(var(--content-col)+1)]! mx-[calc((var(--depth)-1)*var(--indent))]! rounded-b-md border-x border-b border-border bg-group"
       />
       {open ? (
@@ -658,7 +658,7 @@ export function NestedSummary({ className }: Part) {
         className
       )}
     >
-      {count ? `${count} hidden` : "empty — drop fields here"}
+      {count ? `${count} hidden` : "empty, drop fields here"}
     </div>
   )
 }

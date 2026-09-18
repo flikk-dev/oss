@@ -1,4 +1,4 @@
-# Schema builder — design note
+# Schema builder: design note
 
 Target architecture for the JSON Schema builder. Decided 2026-09-16; the current
 `components/ui/schema-editor` is the prototype this replaces.
@@ -7,8 +7,8 @@ Target architecture for the JSON Schema builder. Decided 2026-09-16; the current
 
 ```
 core      tree model · slugs · validation · toJsonSchema / fromJsonSchema · store handle   (no React)
-parts     Schema.* · SchemaField.* · SchemaAction.*  — headless-ish compound components
-presets   <JsonSchemaEditor schema={…} variant="…" />  — the four heads, ready to use
+parts     Schema.* · SchemaField.* · SchemaAction.*  (headless-ish compound components)
+presets   <JsonSchemaEditor schema={…} variant="…" />  (the four heads, ready to use)
 ```
 
 Consumers import a preset. Anyone who needs a different look composes parts.
@@ -51,7 +51,7 @@ defineType({
 ```
 
 The registry passed to `Schema.Root` is the only extension point. A regex type,
-a translated registry, a domain-specific field — all are entries, not editor
+a translated registry, a domain-specific field: all are entries, not editor
 changes. (Same idea as `FieldModule` in flikk tables.)
 
 ## Parts
@@ -94,7 +94,7 @@ const row = (node) => (
     {node.isGroup ? (
       <SchemaField.Nested>
         <div className="flex"><Head /><SchemaField.NestedToggle /></div>
-        <SchemaField.NestedList />          // renders <Schema.List render={row}> — same template, next level
+        <SchemaField.NestedList />          // renders <Schema.List render={row}>, the same row one level down
       </SchemaField.Nested>
     ) : (
       <Head />
@@ -169,7 +169,7 @@ Dragging a selected row moves the selection.
 
 ## Presets
 
-`default`, `compact`, `wide`, `mobile` — each a ~20-line head on the parts.
+`default`, `compact`, `wide`, `mobile`, each a short head on the parts.
 `mobile` is auto on a coarse pointer unless overridden.
 
 ## Migration

@@ -1,5 +1,5 @@
 /**
- * JSON Schema editor — parts + presets.
+ * JSON Schema editor: parts + presets.
  *
  *   const schema = useJsonSchema(json)
  *   <JsonSchemaEditor schema={schema} variant="compact" />

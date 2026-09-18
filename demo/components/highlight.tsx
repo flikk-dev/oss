@@ -2,7 +2,7 @@ import * as React from "react"
 
 /**
  * Tiny TSX tokenizer: enough for the snippets on this page, colours from
- * the `--code-*` tokens. Not a grammar — comments, strings, keywords, JSX
+ * the `--code-*` tokens. Not a grammar: comments, strings, keywords, JSX
  * tags and attributes, numbers, punctuation; everything else is plain.
  */
 const KEYWORDS = new Set(

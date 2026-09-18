@@ -41,8 +41,8 @@ export function Showcase({ initial = "default" }: { initial?: Variant }) {
           ))}
         </ToggleGroup>
         <p className="text-xs text-muted-foreground">
-          Drag rows anywhere in the tree · shift-click to select a range · on
-          touch, long-press to select
+          Drag a row anywhere in the tree. Shift-click selects a range. On
+          touch, long-press selects.
         </p>
       </div>
       <EditorPreview variant={variant} />

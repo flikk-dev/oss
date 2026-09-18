@@ -6,6 +6,7 @@ import { MoonIcon, SunIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const GITHUB = "https://github.com/flikk-dev/json-editor"
+const FLIKK = "https://flikk.dev"
 
 export function SiteNav() {
   const { resolvedTheme, setTheme } = useTheme()
@@ -45,6 +46,15 @@ export function SiteNav() {
           className="font-normal text-muted-foreground"
         >
           GitHub
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          nativeButton={false}
+          render={<a href={FLIKK} />}
+          className="ml-1 font-normal"
+        >
+          flikk.dev
         </Button>
         <Button
           variant="ghost"

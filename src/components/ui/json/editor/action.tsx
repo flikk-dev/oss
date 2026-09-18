@@ -104,7 +104,7 @@ export function ActionPrimitive({
   // a string child is the label everywhere, including the icon-only row button's accessible name
   const name = typeof children === "string" ? children : label
 
-  // a custom element carries behaviour + state only — none of the button chrome
+  // a custom element carries behaviour + state only, none of the button chrome
   const custom = useRender({
     render,
     enabled: !!render,

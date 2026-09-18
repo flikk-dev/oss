@@ -31,7 +31,7 @@ export function useJsonSchema(
   return schema
 }
 
-/** re-render on every change with the current JSON — opt-in reactivity */
+/** re-render on every change with the current JSON; opt-in reactivity */
 export function useJsonSchemaValue(schema: JsonSchema): Json {
   return React.useSyncExternalStore(
     (cb) => schema.subscribe(cb),
@@ -76,7 +76,7 @@ function GroupFrame({
   )
 }
 
-/** is anything selected — mobile switches tap to "toggle this row" then */
+/** is anything selected; mobile switches tap to "toggle this row" then */
 const useSelecting = () => useEditorStore((s) => s.selected.length > 0)
 
 /** the ⋯ menu; compact keeps description + examples behind Edit details */
@@ -316,7 +316,7 @@ function Preset({ variant }: { variant?: Variant }) {
         </Schema.Toolbar>
       )}
       <Schema.List variant={v} render={render}>
-        {/* mobile: no checkbox — long-press selects, the card border says so */}
+        {/* mobile: no checkbox; long-press selects, the card border says so */}
         {v !== "mobile" && (
           <>
             <Schema.Column side="left" className="mr-1.5">

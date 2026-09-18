@@ -13,28 +13,28 @@ const INSTALL =
 
 const features = [
   {
-    title: "Real JSON Schema",
-    body: "2020-12 in, 2020-12 out. Round-trips losslessly; keywords the editor has no UI for ride along untouched.",
+    title: "You get real JSON Schema back",
+    body: "Draft 2020-12 in and out. Keywords the editor has no UI for stay on the field and come back untouched.",
   },
   {
-    title: "Drag anything, anywhere",
-    body: "One tree-wide model: any row to any depth, whole groups as one, selections in bulk. Ghost, skeleton, no surprises.",
+    title: "You drag any field anywhere",
+    body: "One model for the whole tree: a row to any depth, a group as one piece, a selection as a batch. A skeleton marks the slot, the siblings make room, and the row lands where the skeleton was.",
   },
   {
-    title: "Bulk actions",
-    body: "Select with click, shift-range or long-press. Toggle flags, move into a group, duplicate, remove — all at once.",
+    title: "You edit ten fields at once",
+    body: "Select with a click, shift-click for a range, or a long press on touch. Then toggle flags, move into a group, duplicate, or remove the lot.",
   },
   {
-    title: "Type modules",
-    body: "A type is a self-contained module: icon, schema, example, what it accepts. Add your own; the editor never branches on type.",
+    title: "You add your own types",
+    body: "A type is one object: icon, label, schema, example, what it accepts, its own extra UI. The editor picks it up; nothing inside branches on the type name.",
   },
   {
-    title: "Presets, parts, hooks",
-    body: "Ship the preset, compose the parts, or go headless with two hooks. Same core, your choice of surface.",
+    title: "You choose how deep to go",
+    body: "Ship the preset, compose the parts, or build your own rows on two hooks. The built-in parts are written on the same hooks.",
   },
   {
-    title: "Yours to own",
-    body: "shadcn-style: the source lands in components/ui. Tailwind tokens from your globals.css, Base UI underneath, no theme system to learn.",
+    title: "You own the source",
+    body: "The shadcn way: the code lands in components/ui, styled from the tokens in your globals.css, built on Base UI. You edit it like anything else in your app.",
   },
 ]
 
@@ -60,8 +60,15 @@ export default async function Page({
           <span className="text-primary">in your own projects.</span>
         </h1>
         <p className="max-w-xl text-lg leading-relaxed text-pretty text-muted-foreground">
-          The pieces we build for flikk, shadcn-style: one command copies the
-          source into your app, and it&apos;s yours. First up, a JSON Schema
+          The components we build for{" "}
+          <a
+            href="https://flikk.dev"
+            className="text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
+          >
+            flikk
+          </a>
+          , shipped the shadcn way. You run one command, the source lands in
+          your app, and you own it from there. The first one is a JSON Schema
           builder.
         </p>
         <div className="flex flex-wrap items-center gap-3">
@@ -80,7 +87,8 @@ export default async function Page({
         <div className="flex flex-col gap-1">
           <h2 className="text-xl font-medium">JSON Schema builder</h2>
           <p className="text-sm text-muted-foreground">
-            A schema, edited as a tree. Four presets from one set of parts.
+            You edit the schema as a tree and get valid JSON Schema back. Four
+            presets, one set of parts.
           </p>
         </div>
         <Showcase initial={(variant as Variant) ?? "default"} />
@@ -90,7 +98,7 @@ export default async function Page({
         <div className="flex flex-col gap-1">
           <h2 className="text-xl font-medium">Three ways in</h2>
           <p className="text-sm text-muted-foreground">
-            Pick how much you want to own.
+            You choose how much of it you want to own.
           </p>
         </div>
         <Usage />
@@ -108,7 +116,9 @@ export default async function Page({
       </section>
 
       <footer className="flex flex-wrap items-center gap-4 border-t border-border pt-6 text-xs text-muted-foreground">
-        <span>flikk</span>
+        <a href="https://flikk.dev" className="hover:text-foreground">
+          flikk.dev
+        </a>
         <span>MIT</span>
         <a
           href={GITHUB}
