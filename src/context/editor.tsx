@@ -50,6 +50,10 @@ export type ListCtx = {
   render: RenderRow
   /** inside the drag ghost: render only, no drag / hit-test participation */
   ghost?: boolean
+  /** <Schema.Column> cells every row draws beside its content; nested lists inherit */
+  columns?: { left: React.ReactElement[]; right: React.ReactElement[] }
+  /** the grid this list's rows are laid on: [left | content | right] when columns are declared */
+  cols: 1 | 3
 }
 export const ListContext = React.createContext<ListCtx | null>(null)
 export const useList = () => {

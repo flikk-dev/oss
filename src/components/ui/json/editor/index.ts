@@ -13,6 +13,7 @@ import * as ActionParts from "./action"
 export const Schema = {
   Root: SchemaParts.Root,
   List: SchemaParts.List,
+  Column: SchemaParts.Column,
   Skeleton: SchemaParts.Skeleton,
   AddField: SchemaParts.AddField,
   Toolbar: SchemaParts.Toolbar,
@@ -54,12 +55,7 @@ export const SchemaAction = {
   MoveInto: ActionParts.MoveInto,
 }
 
-export {
-  JsonSchemaEditor,
-  useJsonSchema,
-  useJsonSchemaValue,
-  type Groups,
-} from "./presets"
+export { JsonSchemaEditor, useJsonSchema, useJsonSchemaValue } from "./presets"
 export { useSchema, useField, type NewField } from "./hooks"
 export type { Field, FieldPatch } from "@/store"
 export type { Variant } from "@/context/editor"

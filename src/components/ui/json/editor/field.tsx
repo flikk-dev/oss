@@ -4,6 +4,7 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import { cn } from "cn"
 import { motion, useDragControls } from "motion/react"
+import { useShallow } from "zustand/react/shallow"
 import { useRender } from "@base-ui/react/use-render"
 import { ChevronDownIcon, EllipsisIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -538,7 +539,7 @@ export function Nested({
       <div
         data-slot="nested"
         data-state={node.collapsed ? "closed" : "open"}
-        className={cn("flex min-w-0 flex-col", className)}
+        className={cn("contents", className)}
       >
         {children}
       </div>
@@ -603,21 +604,30 @@ export function NestedList({
   const v = useVariant()
   const open = forced || !node.collapsed
   const pad = {
-    compact: "p-1",
-    default: "p-1.5",
-    wide: "p-2",
-    mobile: "p-1.5",
+    compact: "[--frame-pad:--spacing(1)]",
+    default: "[--frame-pad:--spacing(1.5)]",
+    wide: "[--frame-pad:--spacing(2)]",
+    mobile: "[--frame-pad:--spacing(1.5)]",
   }[v]
   return (
     <div
       data-slot="nested-list"
       data-state={open ? "open" : "closed"}
+      style={{ "--depth": list.depth + 1 } as React.CSSProperties}
       className={cn(
-        "flex min-w-0 flex-col border-t border-border bg-group",
+        // spans the row's grid so nested cells reach the outer columns; the frame is drawn on the content column only
+        "relative col-span-full! row-start-2! mx-0! grid min-w-0 grid-cols-subgrid py-(--frame-pad)",
+        "[&>*]:relative [&>*]:[grid-column:var(--content-col)] [&>*]:mx-[calc(var(--depth)*var(--indent))] [&>*+*]:mt-(--row-gap)",
         pad,
         className
       )}
     >
+      <div
+        aria-hidden
+        data-slot="nested-frame"
+        // absolute inside its grid area: the content column, full height, no row of its own
+        className="absolute! inset-0 mx-[calc((var(--depth)-1)*var(--indent))]! rounded-b-md border-x border-b border-border bg-group"
+      />
       {open ? (
         // an explicit <Schema.List> child inherits this group as its parent; none → same template, next level
         <ListContext.Provider
@@ -642,7 +652,11 @@ export function NestedSummary({ className }: Part) {
   return (
     <div
       data-slot="nested-summary"
-      className={cn("px-2 py-1 text-muted-foreground", tiny[v], className)}
+      className={cn(
+        "relative px-2 py-1 text-muted-foreground",
+        tiny[v],
+        className
+      )}
     >
       {count ? `${count} hidden` : "empty — drop fields here"}
     </div>
@@ -733,7 +747,7 @@ function RowImpl({
   const controls = useDragControls()
   const ref = React.useRef<HTMLDivElement>(null)
   const ghostRef = React.useRef<HTMLDivElement>(null)
-  const grab = React.useRef({ x: 0, y: 0, w: 0, h: 0 })
+  const grab = React.useRef({ x: 0, y: 0, w: 0, h: 0, gap: 0 })
   const began = React.useRef(false)
   // the click that ends a drag must not reach row content (e.g. a tap-to-open summary)
   const justDragged = React.useRef(false)
@@ -746,11 +760,14 @@ function RowImpl({
   const selected = useEditorStore((s) => s.selected.includes(id))
   // this row travels with a selection someone else is dragging
   const carried = useEditorStore(
-    (s) => !!s.drop && s.drop.id !== id && s.drop.ids.includes(id)
+    (s) =>
+      !list.ghost && !!s.drop && s.drop.id !== id && s.drop.ids.includes(id)
   )
-  const count = useEditorStore((s) =>
-    s.drop?.id === id ? s.drop.ids.length : 0
+  // everything this drag carries, document order, for the ghost
+  const ghostIds = useEditorStore(
+    useShallow((s) => (s.drop?.id === id ? s.drop.ids : [id]))
   )
+  const count = ghostIds.length
   const startDrag = React.useCallback(
     (e: React.PointerEvent | PointerEvent) => controls.start(e as PointerEvent),
     [controls]
@@ -779,16 +796,59 @@ function RowImpl({
     const ids = st.moving(id)
     const siblings = st.children[parentId].filter((s) => !ids.includes(s))
     const index = beforeId ? siblings.indexOf(beforeId) : siblings.length
-    st.setDrop({ id, ids, parentId, index, height: grab.current.h })
+    st.setDrop({
+      id,
+      ids,
+      parentId,
+      index,
+      height: grab.current.h + grab.current.gap * (ids.length - 1),
+    })
     return { ids, parentId, index }
   }
 
   if (!node) return null
+  // the row is a subgrid: [left cells | template | right cells]; the template's
+  // elements go on the content column, inset by depth; a NestedList spans all
+  const body = (
+    <>
+      {list.columns?.left.length ? (
+        <div
+          data-slot="columns"
+          data-side="left"
+          className="col-start-1 row-start-1 flex items-start"
+        >
+          {list.columns.left}
+        </div>
+      ) : null}
+      <div
+        data-slot="row-content"
+        className={cn(
+          "contents",
+          "[&>*]:[grid-column:var(--content-col)] [&>*]:row-start-1 [&>*]:mx-[calc(var(--depth)*var(--indent))]",
+          "[&>[data-slot=nested]>*]:[grid-column:var(--content-col)] [&>[data-slot=nested]>*]:row-start-1 [&>[data-slot=nested]>*]:mx-[calc(var(--depth)*var(--indent))]"
+        )}
+      >
+        {children}
+      </div>
+      {list.columns?.right.length ? (
+        <div
+          data-slot="columns"
+          data-side="right"
+          className="col-start-3 row-start-1 flex items-start"
+        >
+          {list.columns.right}
+        </div>
+      ) : null}
+    </>
+  )
+  const layout =
+    "relative col-span-full! mx-0! grid min-w-0 grid-cols-subgrid items-start"
+  const depthVar = { "--depth": list.depth } as React.CSSProperties
   if (list.ghost)
     return (
       <FieldContext.Provider value={ctx}>
-        <div data-slot="row" className={className}>
-          {children}
+        <div data-slot="row" style={depthVar} className={cn(layout, className)}>
+          {body}
         </div>
       </FieldContext.Provider>
     )
@@ -814,11 +874,30 @@ function RowImpl({
           if (!began.current) {
             began.current = true
             const r = ref.current!.getBoundingClientRect()
+            // the slot is as tall as everything that moves: this row, or the selection it belongs to
+            const moving = store.getState().moving(id)
+            const gapVar = getComputedStyle(ref.current!)
+              .getPropertyValue("--row-gap")
+              .trim()
+            const gap =
+              (parseFloat(gapVar) || 0) *
+              (gapVar.endsWith("rem")
+                ? parseFloat(
+                    getComputedStyle(document.documentElement).fontSize
+                  )
+                : 1)
+            const h = moving.reduce((sum, m) => {
+              const el = root.current?.querySelector<HTMLElement>(
+                `[data-slot=row][data-id="${m}"]`
+              )
+              return sum + (el ? el.getBoundingClientRect().height : 0)
+            }, 0)
             grab.current = {
               x: info.point.x - window.scrollX - r.left,
               y: info.point.y - window.scrollY - r.top,
               w: r.width,
-              h: r.height,
+              h: h || r.height,
+              gap,
             }
             document.body.style.userSelect = "none"
             setDragging(true)
@@ -863,19 +942,20 @@ function RowImpl({
         data-selected={selected ? "" : undefined}
         data-drag-from={hasHandle ? "handle" : "row"}
         data-dragging={dragging ? "" : carried ? "carried" : undefined}
+        style={depthVar}
         className={cn(
-          "group/row relative flex min-w-0 flex-col",
+          "group/row",
+          layout,
           !hasHandle &&
             !mobile &&
             "cursor-grab select-none active:cursor-grabbing",
           mobile && "touch-none select-none",
           // collapsed, not display:none: motion keeps a sane layout snapshot, so no fly-in on settle
-          (dragging || carried) &&
-            "invisible [margin-top:calc(var(--row-gap)*-1)] h-0 overflow-hidden",
+          (dragging || carried) && "invisible mt-0! h-0 overflow-hidden",
           className
         )}
       >
-        {children}
+        {body}
       </motion.div>
       {!list.ghost && <DetailsOverlay />}
       {dragging &&
@@ -884,8 +964,13 @@ function RowImpl({
             ref={ghostRef}
             data-ghost
             aria-hidden
-            style={{ width: grab.current.w }}
-            className="pointer-events-none fixed top-0 left-0 z-100 opacity-90 shadow-lg"
+            style={{
+              width: grab.current.w,
+              gap: grab.current.gap,
+              gridTemplateColumns: gridCols(list.cols),
+              ...({ "--content-col": list.cols === 3 ? 2 : 1 } as object),
+            }}
+            className="pointer-events-none fixed top-0 left-0 z-100 grid opacity-90 shadow-lg"
           >
             {count > 1 && (
               <span
@@ -896,9 +981,26 @@ function RowImpl({
               </span>
             )}
             <ListContext.Provider value={{ ...list, ghost: true }}>
-              <RowImpl id={id} className={className}>
-                {children}
-              </RowImpl>
+              {ghostIds.slice(0, GHOST_MAX).map((gid) =>
+                gid === id ? (
+                  <RowImpl key={gid} id={id} className={className}>
+                    {children}
+                  </RowImpl>
+                ) : (
+                  <GhostRow key={gid} id={gid} />
+                )
+              )}
+              {ghostIds.length > GHOST_MAX && (
+                <div
+                  data-slot="ghost-more"
+                  className={cn(
+                    "px-2 py-1 text-center text-muted-foreground",
+                    tiny[list.variant]
+                  )}
+                >
+                  +{ghostIds.length - GHOST_MAX} more
+                </div>
+              )}
             </ListContext.Provider>
           </div>,
           document.body
@@ -907,5 +1009,20 @@ function RowImpl({
   )
 }
 
+/** ghost shows at most this many carried rows, then "+N more" */
+const GHOST_MAX = 3
+
+/** a carried row drawn in the ghost with the list's own template */
+function GhostRow({ id }: { id: string }) {
+  const { render } = useList()
+  const node = useEditorStore((s) => s.byId[id])
+  if (!node) return null
+  return (
+    <RowIdContext.Provider value={id}>
+      {render({ ...node })}
+    </RowIdContext.Provider>
+  )
+}
+
 // after Row so the cycle (row → nested → list → row) resolves at call time
-import { List } from "./schema"
+import { List, gridCols } from "./schema"

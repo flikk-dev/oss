@@ -320,11 +320,19 @@ export function Select({
   const { id } = useFieldContext()
   const { store } = useEditor()
   const on = useEditorStore((s) => s.selected.includes(id))
+  // a group with selected rows inside, itself unselected → partial
+  const partial = useEditorStore(
+    (s) =>
+      !on &&
+      !!s.children[id]?.length &&
+      s.selected.some((x) => isDescendant(s, id, x))
+  )
   return (
     <Checkbox
       data-slot="select"
       aria-label="Select field"
       checked={on}
+      indeterminate={partial}
       onCheckedChange={(checked, { event }) => {
         // shift extends the range from the last hand-toggled row
         if ((event as MouseEvent).shiftKey) store.getState().selectRange(id)

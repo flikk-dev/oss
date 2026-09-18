@@ -16,12 +16,6 @@ import {
   useVariant,
   type Variant,
 } from "@/context/editor"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
 import * as Schema from "./schema"
 import * as SchemaField from "./field"
 import * as SchemaAction from "./action"
@@ -52,97 +46,65 @@ const pad: Record<Variant, string> = {
   wide: "gap-3 px-4 py-3",
   mobile: "gap-2 px-3 py-2",
 }
+/** the head's vertical padding as a var on the row, so a column cell can line up with its first line */
+const headPy: Record<Variant, string> = {
+  compact: "[--head-py:--spacing(1)]",
+  default: "[--head-py:--spacing(2)]",
+  wide: "[--head-py:--spacing(3)]",
+  mobile: "[--head-py:--spacing(2)]",
+}
 
-/** how a group row folds: our Nested parts, or shadcn's Accordion (A/B) */
-export type Groups = "nested" | "accordion"
-
-/**
- * Group frame around a head. `nested`: chevron inside the head, our frame.
- * `accordion`: shadcn Accordion — its trigger is the chevron, its panel
- * animates the list.
- */
+/** group rows: head + nested list under one <Nested>; leaves: just the head */
 function GroupFrame({
   node,
-  groups,
   head,
 }: {
   node: SchemaNode
-  groups: Groups
   head: React.ReactNode
 }) {
-  const { set } = useFieldContext()
   if (!node.isGroup) return head
-  if (groups === "nested")
-    return (
-      <SchemaField.Nested>
-        {head}
-        <SchemaField.NestedList>
-          <Schema.List />
-          <Schema.AddField className="self-end" />
-        </SchemaField.NestedList>
-      </SchemaField.Nested>
-    )
   return (
     <SchemaField.Nested>
-      <Accordion
-        value={node.collapsed ? [] : [node.id]}
-        onValueChange={(v) => set({ collapsed: v.length === 0 })}
-      >
-        <AccordionItem value={node.id} className="border-0">
-          <div className="flex items-start">
-            <div className="min-w-0 flex-1">{head}</div>
-            <AccordionTrigger
-              aria-label={node.collapsed ? "Expand" : "Collapse"}
-              className="m-1 size-6 flex-none items-center justify-center rounded-md p-0 text-muted-foreground hover:bg-muted hover:no-underline **:data-[slot=accordion-trigger-icon]:m-0"
-            />
-          </div>
-          <AccordionContent className="p-0">
-            <SchemaField.NestedList open>
-              <Schema.List />
-              <Schema.AddField className="self-end" />
-            </SchemaField.NestedList>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-      <SchemaField.NestedSummary className="border-t border-border bg-group" />
+      {head}
+      <SchemaField.NestedList>
+        <Schema.List />
+        <Schema.AddField className="justify-self-end" />
+      </SchemaField.NestedList>
     </SchemaField.Nested>
   )
 }
 
 /** one template for default / compact / wide; compact moves description + examples into the menu */
-const desktop = (groups: Groups) => (node: SchemaNode) => (
-  <DesktopRow node={node} groups={groups} />
-)
+const desktop = (node: SchemaNode) => <DesktopRow node={node} />
 
-function DesktopRow({ node, groups }: { node: SchemaNode; groups: Groups }) {
+function DesktopRow({ node }: { node: SchemaNode }) {
   const v = useVariant()
   return (
-    <SchemaField.Row
-      dragFrom="anywhere"
-      className="group/row flex-row items-center"
-    >
-      {/* outside the card: shown on hover, when checked, and while any selection is active */}
-      <SchemaAction.Select className="mr-1.5 shrink-0 opacity-0 group-hover/row:opacity-100 group-data-[selection=active]/editor:opacity-100 data-checked:opacity-100" />
-      <div
-        data-slot="card"
-        className={cn(
-          "min-w-0 flex-1 rounded-md border bg-background",
-          node.isGroup
-            ? "border-border"
-            : "border-transparent has-[>[data-slot=head]:hover]:border-border"
-        )}
-      >
-        <GroupFrame
-          node={node}
-          groups={groups}
-          head={<Head node={node} toggle={groups === "nested"} />}
-        />
-      </div>
+    <SchemaField.Row dragFrom="anywhere" className={cn("group/row", headPy[v])}>
+      <GroupFrame
+        node={node}
+        head={
+          <div
+            data-slot="card"
+            className={cn(
+              "min-w-0 border bg-background",
+              // a group's card is the top of its frame
+              node.isGroup
+                ? "rounded-t-md border-border"
+                : "rounded-md border-transparent has-[>[data-slot=head]:hover]:border-border",
+              // selected: the hover look, kept
+              "group-data-[selected]/row:border-border group-data-[selected]/row:bg-muted/40 group-data-[selected]/row:[&_[data-slot=head]>*]:opacity-100"
+            )}
+          >
+            <Head node={node} />
+          </div>
+        }
+      />
     </SchemaField.Row>
   )
 }
 
-function Head({ node, toggle }: { node: SchemaNode; toggle: boolean }) {
+function Head({ node }: { node: SchemaNode }) {
   const v = useVariant()
   const compact = v === "compact"
   return (
@@ -166,9 +128,7 @@ function Head({ node, toggle }: { node: SchemaNode; toggle: boolean }) {
           <SchemaField.Repeated />
           <SchemaField.ChildrenCount />
           <SchemaField.Optional />
-          {toggle && node.isGroup && (
-            <SchemaField.NestedToggle className="ml-auto" />
-          )}
+          {node.isGroup && <SchemaField.NestedToggle className="ml-auto" />}
         </div>
         {!compact && (
           <>
@@ -204,14 +164,20 @@ function Head({ node, toggle }: { node: SchemaNode; toggle: boolean }) {
 const SWIPE = 88
 
 /** read-only summary; tap opens the sheet, swipe left reveals actions, press-and-drag reorders */
-const mobile = (groups: Groups) => (node: SchemaNode) => (
-  <MobileRow node={node} groups={groups} />
-)
+const mobile = (node: SchemaNode) => <MobileRow node={node} />
 
-function MobileRow({ node, groups }: { node: SchemaNode; groups: Groups }) {
+function MobileRow({ node }: { node: SchemaNode }) {
   const x = useMotionValue(0)
   const head = (
-    <div className="relative overflow-hidden rounded-md">
+    <div
+      data-slot="card"
+      className={cn(
+        "relative overflow-hidden border bg-background",
+        node.isGroup
+          ? "rounded-t-md border-border"
+          : "rounded-md border-transparent"
+      )}
+    >
       <div className="absolute inset-y-0 right-0 flex items-start gap-0.5 px-2 py-1">
         <SchemaAction.Remove />
         <SchemaField.MenuPart>
@@ -266,14 +232,8 @@ function MobileRow({ node, groups }: { node: SchemaNode; groups: Groups }) {
     </div>
   )
   return (
-    <SchemaField.Row
-      dragFrom="anywhere"
-      className={cn(
-        "rounded-md border bg-background",
-        node.isGroup ? "border-border" : "border-transparent"
-      )}
-    >
-      <GroupFrame node={node} groups={groups} head={head} />
+    <SchemaField.Row dragFrom="anywhere">
+      <GroupFrame node={node} head={head} />
     </SchemaField.Row>
   )
 }
@@ -283,29 +243,24 @@ function MobileRow({ node, groups }: { node: SchemaNode; groups: Groups }) {
 export function JsonSchemaEditor({
   schema,
   variant,
-  groups = "nested",
   className,
 }: {
   schema: JsonSchema
   /** default: `mobile` on a coarse pointer, else `default` */
   variant?: Variant
-  groups?: Groups
   className?: string
 }) {
   return (
     <Schema.Root store={schema} className={className}>
-      <Preset variant={variant} groups={groups} />
+      <Preset variant={variant} />
     </Schema.Root>
   )
 }
 
-function Preset({ variant, groups }: { variant?: Variant; groups: Groups }) {
+function Preset({ variant }: { variant?: Variant }) {
   const { coarse } = useEditor()
   const v: Variant = variant ?? (coarse ? "mobile" : "default")
-  const render = React.useMemo(
-    () => (v === "mobile" ? mobile(groups) : desktop(groups)),
-    [v, groups]
-  )
+  const render = v === "mobile" ? mobile : desktop
   return (
     <>
       {v !== "mobile" && (
@@ -320,7 +275,14 @@ function Preset({ variant, groups }: { variant?: Variant; groups: Groups }) {
           <SchemaAction.Remove />
         </Schema.Toolbar>
       )}
-      <Schema.List variant={v} render={render} />
+      <Schema.List variant={v} render={render}>
+        {v !== "mobile" && (
+          <Schema.Column side="left" className="mr-1.5">
+            {/* shown on hover, when checked, and while any selection is active */}
+            <SchemaAction.Select className="mt-[calc(var(--head-py)+0.125rem)] opacity-0 group-hover/row:opacity-100 group-data-[selection=active]/editor:opacity-100 data-indeterminate:opacity-100 data-checked:opacity-100" />
+          </Schema.Column>
+        )}
+      </Schema.List>
       <div className="flex justify-end pt-1">
         <Schema.AddField />
       </div>

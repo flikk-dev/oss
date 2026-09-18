@@ -76,19 +76,35 @@ export function Root({
 
 /* ---------------------------------- list --------------------------------- */
 
+/**
+ * Layout is one grid for the whole tree: `[left | content | right]` when
+ * <Schema.Column>s are declared, else a single column. Nested lists and rows
+ * are subgrids, so a cell at depth 3 sits in the same column as one at depth
+ * 0; nesting shows as inset on the content column (`--depth` × `--indent`).
+ */
 const gap: Record<Variant, string> = {
-  compact: "gap-0.5 [--row-gap:0.125rem]",
-  default: "gap-1.5 [--row-gap:0.375rem]",
-  wide: "gap-3 [--row-gap:0.75rem]",
-  mobile: "gap-1 [--row-gap:0.25rem]",
+  compact: "[--row-gap:0.125rem]",
+  default: "[--row-gap:0.375rem]",
+  wide: "[--row-gap:0.75rem]",
+  mobile: "[--row-gap:0.25rem]",
 }
+/** what one level of nesting insets the content column: the frame's padding + its border */
+const indent: Record<Variant, string> = {
+  compact: "[--indent:calc(--spacing(1)+1px)]",
+  default: "[--indent:calc(--spacing(1.5)+1px)]",
+  wide: "[--indent:calc(--spacing(2)+1px)]",
+  mobile: "[--indent:calc(--spacing(1.5)+1px)]",
+}
+export const gridCols = (cols: 1 | 3) =>
+  cols === 3 ? "auto minmax(0,1fr) auto" : "minmax(0,1fr)"
 
 const SkeletonContext = React.createContext<React.ReactElement | null>(null)
 
 /**
  * One sibling set. `render` draws each row; nested lists inherit it (and the
- * variant) unless they set their own. Children: a <Schema.Skeleton> to restyle
- * the drop slot; anything else renders after the rows.
+ * variant) unless they set their own. Children: <Schema.Column>s every row
+ * draws beside its content, a <Schema.Skeleton> to restyle the drop slot;
+ * anything else renders after the rows.
  */
 export function List({
   parentId,
@@ -107,32 +123,51 @@ export function List({
 }) {
   const { store, coarse } = useEditor()
   const parent = React.useContext(ListContext)
+  const kids = React.Children.toArray(children)
+  const isSkeleton = (c: React.ReactNode) =>
+    React.isValidElement(c) && c.type === Skeleton
+  const isColumn = (c: React.ReactNode): c is React.ReactElement<ColumnProps> =>
+    React.isValidElement(c) && c.type === Column
+  const custom = kids.find(isSkeleton) as React.ReactElement | undefined
+  const cols = kids.filter(isColumn)
+  // anything else (an AddField, your own bar) lands after the rows, inside the list's context
+  const rest = kids.filter((c) => !isSkeleton(c) && !isColumn(c))
+  const columns = React.useMemo(
+    () =>
+      cols.length
+        ? {
+            left: cols.filter((c) => (c.props.side ?? "left") === "left"),
+            right: cols.filter((c) => c.props.side === "right"),
+          }
+        : undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [children]
+  )
   const ctx = React.useMemo(() => {
     const r = render ?? parent?.render
     if (!r)
       throw new Error(
         "<Schema.List> needs a render (or an enclosing list to inherit one from)"
       )
+    const cols = columns ?? parent?.columns
     return {
       parentId: parentId ?? parent?.parentId ?? store.getState().root,
       depth: depth ?? (parent ? parent.depth : 0),
       variant: variant ?? parent?.variant ?? (coarse ? "mobile" : "default"),
       render: r,
       ghost: parent?.ghost,
+      columns: cols,
+      cols: (cols ? 3 : 1) as 1 | 3,
     }
-  }, [render, parent, parentId, depth, variant, coarse, store])
+  }, [render, columns, parent, parentId, depth, variant, coarse, store])
+  // a list that starts a grid: the root, or one declaring columns its parent lacks
+  const own = !parent || ctx.cols !== parent.cols
 
   const ids = useEditorStore(useShallow((s) => s.children[ctx.parentId] ?? []))
   const drop = useEditorStore((s) =>
     !ctx.ghost && s.drop?.parentId === ctx.parentId ? s.drop : null
   )
   const visible = drop ? ids.filter((x) => !drop.ids.includes(x)) : ids
-  const kids = React.Children.toArray(children)
-  const isSkeleton = (c: React.ReactNode) =>
-    React.isValidElement(c) && c.type === Skeleton
-  const custom = kids.find(isSkeleton) as React.ReactElement | undefined
-  // anything else (an AddField, your own bar) lands after the rows, inside the list's context
-  const rest = kids.filter((c) => !isSkeleton(c))
   const skeleton = drop && (
     <SkeletonContext.Provider value={custom ?? null}>
       <SkeletonSlot height={drop.height} />
@@ -145,7 +180,25 @@ export function List({
         data-slot="list"
         data-depth={ctx.depth}
         data-variant={ctx.variant}
-        className={cn("flex min-w-0 flex-col", gap[ctx.variant], className)}
+        style={
+          {
+            "--depth": ctx.depth,
+            ...(own && {
+              gridTemplateColumns: gridCols(ctx.cols),
+              "--content-col": ctx.cols === 3 ? 2 : 1,
+            }),
+          } as React.CSSProperties
+        }
+        className={cn(
+          "grid min-w-0",
+          own
+            ? cn(gap[ctx.variant], indent[ctx.variant])
+            : "col-span-full! mx-0! grid-cols-subgrid",
+          // row rhythm as margins, so a collapsed (dragged) row takes no space;
+          // anything that is not a row (an AddField, your bar) sits on the content column, inset like a row
+          "[&>*]:relative [&>*]:[grid-column:var(--content-col)] [&>*]:mx-[calc(var(--depth)*var(--indent))] [&>*+*]:mt-(--row-gap)",
+          className
+        )}
       >
         {ids.map((id) => (
           <React.Fragment key={id}>
@@ -184,6 +237,32 @@ function SkeletonSlot({ height }: { height: number }) {
   )
 }
 
+export type ColumnProps = {
+  /** which side of the row content; default left */
+  side?: "left" | "right"
+  className?: string
+  style?: React.CSSProperties
+  children: React.ReactNode
+}
+
+/**
+ * A cell every row of the list draws beside its content, outside the
+ * template: `<Schema.Column side="left"><SchemaAction.Select /></Schema.Column>`.
+ * Declared as a child of <Schema.List>; rendered per row, inside the row (it
+ * moves with it and sees its context). Nested lists inherit.
+ */
+export function Column({ side = "left", className, children }: ColumnProps) {
+  return (
+    <div
+      data-slot="column"
+      data-side={side}
+      className={cn("shrink-0", className)}
+    >
+      {children}
+    </div>
+  )
+}
+
 /** drop-slot placeholder; place inside <Schema.List> to restyle it */
 export function Skeleton({
   className,
@@ -198,7 +277,7 @@ export function Skeleton({
       data-slot="skeleton"
       style={style}
       className={cn(
-        "rounded-md border-2 border-dashed border-primary/40 bg-primary/5",
+        "col-span-full! mx-0! rounded-md border-2 border-dashed border-primary/40 bg-primary/5",
         className
       )}
     />

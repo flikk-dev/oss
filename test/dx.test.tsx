@@ -376,6 +376,48 @@ describe("composing parts", () => {
     expect(out()).toBe("a")
   })
 
+  test("Schema.Column: per-row cells beside the template, inherited by nested lists", async () => {
+    const schema = createJsonSchema(user)
+    render(
+      <Schema.Root store={schema}>
+        <Schema.List
+          render={() => (
+            <SchemaField.Row>
+              <div data-slot="card">
+                <SchemaField.Title />
+                <SchemaField.Nested>
+                  <SchemaField.NestedList />
+                </SchemaField.Nested>
+              </div>
+            </SchemaField.Row>
+          )}
+        >
+          <Schema.Column side="left">
+            <SchemaAction.Select />
+          </Schema.Column>
+          <Schema.Column side="right">
+            <SchemaAction.Remove />
+          </Schema.Column>
+        </Schema.List>
+      </Schema.Root>
+    )
+    const street = row(titleOf("Street"))
+    // cells are the row's own children, around the template, not inside the card
+    const kids = Array.from(street.children).map(
+      (c) => (c as HTMLElement).dataset.slot
+    )
+    expect(kids).toEqual(["columns", "row-content", "columns"])
+    expect(
+      street.querySelector("[data-slot=card] [data-slot=select]")
+    ).toBeNull()
+    await userEvent.click(within(street).getByRole("checkbox"))
+    expect(schema.selected()).toEqual([schema.find("address.street")!])
+    await userEvent.click(
+      within(street).getByRole("button", { name: /remove/i })
+    )
+    expect(schema.find("address.street")).toBeUndefined()
+  })
+
   test("NestedToggle / NestedList refuse to render outside Nested", () => {
     const err = console.error
     console.error = () => {}
