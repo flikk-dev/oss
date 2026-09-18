@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 import { useShallow } from "zustand/react/shallow"
 import { useRender } from "@base-ui/react/use-render"
 import {
@@ -27,9 +27,12 @@ import {
   useFieldOptional,
   useTypeModule,
   useVariant,
-} from "@/context/editor"
-import { isDescendant, type DetailField } from "@/store/editor"
-import type { JsonSchema, SchemaNode } from "@/store"
+} from "@/components/ui/json/editor/context"
+import {
+  isDescendant,
+  type DetailField,
+} from "@/components/ui/json/core/editor"
+import type { JsonSchema, SchemaNode } from "@/components/ui/json/core"
 import { Type } from "./field"
 import { useField } from "./hooks"
 import {

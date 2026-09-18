@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   JsonSchemaEditor,
@@ -15,7 +15,7 @@ import {
   validate,
   type Json,
   type JsonSchema,
-} from "@/store"
+} from "@/components/ui/json/core"
 
 const sample: Json = {
   type: "object",

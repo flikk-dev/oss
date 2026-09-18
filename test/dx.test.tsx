@@ -4,7 +4,12 @@ import { act, cleanup, render, screen, within } from "@testing-library/react"
 
 afterEach(cleanup)
 import userEvent from "@testing-library/user-event"
-import { createJsonSchema, defineType, types, type SchemaNode } from "@/store"
+import {
+  createJsonSchema,
+  defineType,
+  types,
+  type SchemaNode,
+} from "@/components/ui/json/core"
 import {
   JsonSchemaEditor,
   Schema,

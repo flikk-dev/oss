@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 import { useRender } from "@base-ui/react/use-render"
 
 export type RenderProp = Parameters<typeof useRender>[0]["render"]

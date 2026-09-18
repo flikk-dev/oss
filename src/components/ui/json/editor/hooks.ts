@@ -2,10 +2,19 @@
 
 import * as React from "react"
 import { useShallow } from "zustand/react/shallow"
-import { useEditor, useEditorStore, useFieldContext } from "@/context/editor"
-import { toNode, type EditorState } from "@/store/editor"
-import { validate, type Issue } from "@/store/validate"
-import type { Field, FieldPatch, Json, TypeModule } from "@/store"
+import {
+  useEditor,
+  useEditorStore,
+  useFieldContext,
+} from "@/components/ui/json/editor/context"
+import { toNode, type EditorState } from "@/components/ui/json/core/editor"
+import { validate, type Issue } from "@/components/ui/json/core/validate"
+import type {
+  Field,
+  FieldPatch,
+  Json,
+  TypeModule,
+} from "@/components/ui/json/core"
 
 /**
  * The headless layer: two hooks. `useSchema()` anywhere under <Schema.Root>,

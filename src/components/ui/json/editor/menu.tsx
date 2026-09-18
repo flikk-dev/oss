@@ -1,27 +1,27 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
+import { XIcon } from "lucide-react"
 import { CheckIcon } from "lucide-react"
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { typeGroups, type TypeModule } from "@/store/types"
-import { useEditor, useVariant, type Variant } from "@/context/editor"
+import { typeGroups, type TypeModule } from "@/components/ui/json/core/types"
+import {
+  useEditor,
+  useVariant,
+  type Variant,
+} from "@/components/ui/json/editor/context"
 
 /**
  * One popup engine for every menu: dropdown on desktop, bottom sheet on
@@ -63,8 +63,58 @@ export const menuStyle: Record<
   },
 }
 
-export const sheetClass =
-  "max-h-[85vh] gap-4 overflow-y-auto rounded-t-2xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+/**
+ * Bottom sheet for the mobile variant, on Base UI's Dialog. Same look as
+ * shadcn's <Sheet side="bottom">, plus a `container`: hand it a frame (a phone
+ * mock, a panel) and the sheet stays inside it.
+ */
+export function EditorSheet({
+  open,
+  onOpenChange,
+  title,
+  container,
+  className,
+  children,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title: string
+  container?: SheetPrimitive.Portal.Props["container"]
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <SheetPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <SheetPrimitive.Portal container={container}>
+        <SheetPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/10 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs" />
+        <SheetPrimitive.Popup
+          data-slot="editor-sheet"
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col gap-4 overflow-y-auto rounded-t-2xl border-t bg-popover p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-ending-style:translate-y-10 data-ending-style:opacity-0 data-starting-style:translate-y-10 data-starting-style:opacity-0",
+            className
+          )}
+        >
+          <SheetPrimitive.Title className="text-sm font-normal">
+            {title}
+          </SheetPrimitive.Title>
+          {children}
+          <SheetPrimitive.Close
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="absolute top-3 right-3"
+              />
+            }
+          >
+            <XIcon />
+            <span className="sr-only">Close</span>
+          </SheetPrimitive.Close>
+        </SheetPrimitive.Popup>
+      </SheetPrimitive.Portal>
+    </SheetPrimitive.Root>
+  )
+}
 
 type MenuCtx = { close: () => void; sheet: boolean }
 export const MenuContext = React.createContext<MenuCtx | null>(null)
@@ -95,29 +145,29 @@ export function Menu({
   if (variant === "mobile")
     return (
       <MenuContext.Provider value={ctx}>
-        <Sheet open={open} onOpenChange={setOpen}>
-          {React.cloneElement(
-            trigger as React.ReactElement<Record<string, unknown>>,
-            {
-              "aria-haspopup": "dialog",
-              "aria-expanded": open,
-              onClick: () => setOpen(true),
-            }
-          )}
-          <SheetContent side="bottom" container={portal} className={sheetClass}>
-            <SheetHeader className="p-0">
-              <SheetTitle className="text-sm font-normal">{title}</SheetTitle>
-            </SheetHeader>
-            <div
-              className={cn(
-                "flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border",
-                className
-              )}
-            >
-              {children}
-            </div>
-          </SheetContent>
-        </Sheet>
+        {React.cloneElement(
+          trigger as React.ReactElement<Record<string, unknown>>,
+          {
+            "aria-haspopup": "dialog",
+            "aria-expanded": open,
+            onClick: () => setOpen(true),
+          }
+        )}
+        <EditorSheet
+          open={open}
+          onOpenChange={setOpen}
+          title={title}
+          container={portal}
+        >
+          <div
+            className={cn(
+              "flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border",
+              className
+            )}
+          >
+            {children}
+          </div>
+        </EditorSheet>
       </MenuContext.Provider>
     )
 
@@ -127,7 +177,6 @@ export function Menu({
         <DropdownMenuTrigger render={trigger} />
         <DropdownMenuContent
           align={align}
-          container={portal}
           className={cn(st.content, className)}
         >
           {children}

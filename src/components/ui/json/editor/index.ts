@@ -59,6 +59,6 @@ export const SchemaAction = {
 
 export { JsonSchemaEditor, useJsonSchema, useJsonSchemaValue } from "./presets"
 export { useSchema, useField, type NewField } from "./hooks"
-export type { Field, FieldPatch } from "@/store"
-export type { Variant } from "@/context/editor"
+export type { Field, FieldPatch } from "@/components/ui/json/core"
+export type { Variant } from "@/components/ui/json/editor/context"
 export type { CommandContext } from "./action"

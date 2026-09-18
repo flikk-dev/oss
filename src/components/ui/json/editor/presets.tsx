@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 import { animate, motion, useMotionValue } from "motion/react"
 import {
   createJsonSchema,
@@ -9,14 +9,14 @@ import {
   type JsonSchema,
   type JsonSchemaOptions,
   type SchemaNode,
-} from "@/store"
+} from "@/components/ui/json/core"
 import {
   useEditor,
   useEditorStore,
   useFieldContext,
   useVariant,
   type Variant,
-} from "@/context/editor"
+} from "@/components/ui/json/editor/context"
 import { useField } from "./hooks"
 import * as Schema from "./schema"
 import * as SchemaField from "./field"

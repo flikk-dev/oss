@@ -2,8 +2,13 @@
 
 import * as React from "react"
 import { useStore } from "zustand"
-import type { EditorState, EditorStore } from "@/store/editor"
-import type { JsonSchema, NodePatch, SchemaNode, TypeModule } from "@/store"
+import type { EditorState, EditorStore } from "@/components/ui/json/core/editor"
+import type {
+  JsonSchema,
+  NodePatch,
+  SchemaNode,
+  TypeModule,
+} from "@/components/ui/json/core"
 
 export type Variant = "default" | "compact" | "wide" | "mobile"
 

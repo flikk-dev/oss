@@ -2,21 +2,15 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 import { motion, useDragControls } from "motion/react"
 import { useShallow } from "zustand/react/shallow"
 import { useRender } from "@base-ui/react/use-render"
 import { ChevronDownIcon, EllipsisIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
-import { uniqueSlug } from "@/store/slug"
-import type { DetailField } from "@/store/editor"
+import { uniqueSlug } from "@/components/ui/json/core/slug"
+import type { DetailField } from "@/components/ui/json/core/editor"
 import {
   ActionScopeContext,
   FieldContext,
@@ -29,10 +23,10 @@ import {
   useTypeModule,
   useVariant,
   type Variant,
-} from "@/context/editor"
+} from "@/components/ui/json/editor/context"
 import { Editable, type EditableProps, type RenderProp } from "./editable"
 import { useField } from "./hooks"
-import { IconTile, Menu, sheetClass, TypeMenu } from "./menu"
+import { EditorSheet, IconTile, Menu, TypeMenu } from "./menu"
 
 type Size = Record<Variant, string>
 const text: Size = {
@@ -296,19 +290,17 @@ function DetailsOverlay() {
   if (!details) return null
   const body = <DetailFields fields={details.fields} />
   return mobile ? (
-    <Sheet open onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" container={portal} className={sheetClass}>
-        <SheetHeader className="p-0">
-          <SheetTitle className="text-sm font-normal">
-            {title || "Edit field"}
-          </SheetTitle>
-        </SheetHeader>
-        {body}
-      </SheetContent>
-    </Sheet>
+    <EditorSheet
+      open
+      onOpenChange={onOpenChange}
+      title={title || "Edit field"}
+      container={portal}
+    >
+      {body}
+    </EditorSheet>
   ) : (
     <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent container={portal} className="max-w-sm gap-3 p-4">
+      <DialogContent className="max-w-sm gap-3 p-4">
         <DialogTitle className="text-xs font-medium">
           {title || "Untitled"}
         </DialogTitle>
