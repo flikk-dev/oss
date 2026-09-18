@@ -1,0 +1,163 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "oss",
+  "homepage": "https://oss.flikk.dev/ui",
+  "items": [
+    {
+      "name": "json-editor",
+      "type": "registry:ui",
+      "title": "JSON Schema builder",
+      "description": "Edit a JSON Schema as a tree: presets, compound parts, two hooks, drag and drop across the tree, bulk actions. JSON Schema draft 2020-12 in and out.",
+      "author": "flikk <https://flikk.dev>",
+      "dependencies": [
+        "zustand",
+        "motion",
+        "lucide-react",
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "button",
+        "dropdown-menu",
+        "dialog",
+        "checkbox",
+        "badge"
+      ],
+      "files": [
+        {
+          "path": "registry/base-nova/ui/json/core/editor.ts",
+          "type": "registry:ui",
+          "target": "components/ui/json/core/editor.ts"
+        },
+        {
+          "path": "registry/base-nova/ui/json/core/handle.ts",
+          "type": "registry:ui",
+          "target": "components/ui/json/core/handle.ts"
+        },
+        {
+          "path": "registry/base-nova/ui/json/core/index.ts",
+          "type": "registry:ui",
+          "target": "components/ui/json/core/index.ts"
+        },
+        {
+          "path": "registry/base-nova/ui/json/core/schema.ts",
+          "type": "registry:ui",
+          "target": "components/ui/json/core/schema.ts"
+        },
+        {
+          "path": "registry/base-nova/ui/json/core/slug.ts",
+          "type": "registry:ui",
+          "target": "components/ui/json/core/slug.ts"
+        },
+        {
+          "path": "registry/base-nova/ui/json/core/tree.ts",
+          "type": "registry:ui",
+          "target": "components/ui/json/core/tree.ts"
+        },
+        {
+          "path": "registry/base-nova/ui/json/core/types.ts",
+          "type": "registry:ui",
+          "target": "components/ui/json/core/types.ts"
+        },
+        {
+          "path": "registry/base-nova/ui/json/core/validate.ts",
+          "type": "registry:ui",
+          "target": "components/ui/json/core/validate.ts"
+        },
+        {
+          "path": "registry/base-nova/ui/json/editor/action.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/json/editor/action.tsx"
+        },
+        {
+          "path": "registry/base-nova/ui/json/editor/context.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/json/editor/context.tsx"
+        },
+        {
+          "path": "registry/base-nova/ui/json/editor/editable.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/json/editor/editable.tsx"
+        },
+        {
+          "path": "registry/base-nova/ui/json/editor/field.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/json/editor/field.tsx"
+        },
+        {
+          "path": "registry/base-nova/ui/json/editor/hooks.ts",
+          "type": "registry:ui",
+          "target": "components/ui/json/editor/hooks.ts"
+        },
+        {
+          "path": "registry/base-nova/ui/json/editor/index.ts",
+          "type": "registry:ui",
+          "target": "components/ui/json/editor/index.ts"
+        },
+        {
+          "path": "registry/base-nova/ui/json/editor/menu.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/json/editor/menu.tsx"
+        },
+        {
+          "path": "registry/base-nova/ui/json/editor/presets.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/json/editor/presets.tsx"
+        },
+        {
+          "path": "registry/base-nova/ui/json/editor/schema.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/json/editor/schema.tsx"
+        }
+      ],
+      "cssVars": {
+        "theme": {
+          "text-3xs": "0.5625rem",
+          "text-3xs--line-height": "0.75rem",
+          "text-2xs": "0.625rem",
+          "text-2xs--line-height": "0.875rem",
+          "color-group": "var(--group)",
+          "color-type-string": "var(--type-string)",
+          "color-type-number": "var(--type-number)",
+          "color-type-integer": "var(--type-integer)",
+          "color-type-boolean": "var(--type-boolean)",
+          "color-type-const": "var(--type-const)",
+          "color-type-object": "var(--type-object)",
+          "color-type-oneOf": "var(--type-oneOf)",
+          "color-type-date": "var(--type-date)",
+          "color-type-email": "var(--type-email)",
+          "color-type-url": "var(--type-url)",
+          "color-type-null": "var(--type-null)"
+        },
+        "light": {
+          "group": "oklch(0.965 0.008 280)",
+          "type-string": "oklch(0.546 0.245 262.881)",
+          "type-number": "oklch(0.666 0.179 58.318)",
+          "type-integer": "oklch(0.6 0.118 184.704)",
+          "type-boolean": "oklch(0.627 0.194 149.214)",
+          "type-const": "oklch(0.592 0.249 0.584)",
+          "type-object": "oklch(0.541 0.281 293.009)",
+          "type-oneOf": "oklch(0.591 0.293 322.896)",
+          "type-date": "oklch(0.588 0.158 241.966)",
+          "type-email": "oklch(0.586 0.253 17.585)",
+          "type-url": "oklch(0.511 0.262 276.966)",
+          "type-null": "oklch(0.5 0.02 275)"
+        },
+        "dark": {
+          "group": "oklch(0.215 0.022 300)",
+          "type-string": "oklch(0.707 0.165 254.624)",
+          "type-number": "oklch(0.828 0.189 84.429)",
+          "type-integer": "oklch(0.777 0.152 181.912)",
+          "type-boolean": "oklch(0.792 0.209 151.711)",
+          "type-const": "oklch(0.823 0.12 346.018)",
+          "type-object": "oklch(0.811 0.111 293.571)",
+          "type-oneOf": "oklch(0.833 0.145 321.434)",
+          "type-date": "oklch(0.828 0.111 230.318)",
+          "type-email": "oklch(0.81 0.117 11.638)",
+          "type-url": "oklch(0.785 0.115 274.713)",
+          "type-null": "oklch(0.65 0.015 295)"
+        }
+      },
+      "docs": "import { JsonSchemaEditor, useJsonSchema } from \"@/components/ui/json/editor\""
+    }
+  ]
+}

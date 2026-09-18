@@ -13,7 +13,6 @@
 
 # next.js
 /.next/
-/demo/.next/
 /out/
 
 # production
@@ -35,3 +34,6 @@ pnpm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude internal
+.claude

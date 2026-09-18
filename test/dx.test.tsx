@@ -4,7 +4,12 @@ import { act, cleanup, render, screen, within } from "@testing-library/react"
 
 afterEach(cleanup)
 import userEvent from "@testing-library/user-event"
-import { createJsonSchema, defineType, types, type SchemaNode } from "@/store"
+import {
+  createJsonSchema,
+  defineType,
+  types,
+  type SchemaNode,
+} from "@/registry/base-nova/ui/json/core"
 import {
   JsonSchemaEditor,
   Schema,
@@ -13,7 +18,7 @@ import {
   useField,
   useJsonSchema,
   useSchema,
-} from "@/components/ui/json/editor"
+} from "@/registry/base-nova/ui/json/editor"
 
 /**
  * The DX contract. Each test is a composition a consumer would actually write,

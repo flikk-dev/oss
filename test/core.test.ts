@@ -5,7 +5,7 @@ import {
   fromJsonSchema,
   toJsonSchema,
   types,
-} from "@/store"
+} from "@/registry/base-nova/ui/json/core"
 
 /**
  * Target behaviour for the core. Written before the implementation — every
@@ -419,7 +419,7 @@ describe("type modules", () => {
 
 describe("toExample", () => {
   test("uses the first example, else a type default, first option for choices", async () => {
-    const { toExample } = await import("@/store")
+    const { toExample } = await import("@/registry/base-nova/ui/json/core")
     expect(toExample(fromJsonSchema(user))).toMatchObject({
       id: 1042,
       fullName: "Ada Lovelace",
