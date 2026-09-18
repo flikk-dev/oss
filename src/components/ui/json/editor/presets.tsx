@@ -284,27 +284,37 @@ function Preset({ variant }: { variant?: Variant }) {
   const render = v === "mobile" ? mobile : desktop
   return (
     <>
-      <Schema.Toolbar
-        className={cn(
-          "flex-wrap gap-1 data-[state=empty]:hidden",
-          v === "mobile"
-            ? // floating, thumb reach, scrolls sideways when narrow
-              "fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-40 flex-nowrap overflow-x-auto rounded-xl border border-border bg-popover p-2 shadow-lg [&>*]:shrink-0"
-            : "mb-1 rounded-md border border-border bg-muted/40 px-2 py-1"
-        )}
-      >
-        <Schema.SelectAll className="mr-1" />
-        <Schema.SelectionCount className="mr-2 text-xs text-muted-foreground" />
-        <SchemaAction.Optional />
-        <SchemaAction.Repeated />
-        <SchemaAction.Nullable />
-        <SchemaAction.MoveInto />
-        <SchemaAction.Duplicate />
-        <SchemaAction.Remove />
-        <SchemaAction.ClearSelection
-          className={v === "mobile" ? "" : "ml-auto"}
-        />
-      </Schema.Toolbar>
+      {v === "mobile" ? (
+        // floating, thumb reach: count, the destructive one, the rest behind ⋯
+        <Schema.Toolbar
+          variant="mobile"
+          className="fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-40 gap-1.5 rounded-xl border border-border bg-popover p-2 shadow-lg data-[state=empty]:hidden"
+        >
+          <Schema.SelectAll className="ml-1" />
+          <Schema.SelectionCount className="text-xs text-muted-foreground" />
+          <SchemaAction.Remove className="ml-auto" />
+          <Schema.SelectionMenu label="Selection">
+            <SchemaAction.Optional />
+            <SchemaAction.Repeated />
+            <SchemaAction.Nullable />
+            <SchemaAction.MoveInto />
+            <SchemaAction.Duplicate />
+          </Schema.SelectionMenu>
+          <SchemaAction.ClearSelection />
+        </Schema.Toolbar>
+      ) : (
+        <Schema.Toolbar className="mb-1 flex-wrap gap-1 rounded-md border border-border bg-muted/40 px-2 py-1 data-[state=empty]:hidden">
+          <Schema.SelectAll className="mr-1" />
+          <Schema.SelectionCount className="mr-2 text-xs text-muted-foreground" />
+          <SchemaAction.Optional />
+          <SchemaAction.Repeated />
+          <SchemaAction.Nullable />
+          <SchemaAction.MoveInto />
+          <SchemaAction.Duplicate />
+          <SchemaAction.Remove />
+          <SchemaAction.ClearSelection className="ml-auto" />
+        </Schema.Toolbar>
+      )}
       <Schema.List variant={v} render={render}>
         {/* mobile: no checkbox — long-press selects, the card border says so */}
         {v !== "mobile" && (

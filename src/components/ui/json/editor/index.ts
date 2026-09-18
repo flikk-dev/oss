@@ -17,6 +17,7 @@ export const Schema = {
   Skeleton: SchemaParts.Skeleton,
   AddField: SchemaParts.AddField,
   Toolbar: SchemaParts.Toolbar,
+  SelectionMenu: SchemaParts.SelectionMenu,
   SelectAll: SchemaParts.SelectAll,
   SelectionCount: SchemaParts.SelectionCount,
 }

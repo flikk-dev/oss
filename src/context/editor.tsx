@@ -63,9 +63,14 @@ export const useList = () => {
   if (!ctx) throw new Error("row parts must be inside <Schema.List>")
   return ctx
 }
-/** list variant; "default" outside a list (toolbars) */
-export const useVariant = (): Variant =>
-  React.useContext(ListContext)?.variant ?? "default"
+/** variant outside a list (a toolbar's), set by <Schema.Toolbar variant> */
+export const VariantContext = React.createContext<Variant | null>(null)
+/** list variant; outside a list the toolbar's, else "default" */
+export const useVariant = (): Variant => {
+  const list = React.useContext(ListContext)
+  const outer = React.useContext(VariantContext)
+  return list?.variant ?? outer ?? "default"
+}
 
 /* ---------------------------------- field -------------------------------- */
 
@@ -103,12 +108,16 @@ export type ActionScope = "row" | "menu" | "toolbar"
 export const ActionScopeContext = React.createContext<ActionScope>("row")
 export const useActionScope = () => React.useContext(ActionScopeContext)
 
+/** true under <Schema.Toolbar>: actions there (menus included) apply to the selection */
+export const ToolbarContext = React.createContext(false)
+
 /** ids an action applies to: the field, or the selection inside a toolbar */
 export function useActionTargets(): string[] {
   const scope = useActionScope()
+  const toolbar = React.useContext(ToolbarContext)
   const field = useFieldOptional()
   const selected = useEditorStore((s) => s.selected)
-  if (scope === "toolbar") return selected
+  if (scope === "toolbar" || toolbar) return selected
   if (!field)
     throw new Error(
       "actions outside a toolbar must be inside <SchemaField.Row>"

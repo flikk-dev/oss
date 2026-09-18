@@ -4,7 +4,7 @@ import * as React from "react"
 import { useStore } from "zustand"
 import { cn } from "cn"
 import { useShallow } from "zustand/react/shallow"
-import { PlusIcon } from "lucide-react"
+import { EllipsisIcon, PlusIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { JsonSchema } from "@/store"
 import {
@@ -12,6 +12,8 @@ import {
   EditorContext,
   ListContext,
   RowIdContext,
+  ToolbarContext,
+  VariantContext,
   useEditor,
   useEditorStore,
   useList,
@@ -19,7 +21,7 @@ import {
   type Variant,
   useVariant,
 } from "@/context/editor"
-import { TypeMenu } from "./menu"
+import { Menu, TypeMenu } from "./menu"
 import { Row } from "./field"
 import { Checkbox } from "@/components/ui/checkbox"
 
@@ -342,23 +344,63 @@ export function AddField({
 
 /** hosts SchemaAction.* that apply to the selection; data-state tells if there is one */
 export function Toolbar({
+  variant,
   className,
   children,
 }: {
+  /** density of the actions inside; mobile makes menus bottom sheets */
+  variant?: Variant
   className?: string
   children: React.ReactNode
 }) {
   const n = useEditorStore((s) => s.selected.length)
   return (
-    <ActionScopeContext.Provider value="toolbar">
-      <div
-        role="toolbar"
-        data-slot="toolbar"
-        data-state={n ? "active" : "empty"}
-        className={cn("flex items-center gap-1", className)}
+    <VariantContext.Provider value={variant ?? null}>
+      <ToolbarContext.Provider value={true}>
+        <ActionScopeContext.Provider value="toolbar">
+          <div
+            role="toolbar"
+            data-slot="toolbar"
+            data-state={n ? "active" : "empty"}
+            className={cn("flex items-center gap-1", className)}
+          >
+            {children}
+          </div>
+        </ActionScopeContext.Provider>
+      </ToolbarContext.Provider>
+    </VariantContext.Provider>
+  )
+}
+
+/** the ⋯ menu of a toolbar: SchemaAction.* inside apply to the selection */
+export function SelectionMenu({
+  className,
+  children,
+  label = "More",
+}: {
+  className?: string
+  children: React.ReactNode
+  label?: string
+}) {
+  return (
+    <ActionScopeContext.Provider value="menu">
+      <Menu
+        title={label}
+        align="end"
+        trigger={
+          <Button
+            data-slot="selection-menu"
+            variant="outline"
+            size="icon-xs"
+            aria-label={label}
+            className={cn("size-7", className)}
+          >
+            <EllipsisIcon />
+          </Button>
+        }
       >
         {children}
-      </div>
+      </Menu>
     </ActionScopeContext.Provider>
   )
 }
