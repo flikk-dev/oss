@@ -168,7 +168,7 @@ function ShapePanel({ schema, shape }: { schema: JsonSchema; shape: Shape }) {
 
 export function EditorPreview({ variant }: { variant: Variant }) {
   const schema = useJsonSchema(sample)
-  const [shape, setShape] = React.useState<Shape>("off")
+  const [shape, setShape] = React.useState<Shape>("schema")
   const mobile = variant === "mobile"
   // the phone: fixed height, scrolls inside; a transform makes it the containing
   // block for the editor's fixed toolbar, and popups portal into it

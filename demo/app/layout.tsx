@@ -74,10 +74,12 @@ export default function RootLayout({
               programmingLanguage: "TypeScript",
               runtimePlatform: "React",
               license: "https://opensource.org/licenses/MIT",
+              image: `${SITE}/icon.png`,
               author: {
                 "@type": "Organization",
                 name: "flikk",
                 url: "https://flikk.dev",
+                logo: `${SITE}/icon.png`,
               },
             }),
           }}
