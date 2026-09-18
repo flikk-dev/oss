@@ -257,15 +257,22 @@ function MobileRow({ node }: { node: SchemaNode }) {
 export function JsonSchemaEditor({
   schema,
   variant,
+  portalContainer,
   className,
 }: {
   schema: JsonSchema
   /** default: `mobile` on a coarse pointer, else `default` */
   variant?: Variant
+  /** keep sheets, menus and the mobile toolbar inside this element */
+  portalContainer?: React.RefObject<HTMLElement | null>
   className?: string
 }) {
   return (
-    <Schema.Root store={schema} className={className}>
+    <Schema.Root
+      store={schema}
+      portalContainer={portalContainer}
+      className={className}
+    >
       <Preset variant={variant} />
     </Schema.Root>
   )

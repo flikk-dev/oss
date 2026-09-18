@@ -40,10 +40,13 @@ function useCoarsePointer() {
 
 export function Root({
   store: schema,
+  portalContainer,
   className,
   children,
 }: {
   store: JsonSchema
+  /** where popups render — hand it a frame to keep sheets and menus inside (a phone mock, a panel) */
+  portalContainer?: React.RefObject<HTMLElement | null>
   className?: string
   children: React.ReactNode
 }) {
@@ -56,8 +59,9 @@ export function Root({
       types: schema.types,
       root: ref,
       coarse,
+      portal: portalContainer,
     }),
-    [schema, coarse]
+    [schema, coarse, portalContainer]
   )
   const selecting = useStore(schema.store, (s) => s.selected.length > 0)
   return (

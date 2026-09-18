@@ -2,6 +2,11 @@ import { Showcase } from "@demo/components/showcase"
 import { Usage } from "@demo/components/usage"
 import { CodeBlock } from "@demo/components/code-block"
 import type { Variant } from "@/components/ui/json/editor"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { ArrowUpRightIcon, SparklesIcon } from "lucide-react"
+
+const GITHUB = "https://github.com/flikk-dev/json-editor"
 
 const INSTALL =
   "npx shadcn@latest add https://oss.flikk.dev/ui/r/json-editor.json"
@@ -41,19 +46,34 @@ export default async function Page({
   const { variant } = await searchParams
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-16 px-6 pt-14 pb-24">
-      <section className="flex flex-col gap-5">
-        <p className="font-mono text-xs text-muted-foreground">
-          oss.flikk.dev/ui
-        </p>
-        <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-          Use flikk&apos;s components in your own projects.
+      <section className="flex flex-col gap-6">
+        <Badge
+          variant="outline"
+          className="w-fit gap-1.5 font-mono font-normal"
+        >
+          <SparklesIcon className="size-3 text-primary" />
+          oss.flikk.dev/ui · open source
+        </Badge>
+        <h1 className="max-w-2xl text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+          Use flikk&apos;s components
+          <br />
+          <span className="text-primary">in your own projects.</span>
         </h1>
-        <p className="max-w-xl text-lg text-pretty text-muted-foreground">
-          The pieces we build for flikk, open source and shadcn-style: one
-          command copies the source into your app, and it&apos;s yours. First
-          up, a JSON Schema builder.
+        <p className="max-w-xl text-lg leading-relaxed text-pretty text-muted-foreground">
+          The pieces we build for flikk, shadcn-style: one command copies the
+          source into your app, and it&apos;s yours. First up, a JSON Schema
+          builder.
         </p>
-        <CodeBlock code={INSTALL} compact className="w-fit max-w-full" />
+        <div className="flex flex-wrap items-center gap-3">
+          <CodeBlock code={INSTALL} compact className="max-w-full" />
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<a href={GITHUB} target="_blank" rel="noreferrer" />}
+          >
+            GitHub <ArrowUpRightIcon />
+          </Button>
+        </div>
       </section>
 
       <section id="demo" className="flex scroll-mt-16 flex-col gap-4">
@@ -91,7 +111,7 @@ export default async function Page({
         <span>flikk</span>
         <span>MIT</span>
         <a
-          href="https://github.com/flikk-dev/json-editor"
+          href={GITHUB}
           className="hover:text-foreground"
           target="_blank"
           rel="noreferrer"

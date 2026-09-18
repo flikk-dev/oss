@@ -4,6 +4,7 @@ import * as React from "react"
 import { cn } from "cn"
 import { CheckIcon, CopyIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Highlight } from "./highlight"
 
 /** monospace block with a copy button; no highlighter, tokens from globals.css */
 export function CodeBlock({
@@ -13,7 +14,7 @@ export function CodeBlock({
 }: {
   code: string
   className?: string
-  /** one-liner: inline padding, no scroll */
+  /** one-liner: inline padding, no scroll, no colours */
   compact?: boolean
 }) {
   const [copied, setCopied] = React.useState(false)
@@ -25,7 +26,7 @@ export function CodeBlock({
   return (
     <div
       className={cn(
-        "group/code relative rounded-lg border border-border bg-muted/40",
+        "group/code relative rounded-lg border border-border bg-card",
         className
       )}
     >
@@ -35,7 +36,7 @@ export function CodeBlock({
           compact ? "px-3 py-2 pr-10" : "p-4 pr-10"
         )}
       >
-        <code>{code}</code>
+        <code>{compact ? code : <Highlight code={code} />}</code>
       </pre>
       <Button
         variant="ghost"

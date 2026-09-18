@@ -170,10 +170,17 @@ export function EditorPreview({ variant }: { variant: Variant }) {
   const schema = useJsonSchema(sample)
   const [shape, setShape] = React.useState<Shape>("off")
   const mobile = variant === "mobile"
+  // the phone: fixed height, scrolls inside; a transform makes it the containing
+  // block for the editor's fixed toolbar, and popups portal into it
+  const phone = React.useRef<HTMLDivElement>(null)
 
   const editor = (
     <div className={cn("rounded-xl border bg-card", mobile ? "p-2" : "p-3")}>
-      <JsonSchemaEditor schema={schema} variant={variant} />
+      <JsonSchemaEditor
+        schema={schema}
+        variant={variant}
+        portalContainer={mobile ? phone : undefined}
+      />
     </div>
   )
 
@@ -214,9 +221,16 @@ export function EditorPreview({ variant }: { variant: Variant }) {
       >
         {mobile ? (
           <div className="flex justify-center">
-            <div className="w-[390px] max-w-full rounded-[2rem] border-8 border-foreground/80 bg-background p-3 shadow-xl">
-              <div className="mx-auto mb-3 h-1.5 w-20 rounded-full bg-foreground/20" />
-              {editor}
+            <div
+              ref={phone}
+              className="relative h-[720px] w-[390px] max-w-full transform-gpu overflow-hidden rounded-[2rem] border-8 border-foreground/80 bg-background shadow-xl"
+            >
+              <div className="absolute inset-x-0 top-0 z-10 flex h-8 items-center justify-center bg-background">
+                <div className="h-1.5 w-20 rounded-full bg-foreground/20" />
+              </div>
+              <div className="h-full overflow-y-auto px-3 pt-8 pb-3">
+                {editor}
+              </div>
             </div>
           </div>
         ) : (

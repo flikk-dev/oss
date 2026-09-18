@@ -17,6 +17,8 @@ export type EditorCtx = {
   root: React.RefObject<HTMLDivElement | null>
   /** coarse pointer detected → lists default to `mobile` */
   coarse: boolean
+  /** where popups (menus, sheets, dialogs) portal to; default document body */
+  portal?: React.RefObject<HTMLElement | null>
 }
 export const EditorContext = React.createContext<EditorCtx | null>(null)
 

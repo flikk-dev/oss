@@ -284,7 +284,7 @@ export function DetailFields({
 /** the row's details overlay: dialog, or a bottom sheet on mobile; opened by <SchemaAction.EditDetails> */
 function DetailsOverlay() {
   const { id } = useFieldContext()
-  const { store } = useEditor()
+  const { store, portal } = useEditor()
   const details = useEditorStore((s) =>
     s.details?.id === id ? s.details : null
   )
@@ -297,7 +297,7 @@ function DetailsOverlay() {
   const body = <DetailFields fields={details.fields} />
   return mobile ? (
     <Sheet open onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className={sheetClass}>
+      <SheetContent side="bottom" container={portal} className={sheetClass}>
         <SheetHeader className="p-0">
           <SheetTitle className="text-sm font-normal">
             {title || "Edit field"}
@@ -308,7 +308,7 @@ function DetailsOverlay() {
     </Sheet>
   ) : (
     <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm gap-3 p-4">
+      <DialogContent container={portal} className="max-w-sm gap-3 p-4">
         <DialogTitle className="text-xs font-medium">
           {title || "Untitled"}
         </DialogTitle>

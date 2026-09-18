@@ -84,6 +84,7 @@ export function Menu({
   children: React.ReactNode
 }) {
   const variant = useVariant()
+  const { portal } = useEditor()
   const st = menuStyle[variant]
   const [open, setOpen] = React.useState(false)
   const ctx = React.useMemo(
@@ -103,7 +104,7 @@ export function Menu({
               onClick: () => setOpen(true),
             }
           )}
-          <SheetContent side="bottom" className={sheetClass}>
+          <SheetContent side="bottom" container={portal} className={sheetClass}>
             <SheetHeader className="p-0">
               <SheetTitle className="text-sm font-normal">{title}</SheetTitle>
             </SheetHeader>
@@ -126,6 +127,7 @@ export function Menu({
         <DropdownMenuTrigger render={trigger} />
         <DropdownMenuContent
           align={align}
+          container={portal}
           className={cn(st.content, className)}
         >
           {children}
