@@ -3,21 +3,6 @@
 import * as React from "react"
 import { cn } from "cn"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
 import {
   JsonSchemaEditor,
   useJsonSchema,
@@ -220,48 +205,6 @@ export function EditorPreview({ variant }: { variant: Variant }) {
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        {/* trial: the same handle, inside overlays */}
-        <Sheet>
-          <SheetTrigger
-            render={
-              <Button
-                variant="outline"
-                size="xs"
-                className="text-[11px] font-normal"
-              />
-            }
-          >
-            Open in sheet
-          </SheetTrigger>
-          <SheetContent
-            side="right"
-            className="w-full overflow-y-auto p-4 sm:max-w-2xl"
-          >
-            <SheetHeader className="p-0">
-              <SheetTitle className="text-sm">Schema</SheetTitle>
-            </SheetHeader>
-            <JsonSchemaEditor schema={schema} variant={variant} />
-          </SheetContent>
-        </Sheet>
-        <Dialog>
-          <DialogTrigger
-            render={
-              <Button
-                variant="outline"
-                size="xs"
-                className="text-[11px] font-normal"
-              />
-            }
-          >
-            Open in dialog
-          </DialogTrigger>
-          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
-            <DialogHeader>
-              <DialogTitle className="text-sm">Schema</DialogTitle>
-            </DialogHeader>
-            <JsonSchemaEditor schema={schema} variant={variant} />
-          </DialogContent>
-        </Dialog>
       </div>
       <div
         className={cn(

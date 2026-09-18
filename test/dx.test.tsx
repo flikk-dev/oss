@@ -682,6 +682,7 @@ describe("selection + toolbar", () => {
           <Schema.SelectionCount />
           <SchemaAction.Optional />
           <SchemaAction.Remove />
+          <SchemaAction.ClearSelection />
         </Schema.Toolbar>
         <Schema.List
           render={() => (
@@ -704,6 +705,12 @@ describe("selection + toolbar", () => {
       within(toolbar).getByRole("button", { name: /optional/i })
     )
     expect((schema.toJSON() as any).required).toEqual(["address"])
+    await userEvent.click(
+      within(toolbar).getByRole("button", { name: /clear selection/i })
+    )
+    expect(toolbar.dataset.state).toBe("empty")
+    await userEvent.click(within(row(titleOf("ID"))).getByRole("checkbox"))
+    await userEvent.click(within(row(titleOf("Name"))).getByRole("checkbox"))
     await userEvent.click(
       within(toolbar).getByRole("button", { name: /remove/i })
     )

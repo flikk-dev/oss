@@ -14,6 +14,7 @@ import {
   GripVerticalIcon,
   PencilLineIcon,
   Trash2Icon,
+  XIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -462,6 +463,19 @@ export function Remove(props: ActionProps) {
       label="Remove"
       destructive
       run={() => store.getState().remove(ids)}
+      {...props}
+    />
+  )
+}
+
+/** empties the selection; for toolbars */
+export function ClearSelection(props: ActionProps) {
+  const { store } = useEditor()
+  return (
+    <ActionPrimitive
+      icon={XIcon}
+      label="Clear selection"
+      run={() => store.getState().select([])}
       {...props}
     />
   )

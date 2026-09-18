@@ -294,6 +294,9 @@ function Preset({ variant }: { variant?: Variant }) {
         <SchemaAction.MoveInto />
         <SchemaAction.Duplicate />
         <SchemaAction.Remove />
+        <SchemaAction.ClearSelection
+          className={v === "mobile" ? "" : "ml-auto"}
+        />
       </Schema.Toolbar>
       <Schema.List variant={v} render={render}>
         {/* mobile: no checkbox — long-press selects, the card border says so */}
