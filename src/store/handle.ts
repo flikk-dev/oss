@@ -66,7 +66,7 @@ export function createJsonSchema(
     update: (id: string, patch: NodePatch) => s().update(id, patch),
     insert: (parentId: string, type: string, index?: number) =>
       s().insert(parentId, type, index),
-    move: (id: string, parentId: string, index: number) =>
+    move: (id: string | string[], parentId: string, index: number) =>
       s().move(id, parentId, index),
     remove: (ids: string | string[]) => s().remove(ids),
     duplicate: (id: string) => s().duplicate(id),

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import * as React from "react"
-import { cleanup, render, screen, within } from "@testing-library/react"
+import { act, cleanup, render, screen, within } from "@testing-library/react"
 
 afterEach(cleanup)
 import userEvent from "@testing-library/user-event"
@@ -10,7 +10,9 @@ import {
   Schema,
   SchemaAction,
   SchemaField,
+  useField,
   useJsonSchema,
+  useSchema,
 } from "@/components/ui/json/editor"
 
 /**
@@ -256,6 +258,122 @@ describe("composing parts", () => {
     )
     const dialog = await screen.findByRole("dialog")
     expect(within(dialog).getByDisplayValue("Display name")).toBeTruthy()
+  })
+
+  test("SchemaAction.Command: your own action, targets from scope", async () => {
+    const schema = createJsonSchema(user)
+    const seen: string[][] = []
+    render(
+      <Schema.Root store={schema}>
+        <Schema.Toolbar>
+          <SchemaAction.Command
+            onClick={({ nodes }) => seen.push(nodes.map((n) => n.key))}
+          >
+            Export
+          </SchemaAction.Command>
+        </Schema.Toolbar>
+        <Schema.List
+          render={() => (
+            <SchemaField.Row>
+              <SchemaAction.Select />
+              <SchemaField.Title />
+              <SchemaAction.Command
+                onClick={({ ids, schema }) =>
+                  schema.update(ids[0], { title: "Zapped" })
+                }
+              >
+                Zap
+              </SchemaAction.Command>
+            </SchemaField.Row>
+          )}
+        />
+      </Schema.Root>
+    )
+    const name = row(titleOf("Name"))
+    await userEvent.click(within(name).getByRole("button", { name: "Zap" }))
+    expect(screen.getByDisplayValue("Zapped")).toBeTruthy()
+    await userEvent.click(within(name).getByRole("checkbox"))
+    await userEvent.click(
+      within(screen.getByRole("toolbar")).getByRole("button", {
+        name: "Export",
+      })
+    )
+    expect(seen).toEqual([["name"]])
+  })
+
+  test("hooks: useSchema() is the tree + ops by slug; useField() is the row", async () => {
+    let api: ReturnType<typeof useSchema> | null = null
+    function MyRow() {
+      const f = useField()
+      return (
+        <>
+          <input
+            aria-label="my title"
+            value={f.field.title}
+            onChange={(e) => f.update({ title: e.target.value })}
+          />
+          <span>{f.type.label}</span>
+          <button onClick={() => f.update({ optional: !f.field.optional })}>
+            opt
+          </button>
+          <button onClick={() => f.select()}>pick</button>
+          {f.issue && <mark>{f.issue.code}</mark>}
+          {f.field.isGroup && <em>{f.childrenCount} kids</em>}
+          <button onClick={f.drop}>x</button>
+          {f.field.isGroup && <Schema.List parentId={f.field.id} depth={1} />}
+        </>
+      )
+    }
+    function Probe() {
+      api = useSchema()
+      return <output>{api.schema.fields!.map((f) => f.key).join(",")}</output>
+    }
+    const handle = createJsonSchema(user)
+    render(
+      <Schema.Root store={handle}>
+        <Probe />
+        <Schema.List
+          render={() => (
+            <SchemaField.Row>
+              <MyRow />
+            </SchemaField.Row>
+          )}
+        />
+      </Schema.Root>
+    )
+    const out = () => screen.getByRole("status").textContent
+    expect(out()).toBe("id,name,address")
+
+    // row hook
+    const name = row(titleOf("Name"))
+    expect(within(name).getByText("Text")).toBeTruthy()
+    await userEvent.type(within(name).getByLabelText("my title"), "!")
+    expect(api!.schema.fields![1].title).toBe("Name!")
+    await userEvent.click(within(name).getByRole("button", { name: "opt" }))
+    expect((handle.toJSON() as any).required).toContain("name")
+    expect(within(row(titleOf("Address"))).getByText("2 kids")).toBeTruthy()
+    expect(row(titleOf("Street")).dataset.depth).toBe("1")
+    await userEvent.click(within(name).getByRole("button", { name: "pick" }))
+    expect(api!.selectedFields.map((f) => f.key)).toEqual(["name"])
+
+    // schema hook: ops by slug
+    act(() => {
+      api!.fields.add({ type: "boolean", title: "Active" }, "address")
+      api!.fields.update("address.zip", { title: "Postcode", optional: true })
+      api!.fields.drop(["id", "address.street"])
+      api!.fields.move("address.active", "", 0)
+      api!.setSelectedFields(["address", "name"])
+    })
+    expect(out()).toBe("active,name,address")
+    expect(api!.fields.get("address")!.fields!.map((f) => f.key)).toEqual([
+      "zip",
+    ])
+    expect(api!.fields.get("address.zip")!.title).toBe("Postcode")
+    expect(api!.selectedFields.map((f) => f.key)).toEqual(["address", "name"])
+    act(() =>
+      api!.setSchema({ type: "object", properties: { a: { type: "string" } } })
+    )
+    expect(out()).toBe("a")
   })
 
   test("NestedToggle / NestedList refuse to render outside Nested", () => {

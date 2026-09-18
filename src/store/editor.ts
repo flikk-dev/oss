@@ -9,12 +9,13 @@ import { defaultTypes, type TypeModule } from "./types"
  * re-renders one row. The root is a node like any other (type object, key "").
  */
 
-export type Field = Omit<SchemaNode, "children">
+/** a node without its subtree, as stored */
+export type NodeRecord = Omit<SchemaNode, "children">
 export type DetailField = "title" | "key" | "description" | "examples"
 
 export type EditorState = {
   root: string
-  byId: Record<string, Field>
+  byId: Record<string, NodeRecord>
   children: Record<string, string[]>
   parentOf: Record<string, string>
   types: TypeModule[]
@@ -23,8 +24,15 @@ export type EditorState = {
   selected: string[]
   /** last id toggled by hand; shift-select ranges from it */
   anchor: string | null
-  /** live drag: where the row would land; index counts siblings without the dragged row */
-  drop: { id: string; parentId: string; index: number; height: number } | null
+  /** live drag: where the row(s) would land; index counts siblings without the moving rows */
+  drop: {
+    id: string
+    /** everything that moves: the row, or the selection it belongs to */
+    ids: string[]
+    parentId: string
+    index: number
+    height: number
+  } | null
   /** details dialog / sheet: which field, and which of its fields to show (all when omitted) */
   details: { id: string; fields?: DetailField[] } | null
 
@@ -33,8 +41,10 @@ export type EditorState = {
   remove: (ids: string | string[]) => void
   duplicate: (id: string) => string
   insert: (parentId: string, type: string, index?: number) => string
-  /** reparent + reorder in one step; index is among siblings excluding `id` */
-  move: (id: string, parentId: string, index: number) => void
+  /** reparent + reorder in one step; index is among siblings excluding the moved rows */
+  move: (id: string | string[], parentId: string, index: number) => void
+  /** what a drag of `id` carries: the selection when `id` is part of it, else just `id` */
+  moving: (id: string) => string[]
   select: (ids: string[]) => void
   toggleSelect: (id: string, on?: boolean) => void
   /** add every node between the anchor and `id` (document order) to the selection */
@@ -68,6 +78,17 @@ export function toNode(
   return n.isGroup
     ? { ...n, children: (s.children[id] ?? []).map((c) => toNode(s, c)) }
     : { ...n }
+}
+
+/** ids in document order, root excluded */
+export function docOrder(s: Pick<EditorState, "root" | "children">) {
+  const out: string[] = []
+  const walk = (x: string) => {
+    if (x !== s.root) out.push(x)
+    for (const c of s.children[x] ?? []) walk(c)
+  }
+  walk(s.root)
+  return out
 }
 
 export function isDescendant(
@@ -226,13 +247,24 @@ export function createEditorStore(
 
         move: (id, parentId, index) => {
           const s = get()
-          if (id === parentId || id === s.root || isDescendant(s, id, parentId))
+          const want = new Set([id].flat())
+          // document order; a row inside another moved row travels with it
+          const ids = docOrder(s).filter(
+            (x) =>
+              want.has(x) &&
+              !Array.from(want).some((a) => a !== x && isDescendant(s, a, x))
+          )
+          if (!ids.length || !s.children[parentId]) return
+          if (ids.some((x) => x === parentId || isDescendant(s, x, parentId)))
             return
-          if (!s.children[parentId]) return
           mutate((s) => {
-            detach(s, id)
-            attach(s, id, parentId, index)
+            for (const x of ids) detach(s, x)
+            ids.forEach((x, i) => attach(s, x, parentId, index + i))
           })
+        },
+        moving: (id) => {
+          const s = get()
+          return s.selected.includes(id) ? s.selected : [id]
         },
 
         select: (selected) => set({ selected }),
@@ -253,12 +285,7 @@ export function createEditorStore(
         selectRange: (id) => {
           const s = get()
           if (!s.anchor || !s.byId[s.anchor]) return s.toggleSelect(id, true)
-          const order: string[] = []
-          const walk = (x: string) => {
-            if (x !== s.root) order.push(x)
-            for (const c of s.children[x] ?? []) walk(c)
-          }
-          walk(s.root)
+          const order = docOrder(s)
           const [a, b] = [order.indexOf(s.anchor), order.indexOf(id)].sort(
             (x, y) => x - y
           )

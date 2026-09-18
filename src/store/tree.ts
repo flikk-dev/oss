@@ -22,6 +22,10 @@ export type SchemaNode = {
 
 export type NodePatch = Partial<Omit<SchemaNode, "id" | "isGroup" | "children">>
 
+/** the node as the hooks hand it out: subtree under `fields` */
+export type Field = Omit<SchemaNode, "children"> & { fields?: Field[] }
+export type FieldPatch = NodePatch
+
 let seq = 0
 /** runtime ids (insert / duplicate) */
 export const newId = () => `x${Date.now().toString(36)}${(seq++).toString(36)}`

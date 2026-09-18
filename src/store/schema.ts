@@ -131,7 +131,9 @@ function parse(
       parse(v, k, types, !required.includes(k), nextId)
     )
   } else if (mod.children) {
-    node.children = ((s.oneOf ?? []) as Json[]).map((v) => parse(v, "", types, false, nextId))
+    node.children = ((s.oneOf ?? []) as Json[]).map((v) =>
+      parse(v, "", types, false, nextId)
+    )
   }
   // everything the editor does not model rides along; type modules read what they need from it
   const consumed = new Set<string>([...META, ...MODELED])

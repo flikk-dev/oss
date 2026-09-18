@@ -281,6 +281,50 @@ describe("createJsonSchema handle", () => {
     expect(Object.keys(json.properties.address.properties)).toEqual(["zip"])
   })
 
+  test("move takes many ids: document order kept, nested ones ride with their parent", () => {
+    const schema = createJsonSchema(user)
+    const [name, id, address, zip] = [
+      "fullName",
+      "id",
+      "address",
+      "address.zip",
+    ].map((p) => schema.find(p)!)
+    const rest = ["email", "active", "role", "tags", "contact", "createdAt"]
+    // zip is inside address → not moved on its own; order is id, fullName, address
+    schema.move([name, zip, id, address], schema.root, rest.length)
+    const json = schema.toJSON() as any
+    expect(Object.keys(json.properties)).toEqual([
+      ...rest,
+      "id",
+      "fullName",
+      "address",
+    ])
+    expect(Object.keys(json.properties.address.properties)).toEqual([
+      "street",
+      "zip",
+    ])
+    // into a group, at the end; index counts siblings minus the moved rows
+    schema.move([id, name], address, 2)
+    expect(Object.keys(schema.toJSON().properties as object)).toEqual([
+      ...rest,
+      "address",
+    ])
+    expect(
+      Object.keys((schema.toJSON() as any).properties.address.properties)
+    ).toEqual(["street", "zip", "id", "fullName"])
+  })
+
+  test("a group cannot move into itself or its own subtree, even in a batch", () => {
+    const schema = createJsonSchema(user)
+    const before = schema.toJSON()
+    schema.move(
+      [schema.find("id")!, schema.find("address")!],
+      schema.find("address")!,
+      0
+    )
+    expect(schema.toJSON()).toEqual(before)
+  })
+
   test("a moved key that collides with a sibling is suffixed", () => {
     const schema = createJsonSchema({
       type: "object",

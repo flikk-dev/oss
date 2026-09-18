@@ -23,13 +23,14 @@ import {
   RowIdContext,
   useEditor,
   useEditorStore,
-  useField,
+  useFieldContext,
   useList,
   useTypeModule,
   useVariant,
   type Variant,
 } from "@/context/editor"
 import { Editable, type EditableProps, type RenderProp } from "./editable"
+import { useField } from "./hooks"
 import { IconTile, Menu, sheetClass, TypeMenu } from "./menu"
 
 type Size = Record<Variant, string>
@@ -80,7 +81,7 @@ export function Title({
   render,
   variant,
 }: Field) {
-  const { node, set } = useField()
+  const { field: node, update: set } = useField()
   const v = useVariant()
   return (
     <Editable
@@ -106,7 +107,8 @@ export function Key({
   render,
   variant,
 }: Field) {
-  const { node, set, id } = useField()
+  const { field: node, update: set } = useField()
+  const id = node.id
   const v = useVariant()
   const { store } = useEditor()
   const conflict = useEditorStore((s) => {
@@ -166,7 +168,9 @@ export function Key({
       title={conflictTitle}
       aria-invalid={conflict || undefined}
     >
-      <span className="select-none">@</span>
+      <span data-slot="key-prefix" className="select-none">
+        @
+      </span>
       {input}
     </span>
   )
@@ -180,7 +184,7 @@ export function Description({
   render,
   variant,
 }: Field & { multiline?: boolean }) {
-  const { node, set } = useField()
+  const { field: node, update: set } = useField()
   const v = useVariant()
   return (
     <Editable
@@ -210,7 +214,7 @@ export function Examples({
   render,
   variant,
 }: Field) {
-  const { node, set } = useField()
+  const { field: node, update: set } = useField()
   const v = useVariant()
   const mod = useTypeModule(node.type)
   const joined = node.examples.join(", ")
@@ -278,7 +282,7 @@ export function DetailFields({
 
 /** the row's details overlay: dialog, or a bottom sheet on mobile; opened by <SchemaAction.EditDetails> */
 function DetailsOverlay() {
-  const { id } = useField()
+  const { id } = useFieldContext()
   const { store } = useEditor()
   const details = useEditorStore((s) =>
     s.details?.id === id ? s.details : null
@@ -350,14 +354,14 @@ function Badge({
 }
 
 export function Optional(props: BadgeProps) {
-  const { node } = useField()
+  const { field: node } = useField()
   return (
     <Badge on={node.optional} slot="optional" label="optional" {...props} />
   )
 }
 
 export function Repeated(props: BadgeProps) {
-  const { node } = useField()
+  const { field: node } = useField()
   return (
     <Badge
       on={node.repeated}
@@ -371,7 +375,7 @@ export function Repeated(props: BadgeProps) {
 }
 
 export function Nullable(props: BadgeProps) {
-  const { node } = useField()
+  const { field: node } = useField()
   return (
     <Badge on={node.nullable} slot="nullable" label="nullable" {...props} />
   )
@@ -382,7 +386,8 @@ export function ChildrenCount({
   render,
   variant = "muted",
 }: Rendered & { variant?: BadgeVariant }) {
-  const { node, id } = useField()
+  const { field: node } = useField()
+  const id = node.id
   const mod = useTypeModule(node.type)
   const count = useEditorStore((s) => s.children[id]?.length ?? 0)
   const v = useVariant()
@@ -421,7 +426,7 @@ export function Type({
   render,
   variant = "icon",
 }: Rendered & { variant?: "icon" | "badge" }) {
-  const { node } = useField()
+  const { field: node } = useField()
   const mod = useTypeModule(node.type)
   const v = useVariant()
   const badge = variant === "badge"
@@ -461,7 +466,7 @@ export function Type({
 
 /** the type module's own UI, if it has one */
 export function Extra(props: Part) {
-  const { node, set } = useField()
+  const { field: node, update: set } = useField()
   const mod = useTypeModule(node.type)
   if (!mod.Extra) return null
   return (
@@ -479,7 +484,7 @@ export function MenuPart({
   children,
   label = "Field settings",
 }: Part & { children: React.ReactNode; label?: string }) {
-  const { node } = useField()
+  const { field: node } = useField()
   const v = useVariant()
   const size = {
     compact: "size-5",
@@ -526,7 +531,7 @@ export function Nested({
   className,
   children,
 }: Part & { children: React.ReactNode }) {
-  const { node } = useField()
+  const { node } = useFieldContext()
   if (!node.isGroup) return null
   return (
     <NestedContext.Provider value={true}>
@@ -547,7 +552,7 @@ export function NestedToggle({
   render,
 }: Part & { render?: React.ComponentProps<typeof Button>["render"] }) {
   useNested("NestedToggle")
-  const { node, set } = useField()
+  const { node, set } = useFieldContext()
   const v = useVariant()
   const open = !node.collapsed
   const size = {
@@ -556,16 +561,19 @@ export function NestedToggle({
     wide: "size-7",
     mobile: "size-8",
   }[v]
+  const props = {
+    "data-slot": "nested-toggle",
+    "data-state": open ? "open" : "closed",
+    "aria-label": open ? "Collapse" : "Expand",
+    "aria-expanded": open,
+    onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+    onClick: () => set({ collapsed: open }),
+  }
   return (
     <Button
-      data-slot="nested-toggle"
-      data-state={open ? "open" : "closed"}
+      {...props}
       variant="ghost"
       size="icon-xs"
-      aria-label={open ? "Collapse" : "Expand"}
-      aria-expanded={open}
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={() => set({ collapsed: open })}
       render={render}
       className={cn(size, "text-muted-foreground", className)}
     >
@@ -590,7 +598,7 @@ export function NestedList({
   open?: boolean
 }) {
   useNested("NestedList")
-  const { node, id } = useField()
+  const { node, id } = useFieldContext()
   const list = useList()
   const v = useVariant()
   const open = forced || !node.collapsed
@@ -627,7 +635,7 @@ export function NestedList({
 /** "3 hidden" / "empty" line of a collapsed group; null while open */
 export function NestedSummary({ className }: Part) {
   useNested("NestedSummary")
-  const { node, id } = useField()
+  const { node, id } = useFieldContext()
   const v = useVariant()
   const count = useEditorStore((s) => s.children[id]?.length ?? 0)
   if (!node.collapsed) return null
@@ -736,6 +744,13 @@ function RowImpl({
   const hasHandle = dragFrom ? dragFrom === "handle" : mounted
   const node = useEditorStore((s) => s.byId[id])
   const selected = useEditorStore((s) => s.selected.includes(id))
+  // this row travels with a selection someone else is dragging
+  const carried = useEditorStore(
+    (s) => !!s.drop && s.drop.id !== id && s.drop.ids.includes(id)
+  )
+  const count = useEditorStore((s) =>
+    s.drop?.id === id ? s.drop.ids.length : 0
+  )
   const startDrag = React.useCallback(
     (e: React.PointerEvent | PointerEvent) => controls.start(e as PointerEvent),
     [controls]
@@ -760,10 +775,12 @@ function RowImpl({
       y,
       store.getState().root
     )
-    const siblings = store.getState().children[parentId].filter((s) => s !== id)
+    const st = store.getState()
+    const ids = st.moving(id)
+    const siblings = st.children[parentId].filter((s) => !ids.includes(s))
     const index = beforeId ? siblings.indexOf(beforeId) : siblings.length
-    store.getState().setDrop({ id, parentId, index, height: grab.current.h })
-    return { parentId, index }
+    st.setDrop({ id, ids, parentId, index, height: grab.current.h })
+    return { ids, parentId, index }
   }
 
   if (!node) return null
@@ -819,7 +836,7 @@ function RowImpl({
           justDragged.current = true
           requestAnimationFrame(() => (justDragged.current = false))
           store.getState().setDrop(null)
-          if (at) store.getState().move(id, at.parentId, at.index)
+          if (at) store.getState().move(at.ids, at.parentId, at.index)
         }}
         // press and drag from anywhere unless a Drag handle is mounted; buttons excluded, an unfocused input drags too
         onPointerDown={(e) => {
@@ -845,7 +862,7 @@ function RowImpl({
         data-variant={list.variant}
         data-selected={selected ? "" : undefined}
         data-drag-from={hasHandle ? "handle" : "row"}
-        data-dragging={dragging ? "" : undefined}
+        data-dragging={dragging ? "" : carried ? "carried" : undefined}
         className={cn(
           "group/row relative flex min-w-0 flex-col",
           !hasHandle &&
@@ -853,7 +870,7 @@ function RowImpl({
             "cursor-grab select-none active:cursor-grabbing",
           mobile && "touch-none select-none",
           // collapsed, not display:none: motion keeps a sane layout snapshot, so no fly-in on settle
-          dragging &&
+          (dragging || carried) &&
             "invisible [margin-top:calc(var(--row-gap)*-1)] h-0 overflow-hidden",
           className
         )}
@@ -870,6 +887,14 @@ function RowImpl({
             style={{ width: grab.current.w }}
             className="pointer-events-none fixed top-0 left-0 z-100 opacity-90 shadow-lg"
           >
+            {count > 1 && (
+              <span
+                data-slot="drag-count"
+                className="absolute -top-2 -right-2 z-10 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-2xs font-medium text-primary-foreground"
+              >
+                {count}
+              </span>
+            )}
             <ListContext.Provider value={{ ...list, ghost: true }}>
               <RowImpl id={id} className={className}>
                 {children}

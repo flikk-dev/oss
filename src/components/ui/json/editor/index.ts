@@ -10,7 +10,6 @@
 import * as SchemaParts from "./schema"
 import * as FieldParts from "./field"
 import * as ActionParts from "./action"
-
 export const Schema = {
   Root: SchemaParts.Root,
   List: SchemaParts.List,
@@ -42,6 +41,7 @@ export const SchemaField = {
 
 export const SchemaAction = {
   Primitive: ActionParts.ActionPrimitive,
+  Command: ActionParts.Command,
   Drag: ActionParts.Drag,
   Select: ActionParts.Select,
   ChangeType: ActionParts.ChangeType,
@@ -60,4 +60,7 @@ export {
   useJsonSchemaValue,
   type Groups,
 } from "./presets"
+export { useSchema, useField, type NewField } from "./hooks"
+export type { Field, FieldPatch } from "@/store"
 export type { Variant } from "@/context/editor"
+export type { CommandContext } from "./action"

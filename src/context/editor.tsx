@@ -76,8 +76,8 @@ export type FieldCtx = {
 }
 export const FieldContext = React.createContext<FieldCtx | null>(null)
 
-/** current row: node (with `isGroup`, without children) + patch; re-renders only when this node changes */
-export function useField() {
+/** current row, internal: node + patch + drag wiring. Parts that only need the model use hooks.useField */
+export function useFieldContext() {
   const ctx = React.useContext(FieldContext)
   if (!ctx) throw new Error("field parts must be inside <SchemaField.Row>")
   const { store } = useEditor()

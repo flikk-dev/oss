@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useStore } from "zustand"
 import { cn } from "cn"
 import { useShallow } from "zustand/react/shallow"
 import { PlusIcon } from "lucide-react"
@@ -20,6 +21,7 @@ import {
 } from "@/context/editor"
 import { TypeMenu } from "./menu"
 import { Row } from "./field"
+import { Checkbox } from "@/components/ui/checkbox"
 
 /* ---------------------------------- root --------------------------------- */
 
@@ -57,12 +59,14 @@ export function Root({
     }),
     [schema, coarse]
   )
+  const selecting = useStore(schema.store, (s) => s.selected.length > 0)
   return (
     <EditorContext.Provider value={ctx}>
       <div
         ref={ref}
         data-slot="json-editor"
-        className={cn("min-w-0 text-sm", className)}
+        data-selection={selecting ? "active" : "empty"}
+        className={cn("group/editor min-w-0 text-sm", className)}
       >
         {children}
       </div>
@@ -83,7 +87,8 @@ const SkeletonContext = React.createContext<React.ReactElement | null>(null)
 
 /**
  * One sibling set. `render` draws each row; nested lists inherit it (and the
- * variant) unless they set their own. Children other than rows: <Schema.Skeleton>.
+ * variant) unless they set their own. Children: a <Schema.Skeleton> to restyle
+ * the drop slot; anything else renders after the rows.
  */
 export function List({
   parentId,
@@ -121,10 +126,13 @@ export function List({
   const drop = useEditorStore((s) =>
     !ctx.ghost && s.drop?.parentId === ctx.parentId ? s.drop : null
   )
-  const visible = drop ? ids.filter((x) => x !== drop.id) : ids
-  const custom = React.Children.toArray(children).find(
-    (c) => React.isValidElement(c) && c.type === Skeleton
-  ) as React.ReactElement | undefined
+  const visible = drop ? ids.filter((x) => !drop.ids.includes(x)) : ids
+  const kids = React.Children.toArray(children)
+  const isSkeleton = (c: React.ReactNode) =>
+    React.isValidElement(c) && c.type === Skeleton
+  const custom = kids.find(isSkeleton) as React.ReactElement | undefined
+  // anything else (an AddField, your own bar) lands after the rows, inside the list's context
+  const rest = kids.filter((c) => !isSkeleton(c))
   const skeleton = drop && (
     <SkeletonContext.Provider value={custom ?? null}>
       <SkeletonSlot height={drop.height} />
@@ -146,6 +154,7 @@ export function List({
           </React.Fragment>
         ))}
         {drop && drop.index >= visible.length && skeleton}
+        {rest}
       </div>
     </ListContext.Provider>
   )
@@ -272,26 +281,19 @@ export function SelectAll({ className }: { className?: string }) {
       return { all: n > 0 && n === ids.length, some: n > 0 && n < ids.length }
     })
   )
-  const ref = React.useRef<HTMLInputElement>(null)
-  React.useEffect(() => {
-    if (ref.current) ref.current.indeterminate = some
-  }, [some])
   return (
-    <input
-      ref={ref}
+    <Checkbox
       data-slot="select-all"
-      type="checkbox"
       aria-label="Select all"
       checked={all}
-      onChange={(e) => {
+      indeterminate={some}
+      onCheckedChange={(checked) => {
         const s = store.getState()
         s.select(
-          e.target.checked
-            ? Object.keys(s.byId).filter((id) => id !== s.root)
-            : []
+          checked ? Object.keys(s.byId).filter((id) => id !== s.root) : []
         )
       }}
-      className={cn("size-3.5 accent-primary", className)}
+      className={className}
     />
   )
 }

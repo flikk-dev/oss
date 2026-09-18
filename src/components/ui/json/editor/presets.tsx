@@ -10,7 +10,12 @@ import {
   type JsonSchemaOptions,
   type SchemaNode,
 } from "@/store"
-import { useEditor, useField, useVariant, type Variant } from "@/context/editor"
+import {
+  useEditor,
+  useFieldContext,
+  useVariant,
+  type Variant,
+} from "@/context/editor"
 import {
   Accordion,
   AccordionContent,
@@ -65,7 +70,7 @@ function GroupFrame({
   groups: Groups
   head: React.ReactNode
 }) {
-  const { set } = useField()
+  const { set } = useFieldContext()
   if (!node.isGroup) return head
   if (groups === "nested")
     return (
@@ -110,21 +115,29 @@ const desktop = (groups: Groups) => (node: SchemaNode) => (
 )
 
 function DesktopRow({ node, groups }: { node: SchemaNode; groups: Groups }) {
+  const v = useVariant()
   return (
     <SchemaField.Row
       dragFrom="anywhere"
-      className={cn(
-        "rounded-md border bg-background",
-        node.isGroup
-          ? "border-border"
-          : "border-transparent has-[>[data-slot=head]:hover]:border-border"
-      )}
+      className="group/row flex-row items-center"
     >
-      <GroupFrame
-        node={node}
-        groups={groups}
-        head={<Head node={node} toggle={groups === "nested"} />}
-      />
+      {/* outside the card: shown on hover, when checked, and while any selection is active */}
+      <SchemaAction.Select className="mr-1.5 shrink-0 opacity-0 group-hover/row:opacity-100 group-data-[selection=active]/editor:opacity-100 data-checked:opacity-100" />
+      <div
+        data-slot="card"
+        className={cn(
+          "min-w-0 flex-1 rounded-md border bg-background",
+          node.isGroup
+            ? "border-border"
+            : "border-transparent has-[>[data-slot=head]:hover]:border-border"
+        )}
+      >
+        <GroupFrame
+          node={node}
+          groups={groups}
+          head={<Head node={node} toggle={groups === "nested"} />}
+        />
+      </div>
     </SchemaField.Row>
   )
 }
@@ -295,6 +308,18 @@ function Preset({ variant, groups }: { variant?: Variant; groups: Groups }) {
   )
   return (
     <>
+      {v !== "mobile" && (
+        <Schema.Toolbar className="mb-1 flex-wrap gap-1 rounded-md border border-border bg-muted/40 px-2 py-1 data-[state=empty]:hidden">
+          <Schema.SelectAll className="mr-1" />
+          <Schema.SelectionCount className="mr-2 text-xs text-muted-foreground" />
+          <SchemaAction.Optional />
+          <SchemaAction.Repeated />
+          <SchemaAction.Nullable />
+          <SchemaAction.MoveInto />
+          <SchemaAction.Duplicate />
+          <SchemaAction.Remove />
+        </Schema.Toolbar>
+      )}
       <Schema.List variant={v} render={render} />
       <div className="flex justify-end pt-1">
         <Schema.AddField />

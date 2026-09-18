@@ -7,6 +7,7 @@ import { useRender } from "@base-ui/react/use-render"
 import {
   BracketsIcon,
   CircleDashedIcon,
+  CircleDotIcon,
   CircleSlashIcon,
   CopyIcon,
   FolderInputIcon,
@@ -15,18 +16,21 @@ import {
   Trash2Icon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   useActionScope,
   useActionTargets,
   useEditor,
   useEditorStore,
-  useField,
+  useFieldContext,
   useFieldOptional,
   useTypeModule,
   useVariant,
 } from "@/context/editor"
 import { isDescendant, type DetailField } from "@/store/editor"
+import type { JsonSchema, SchemaNode } from "@/store"
 import { Type } from "./field"
+import { useField } from "./hooks"
 import {
   IconTile,
   Menu,
@@ -70,7 +74,7 @@ export function ActionPrimitive({
 }: ActionProps & {
   icon: React.ComponentType<{ className?: string }>
   label: string
-  run: () => void
+  run: (e: React.MouseEvent) => void
   /** toggle state; undefined = plain command */
   state?: boolean | "mixed"
   destructive?: boolean
@@ -85,7 +89,7 @@ export function ActionPrimitive({
   const handle = (e: React.MouseEvent) => {
     onClick?.(e)
     if (e.defaultPrevented) return
-    run()
+    run(e)
     if (scope === "menu" && !keepOpen) menu?.close()
   }
   const toggle = state !== undefined
@@ -190,6 +194,73 @@ export function ActionPrimitive({
   )
 }
 
+/* -------------------------------- command -------------------------------- */
+
+export type CommandContext = {
+  /** the field, or the selection inside a toolbar */
+  ids: string[]
+  nodes: SchemaNode[]
+  schema: JsonSchema
+}
+
+/**
+ * Your own action. Same shapes as the built-ins (icon button in a row, item in
+ * a menu, button in a toolbar); `onClick` gets the targets and the handle.
+ */
+export function Command({
+  icon = CircleDotIcon,
+  children,
+  onClick,
+  destructive,
+  keepOpen,
+  state,
+  render,
+  className,
+}: {
+  icon?: React.ComponentType<{ className?: string }>
+  /** the label */
+  children: React.ReactNode
+  onClick: (ctx: CommandContext, e: React.MouseEvent) => void
+  destructive?: boolean
+  /** menu stays open after click */
+  keepOpen?: boolean
+  /** show as a toggle */
+  state?: boolean | "mixed"
+  render?: RenderProp
+  className?: string
+}) {
+  const { schema } = useEditor()
+  const ids = useActionTargets()
+  const label = typeof children === "string" ? children : schema && "Command"
+  let event: React.MouseEvent | null = null
+  return (
+    <ActionPrimitive
+      icon={icon}
+      label={label}
+      destructive={destructive}
+      keepOpen={keepOpen}
+      state={state}
+      render={render}
+      className={className}
+      onClick={(e) => {
+        event = e
+      }}
+      run={() =>
+        onClick(
+          {
+            ids,
+            nodes: ids.map((id) => schema.get(id)!).filter(Boolean),
+            schema,
+          },
+          event!
+        )
+      }
+    >
+      {children}
+    </ActionPrimitive>
+  )
+}
+
 /* ------------------------------ row gestures ----------------------------- */
 
 /** drag handle; when mounted the row drags only from here. `render` swaps the element, children the icon */
@@ -202,7 +273,7 @@ export function Drag({
   children?: React.ReactNode
   render?: RenderProp
 }) {
-  const { startDrag, setHasHandle } = useField()
+  const { startDrag, setHasHandle } = useFieldContext()
   const v = useVariant()
   React.useEffect(() => {
     setHasHandle(true)
@@ -244,41 +315,24 @@ export function Select({
   render,
 }: {
   className?: string
-  render?: RenderProp
+  render?: React.ComponentProps<typeof Checkbox>["render"]
 }) {
-  const { id } = useField()
+  const { id } = useFieldContext()
   const { store } = useEditor()
   const on = useEditorStore((s) => s.selected.includes(id))
-  const pick = (checked: boolean, e: Event | React.SyntheticEvent) => {
-    // React's checkbox onChange is backed by the click event → modifiers are there
-    const shift = ((e as React.SyntheticEvent).nativeEvent ?? e) as MouseEvent
-    if (shift.shiftKey) store.getState().selectRange(id)
-    else store.getState().toggleSelect(id, checked)
-  }
-  const custom = useRender({
-    render,
-    enabled: !!render,
-    defaultTagName: "input",
-    props: {
-      "data-slot": "select",
-      "aria-label": "Select field",
-      checked: on,
-      onCheckedChange: (checked: boolean, e: { event: Event }) =>
-        pick(checked, e.event),
-      onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
-      className,
-    },
-  })
-  if (render) return custom
   return (
-    <input
+    <Checkbox
       data-slot="select"
-      type="checkbox"
       aria-label="Select field"
       checked={on}
-      onChange={(e) => pick(e.target.checked, e)}
+      onCheckedChange={(checked, { event }) => {
+        // shift extends the range from the last hand-toggled row
+        if ((event as MouseEvent).shiftKey) store.getState().selectRange(id)
+        else store.getState().toggleSelect(id, checked)
+      }}
       onPointerDown={(e) => e.stopPropagation()}
-      className={cn("size-3.5 shrink-0 accent-primary", className)}
+      render={render}
+      className={className}
     />
   )
 }
@@ -291,7 +345,7 @@ export function ChangeType({
   className?: string
   children?: React.ReactNode
 }) {
-  const { node, set } = useField()
+  const { field: node, update: set } = useField()
   const mod = useTypeModule(node.type)
   return (
     <TypeMenu

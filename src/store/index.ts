@@ -12,5 +12,5 @@ export {
   type Json,
   type TypeModule,
 } from "./types"
-export type { NodePatch, SchemaNode } from "./tree"
+export type { Field, FieldPatch, NodePatch, SchemaNode } from "./tree"
 export { validate } from "./validate"
