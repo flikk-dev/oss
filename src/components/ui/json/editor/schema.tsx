@@ -227,8 +227,11 @@ export function List({
   )
 }
 
-/** subscribes to one node and hands it to the list's render */
-function RowFor({ id }: { id: string }) {
+/**
+ * Subscribes to one node and hands it to the list's render. Memoised: while a
+ * drag moves the skeleton the list re-renders, the rows must not.
+ */
+const RowFor = React.memo(function RowFor({ id }: { id: string }) {
   const { render } = useList()
   const node = useEditorStore((s) => s.byId[id])
   if (!node) return null
@@ -237,7 +240,7 @@ function RowFor({ id }: { id: string }) {
       {render({ ...node })}
     </RowIdContext.Provider>
   )
-}
+})
 
 function SkeletonSlot({ height }: { height: number }) {
   const custom = React.useContext(SkeletonContext)

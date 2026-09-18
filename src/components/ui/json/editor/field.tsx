@@ -671,16 +671,43 @@ const FIELDS = "input, textarea"
 const inside = (r: DOMRect, x: number, y: number) =>
   x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
 
+/**
+ * What a drag hit-tests against, walked once at drag start: the DOM does not
+ * change while dragging (the skeleton is not a row), only where things are.
+ * Rects are read per frame; the queries are not.
+ */
+type DragGeometry = {
+  rows: { el: HTMLElement; nested: HTMLElement | null }[]
+  frames: HTMLElement[]
+}
+
+function snapshot(root: HTMLElement, self: HTMLElement): DragGeometry {
+  const live = (el: Element) =>
+    !self.contains(el) && !el.closest("[data-ghost]")
+  const rows = Array.from(root.querySelectorAll<HTMLElement>("[data-slot=row]"))
+    .filter(live)
+    .map((el) => {
+      const nested = el.querySelector<HTMLElement>(
+        ":scope [data-slot=nested-list]"
+      )
+      return {
+        el,
+        nested:
+          nested && nested.closest("[data-slot=row]") === el ? nested : null,
+      }
+    })
+  const frames = Array.from(
+    root.querySelectorAll<HTMLElement>(
+      "[data-slot=nested-list][data-state=open]"
+    )
+  ).filter(live)
+  return { rows, frames }
+}
+
 /** a row's "head" = its box minus its nested frame, if any */
-function headCentre(row: HTMLElement) {
-  const r = row.getBoundingClientRect()
-  const nested = row.querySelector<HTMLElement>(
-    ":scope [data-slot=nested-list]"
-  )
-  const bottom =
-    nested && row.contains(nested) && nested.closest("[data-slot=row]") === row
-      ? nested.getBoundingClientRect().top
-      : r.bottom
+function headCentre({ el, nested }: DragGeometry["rows"][number]) {
+  const r = el.getBoundingClientRect()
+  const bottom = nested ? nested.getBoundingClientRect().top : r.bottom
   return (r.top + bottom) / 2
 }
 
@@ -691,23 +718,15 @@ function headCentre(row: HTMLElement) {
  * rows are all above it (its padding / add-field area), append there.
  */
 function resolveDrop(
-  root: HTMLElement,
-  self: HTMLElement,
+  { rows, frames }: DragGeometry,
   x: number,
   y: number,
   rootId: string
 ) {
-  const live = (el: Element) =>
-    !self.contains(el) && !el.closest("[data-ghost]")
-  const rows = Array.from(
-    root.querySelectorAll<HTMLElement>("[data-slot=row]")
-  ).filter(live)
-  const before = rows.find((r) => y < headCentre(r))
+  const before = rows.find((r) => y < headCentre(r))?.el
   let frame: HTMLElement | null = null
-  for (const f of root.querySelectorAll<HTMLElement>(
-    "[data-slot=nested-list][data-state=open]"
-  )) {
-    if (!live(f) || !inside(f.getBoundingClientRect(), x, y)) continue
+  for (const f of frames) {
+    if (!inside(f.getBoundingClientRect(), x, y)) continue
     if (!frame || frame.contains(f)) frame = f
   }
   if (frame && !(before && frame.contains(before)))
@@ -752,6 +771,28 @@ function RowImpl({
   // the click that ends a drag must not reach row content (e.g. a tap-to-open summary)
   const justDragged = React.useRef(false)
   const dir = React.useRef<"x" | "y" | null>(null)
+  // pointer events outrun frames; one hit-test per frame is plenty
+  const frame = React.useRef<{ raf: number; x: number; y: number } | null>(null)
+  const placeSoon = (x: number, y: number) => {
+    if (frame.current) {
+      frame.current.x = x
+      frame.current.y = y
+      return
+    }
+    frame.current = {
+      x,
+      y,
+      raf: requestAnimationFrame(() => {
+        const f = frame.current!
+        frame.current = null
+        place(f.x, f.y)
+      }),
+    }
+  }
+  const cancelFrame = () => {
+    if (frame.current) cancelAnimationFrame(frame.current.raf)
+    frame.current = null
+  }
   // mobile: a press held still selects the row; moving before that drags instead
   const press = React.useRef<{ timer: number; fired: boolean } | null>(null)
   const cancelPress = () => {
@@ -783,6 +824,7 @@ function RowImpl({
     [id, hasHandle, startDrag]
   )
 
+  const geometry = React.useRef<DragGeometry | null>(null)
   const place = (px: number, py: number) => {
     const el = ref.current
     if (!el || !root.current) return null
@@ -791,9 +833,9 @@ function RowImpl({
     const g = ghostRef.current
     if (g)
       g.style.transform = `translate(${x - grab.current.x}px, ${y - grab.current.y}px)`
+    geometry.current ??= snapshot(root.current, el)
     const { parentId, beforeId } = resolveDrop(
-      root.current,
-      el,
+      geometry.current,
       x,
       y,
       store.getState().root
@@ -910,14 +952,16 @@ function RowImpl({
             document.body.style.userSelect = "none"
             setDragging(true)
           }
-          place(info.point.x, info.point.y)
+          placeSoon(info.point.x, info.point.y)
         }}
         onDragEnd={(_, info) => {
           dir.current = null
           cancelPress()
+          cancelFrame()
           if (!began.current) return
           began.current = false
           const at = place(info.point.x, info.point.y)
+          geometry.current = null
           document.body.style.userSelect = ""
           setDragging(false)
           setGen((g) => g + 1)
