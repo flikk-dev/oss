@@ -9,7 +9,7 @@ import {
   defineType,
   types,
   type SchemaNode,
-} from "@/components/ui/json/core"
+} from "@/registry/base-nova/ui/json/core"
 import {
   JsonSchemaEditor,
   Schema,
@@ -18,7 +18,7 @@ import {
   useField,
   useJsonSchema,
   useSchema,
-} from "@/components/ui/json/editor"
+} from "@/registry/base-nova/ui/json/editor"
 
 /**
  * The DX contract. Each test is a composition a consumer would actually write,

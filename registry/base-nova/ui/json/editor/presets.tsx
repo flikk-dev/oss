@@ -9,14 +9,14 @@ import {
   type JsonSchema,
   type JsonSchemaOptions,
   type SchemaNode,
-} from "@/components/ui/json/core"
+} from "@/registry/base-nova/ui/json/core"
 import {
   useEditor,
   useEditorStore,
   useFieldContext,
   useVariant,
   type Variant,
-} from "@/components/ui/json/editor/context"
+} from "@/registry/base-nova/ui/json/editor/context"
 import { useField } from "./hooks"
 import * as Schema from "./schema"
 import * as SchemaField from "./field"

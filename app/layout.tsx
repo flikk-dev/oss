@@ -3,8 +3,8 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 
 import "./globals.css"
-import { ThemeProvider } from "@demo/components/theme-provider"
-import { SiteNav } from "@demo/components/site-nav"
+import { ThemeProvider } from "@/components/theme-provider"
+import { SiteNav } from "@/components/site-nav"
 import { cn } from "@/lib/utils"
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" })

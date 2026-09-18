@@ -27,12 +27,12 @@ import {
   useFieldOptional,
   useTypeModule,
   useVariant,
-} from "@/components/ui/json/editor/context"
+} from "@/registry/base-nova/ui/json/editor/context"
 import {
   isDescendant,
   type DetailField,
-} from "@/components/ui/json/core/editor"
-import type { JsonSchema, SchemaNode } from "@/components/ui/json/core"
+} from "@/registry/base-nova/ui/json/core/editor"
+import type { JsonSchema, SchemaNode } from "@/registry/base-nova/ui/json/core"
 import { Type } from "./field"
 import { useField } from "./hooks"
 import {

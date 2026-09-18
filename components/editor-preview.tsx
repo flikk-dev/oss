@@ -8,14 +8,14 @@ import {
   useJsonSchema,
   useJsonSchemaValue,
   type Variant,
-} from "@/components/ui/json/editor"
+} from "@/registry/base-nova/ui/json/editor"
 import {
   fromJsonSchema,
   toExample,
   validate,
   type Json,
   type JsonSchema,
-} from "@/components/ui/json/core"
+} from "@/registry/base-nova/ui/json/core"
 
 const sample: Json = {
   type: "object",

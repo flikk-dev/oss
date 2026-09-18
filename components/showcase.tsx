@@ -3,7 +3,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import type { Variant } from "@/components/ui/json/editor"
+import type { Variant } from "@/registry/base-nova/ui/json/editor"
 import { EditorPreview } from "./editor-preview"
 
 const variants: { key: Variant; label: string }[] = [

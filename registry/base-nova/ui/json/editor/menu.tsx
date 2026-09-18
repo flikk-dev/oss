@@ -16,12 +16,15 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { typeGroups, type TypeModule } from "@/components/ui/json/core/types"
+import {
+  typeGroups,
+  type TypeModule,
+} from "@/registry/base-nova/ui/json/core/types"
 import {
   useEditor,
   useVariant,
   type Variant,
-} from "@/components/ui/json/editor/context"
+} from "@/registry/base-nova/ui/json/editor/context"
 
 /**
  * One popup engine for every menu: dropdown on desktop, bottom sheet on

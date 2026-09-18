@@ -9,8 +9,8 @@ import { useRender } from "@base-ui/react/use-render"
 import { ChevronDownIcon, EllipsisIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { uniqueSlug } from "@/components/ui/json/core/slug"
-import type { DetailField } from "@/components/ui/json/core/editor"
+import { uniqueSlug } from "@/registry/base-nova/ui/json/core/slug"
+import type { DetailField } from "@/registry/base-nova/ui/json/core/editor"
 import {
   ActionScopeContext,
   FieldContext,
@@ -23,7 +23,7 @@ import {
   useTypeModule,
   useVariant,
   type Variant,
-} from "@/components/ui/json/editor/context"
+} from "@/registry/base-nova/ui/json/editor/context"
 import { Editable, type EditableProps, type RenderProp } from "./editable"
 import { useField } from "./hooks"
 import { EditorSheet, IconTile, Menu, TypeMenu } from "./menu"

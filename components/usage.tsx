@@ -9,7 +9,7 @@ const tabs = [
     key: "preset",
     label: "Preset",
     blurb: "One line. JSON Schema in, JSON Schema out.",
-    code: `import { JsonSchemaEditor, useJsonSchema } from "@/components/ui/json/editor"
+    code: `import { JsonSchemaEditor, useJsonSchema } from "@/registry/base-nova/ui/json/editor"
 
 function SchemaPage({ initial }) {
   const schema = useJsonSchema(initial)          // a handle; it never re-renders the owner
@@ -25,7 +25,7 @@ function SchemaPage({ initial }) {
     key: "parts",
     label: "Parts",
     blurb: "You write the row once. Groups reuse it for their children.",
-    code: `import { Schema, SchemaField, SchemaAction } from "@/components/ui/json/editor"
+    code: `import { Schema, SchemaField, SchemaAction } from "@/registry/base-nova/ui/json/editor"
 
 const row = (field) => (
   <SchemaField.Row>
@@ -62,7 +62,7 @@ const row = (field) => (
     key: "hooks",
     label: "Hooks",
     blurb: "Two hooks, your own markup.",
-    code: `import { useSchema, useField } from "@/components/ui/json/editor"
+    code: `import { useSchema, useField } from "@/registry/base-nova/ui/json/editor"
 
 function MyRow() {
   const { field, type, update, drop, issue } = useField()

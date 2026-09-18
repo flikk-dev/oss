@@ -24,87 +24,87 @@
       ],
       "files": [
         {
-          "path": "src/components/ui/json/core/editor.ts",
+          "path": "registry/base-nova/ui/json/core/editor.ts",
           "type": "registry:ui",
           "target": "components/ui/json/core/editor.ts"
         },
         {
-          "path": "src/components/ui/json/core/handle.ts",
+          "path": "registry/base-nova/ui/json/core/handle.ts",
           "type": "registry:ui",
           "target": "components/ui/json/core/handle.ts"
         },
         {
-          "path": "src/components/ui/json/core/index.ts",
+          "path": "registry/base-nova/ui/json/core/index.ts",
           "type": "registry:ui",
           "target": "components/ui/json/core/index.ts"
         },
         {
-          "path": "src/components/ui/json/core/schema.ts",
+          "path": "registry/base-nova/ui/json/core/schema.ts",
           "type": "registry:ui",
           "target": "components/ui/json/core/schema.ts"
         },
         {
-          "path": "src/components/ui/json/core/slug.ts",
+          "path": "registry/base-nova/ui/json/core/slug.ts",
           "type": "registry:ui",
           "target": "components/ui/json/core/slug.ts"
         },
         {
-          "path": "src/components/ui/json/core/tree.ts",
+          "path": "registry/base-nova/ui/json/core/tree.ts",
           "type": "registry:ui",
           "target": "components/ui/json/core/tree.ts"
         },
         {
-          "path": "src/components/ui/json/core/types.ts",
+          "path": "registry/base-nova/ui/json/core/types.ts",
           "type": "registry:ui",
           "target": "components/ui/json/core/types.ts"
         },
         {
-          "path": "src/components/ui/json/core/validate.ts",
+          "path": "registry/base-nova/ui/json/core/validate.ts",
           "type": "registry:ui",
           "target": "components/ui/json/core/validate.ts"
         },
         {
-          "path": "src/components/ui/json/editor/action.tsx",
+          "path": "registry/base-nova/ui/json/editor/action.tsx",
           "type": "registry:ui",
           "target": "components/ui/json/editor/action.tsx"
         },
         {
-          "path": "src/components/ui/json/editor/context.tsx",
+          "path": "registry/base-nova/ui/json/editor/context.tsx",
           "type": "registry:ui",
           "target": "components/ui/json/editor/context.tsx"
         },
         {
-          "path": "src/components/ui/json/editor/editable.tsx",
+          "path": "registry/base-nova/ui/json/editor/editable.tsx",
           "type": "registry:ui",
           "target": "components/ui/json/editor/editable.tsx"
         },
         {
-          "path": "src/components/ui/json/editor/field.tsx",
+          "path": "registry/base-nova/ui/json/editor/field.tsx",
           "type": "registry:ui",
           "target": "components/ui/json/editor/field.tsx"
         },
         {
-          "path": "src/components/ui/json/editor/hooks.ts",
+          "path": "registry/base-nova/ui/json/editor/hooks.ts",
           "type": "registry:ui",
           "target": "components/ui/json/editor/hooks.ts"
         },
         {
-          "path": "src/components/ui/json/editor/index.ts",
+          "path": "registry/base-nova/ui/json/editor/index.ts",
           "type": "registry:ui",
           "target": "components/ui/json/editor/index.ts"
         },
         {
-          "path": "src/components/ui/json/editor/menu.tsx",
+          "path": "registry/base-nova/ui/json/editor/menu.tsx",
           "type": "registry:ui",
           "target": "components/ui/json/editor/menu.tsx"
         },
         {
-          "path": "src/components/ui/json/editor/presets.tsx",
+          "path": "registry/base-nova/ui/json/editor/presets.tsx",
           "type": "registry:ui",
           "target": "components/ui/json/editor/presets.tsx"
         },
         {
-          "path": "src/components/ui/json/editor/schema.tsx",
+          "path": "registry/base-nova/ui/json/editor/schema.tsx",
           "type": "registry:ui",
           "target": "components/ui/json/editor/schema.tsx"
         }

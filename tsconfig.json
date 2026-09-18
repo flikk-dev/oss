@@ -19,27 +19,27 @@
     "incremental": true,
     "paths": {
       "@/*": [
-        "./src/*"
-      ],
-      "@demo/*": [
-        "./demo/*"
+        "./*"
       ]
     },
     "types": [
       "bun"
+    ],
+    "plugins": [
+      {
+        "name": "next"
+      }
     ]
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "test/**/*.ts",
-    "test/**/*.tsx",
-    "demo/**/*.ts",
-    "demo/**/*.tsx",
-    "demo/next-env.d.ts"
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    "demo/.next"
+    "public"
   ]
 }

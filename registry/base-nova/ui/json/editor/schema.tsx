@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 import { useShallow } from "zustand/react/shallow"
 import { EllipsisIcon, PlusIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { JsonSchema } from "@/components/ui/json/core"
+import type { JsonSchema } from "@/registry/base-nova/ui/json/core"
 import {
   ActionScopeContext,
   EditorContext,
@@ -20,7 +20,7 @@ import {
   type RenderRow,
   type Variant,
   useVariant,
-} from "@/components/ui/json/editor/context"
+} from "@/registry/base-nova/ui/json/editor/context"
 import { Menu, TypeMenu } from "./menu"
 import { Row } from "./field"
 import { Checkbox } from "@/components/ui/checkbox"

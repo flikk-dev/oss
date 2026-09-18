@@ -8,7 +8,7 @@ export const contentType = "image/png"
 
 /** OG card on the flikk palette with the mascot; no fonts fetched, system sans */
 export default async function Image() {
-  const mark = await readFile(join(process.cwd(), "demo/public/icon.png"))
+  const mark = await readFile(join(process.cwd(), "public/icon.png"))
   const src = `data:image/png;base64,${mark.toString("base64")}`
   return new ImageResponse(
     <div

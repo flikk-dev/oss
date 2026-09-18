@@ -6,15 +6,21 @@ import {
   useEditor,
   useEditorStore,
   useFieldContext,
-} from "@/components/ui/json/editor/context"
-import { toNode, type EditorState } from "@/components/ui/json/core/editor"
-import { validate, type Issue } from "@/components/ui/json/core/validate"
+} from "@/registry/base-nova/ui/json/editor/context"
+import {
+  toNode,
+  type EditorState,
+} from "@/registry/base-nova/ui/json/core/editor"
+import {
+  validate,
+  type Issue,
+} from "@/registry/base-nova/ui/json/core/validate"
 import type {
   Field,
   FieldPatch,
   Json,
   TypeModule,
-} from "@/components/ui/json/core"
+} from "@/registry/base-nova/ui/json/core"
 
 /**
  * The headless layer: two hooks. `useSchema()` anywhere under <Schema.Root>,

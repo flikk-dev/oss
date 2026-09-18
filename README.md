@@ -140,14 +140,15 @@ bun run typecheck
 ```
 
 ```
-src/components/ui/json/editor   parts, presets, hooks, contexts
-src/components/ui/json/core     tree, JSON Schema in and out, type modules, the handle (no React)
-registry.json                   the shadcn registry item; `bun run registry:build` writes demo/public/r
-demo                            the landing page (Next.js), which also serves the registry
-test                            core and DX tests
+registry/base-nova/ui/json/editor   parts, presets, hooks, contexts
+registry/base-nova/ui/json/core     tree, JSON Schema in and out, type modules, the handle (no React)
+registry.json                       the shadcn registry item
+public/r/                           the built registry, `bun run registry:build`
+app, components, lib                the landing page (Next.js), which also serves the registry
+test                                core and DX tests
 ```
 
-The registry mirrors the source tree: what you install lands in `components/ui/json/{editor,core}`, the same paths as here.
+Same layout as shadcn's registry template. Sources import `@/registry/base-nova/ui/json/...`; the CLI rewrites that to `@/components/ui/json/...` when you install.
 
 Design notes live in [DESIGN.md](DESIGN.md).
 
