@@ -7,7 +7,7 @@ export function GET() {
 > Open-source React components from flikk (https://flikk.dev), shipped the shadcn way: one command copies the source into your app and you own it from there. The first component is a JSON Schema builder.
 
 Site: ${SITE}
-Source: https://github.com/flikk-dev/json-editor
+Source: https://github.com/flikk-dev/oss
 License: MIT
 Stack: React 19, Tailwind 4, Base UI (via shadcn), zustand, motion
 
@@ -28,7 +28,7 @@ Interaction: you drag a row to any depth, a group as one piece, or a selection a
 ## Links
 
 - flikk: https://flikk.dev
-- GitHub: https://github.com/flikk-dev/json-editor
+- GitHub: https://github.com/flikk-dev/oss
 `
   return new Response(body, {
     headers: { "content-type": "text/plain; charset=utf-8" },

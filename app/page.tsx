@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ArrowUpRightIcon, SparklesIcon } from "lucide-react"
 
-const GITHUB = "https://github.com/flikk-dev/json-editor"
+const GITHUB = "https://github.com/flikk-dev/oss"
 
 const INSTALL =
   "npx shadcn@latest add https://oss.flikk.dev/ui/r/json-editor.json"
@@ -126,7 +126,7 @@ export default async function Page({
           target="_blank"
           rel="noreferrer"
         >
-          github.com/flikk-dev/json-editor
+          github.com/flikk-dev/oss
         </a>
       </footer>
     </main>

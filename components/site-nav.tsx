@@ -5,7 +5,7 @@ import { useTheme } from "next-themes"
 import { MoonIcon, SunIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-const GITHUB = "https://github.com/flikk-dev/json-editor"
+const GITHUB = "https://github.com/flikk-dev/oss"
 const FLIKK = "https://flikk.dev"
 
 export function SiteNav() {

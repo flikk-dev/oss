@@ -70,7 +70,7 @@ export default function RootLayout({
               name: "flikk UI: JSON Schema builder",
               description,
               url: SITE,
-              codeRepository: "https://github.com/flikk-dev/json-editor",
+              codeRepository: "https://github.com/flikk-dev/oss",
               programmingLanguage: "TypeScript",
               runtimePlatform: "React",
               license: "https://opensource.org/licenses/MIT",
