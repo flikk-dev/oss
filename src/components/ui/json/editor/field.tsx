@@ -625,8 +625,8 @@ export function NestedList({
       <div
         aria-hidden
         data-slot="nested-frame"
-        // absolute inside its grid area: the content column, full height, no row of its own
-        className="absolute! inset-0 mx-[calc((var(--depth)-1)*var(--indent))]! rounded-b-md border-x border-b border-border bg-group"
+        // absolute inside its grid area: the content column (both lines explicit — `auto` would mean the container's edge), full height, no row of its own
+        className="absolute! inset-0 [grid-column:var(--content-col)/calc(var(--content-col)+1)]! mx-[calc((var(--depth)-1)*var(--indent))]! rounded-b-md border-x border-b border-border bg-group"
       />
       {open ? (
         // an explicit <Schema.List> child inherits this group as its parent; none → same template, next level
@@ -752,6 +752,12 @@ function RowImpl({
   // the click that ends a drag must not reach row content (e.g. a tap-to-open summary)
   const justDragged = React.useRef(false)
   const dir = React.useRef<"x" | "y" | null>(null)
+  // mobile: a press held still selects the row; moving before that drags instead
+  const press = React.useRef<{ timer: number; fired: boolean } | null>(null)
+  const cancelPress = () => {
+    if (press.current) window.clearTimeout(press.current.timer)
+    press.current = null
+  }
   const [dragging, setDragging] = React.useState(false)
   const [gen, setGen] = React.useState(0)
   const [mounted, setHasHandle] = React.useState(false)
@@ -871,7 +877,9 @@ function RowImpl({
         layout="position"
         onDrag={(_, info) => {
           if (mobile && dir.current !== "y") return
+          if (press.current?.fired) return
           if (!began.current) {
+            cancelPress()
             began.current = true
             const r = ref.current!.getBoundingClientRect()
             // the slot is as tall as everything that moves: this row, or the selection it belongs to
@@ -906,6 +914,7 @@ function RowImpl({
         }}
         onDragEnd={(_, info) => {
           dir.current = null
+          cancelPress()
           if (!began.current) return
           began.current = false
           const at = place(info.point.x, info.point.y)
@@ -926,7 +935,25 @@ function RowImpl({
           if (field && field === document.activeElement) return
           if (field) e.preventDefault()
           controls.start(e)
+          if (mobile) {
+            cancelPress()
+            const p = { timer: 0, fired: false }
+            p.timer = window.setTimeout(() => {
+              p.fired = true
+              store.getState().toggleSelect(id)
+              navigator.vibrate?.(10)
+              // the tap that ends the press must not open anything
+              justDragged.current = true
+            }, LONG_PRESS)
+            press.current = p
+          }
         }}
+        onPointerUp={() => {
+          if (press.current?.fired)
+            requestAnimationFrame(() => (justDragged.current = false))
+          cancelPress()
+        }}
+        onPointerCancel={cancelPress}
         onClickCapture={(e) => {
           if (justDragged.current) e.stopPropagation()
         }}
@@ -1008,6 +1035,9 @@ function RowImpl({
     </FieldContext.Provider>
   )
 }
+
+/** mobile: hold this long without moving to select the row */
+const LONG_PRESS = 400
 
 /** ghost shows at most this many carried rows, then "+N more" */
 const GHOST_MAX = 3

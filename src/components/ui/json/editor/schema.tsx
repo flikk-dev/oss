@@ -100,6 +100,14 @@ export const gridCols = (cols: 1 | 3) =>
 
 const SkeletonContext = React.createContext<React.ReactElement | null>(null)
 
+/** children with fragments unwrapped, so `<>{cols}</>` still declares columns */
+const flatten = (children: React.ReactNode): React.ReactNode[] =>
+  React.Children.toArray(children).flatMap((c) =>
+    React.isValidElement(c) && c.type === React.Fragment
+      ? flatten((c.props as { children?: React.ReactNode }).children)
+      : [c]
+  )
+
 /**
  * One sibling set. `render` draws each row; nested lists inherit it (and the
  * variant) unless they set their own. Children: <Schema.Column>s every row
@@ -123,7 +131,7 @@ export function List({
 }) {
   const { store, coarse } = useEditor()
   const parent = React.useContext(ListContext)
-  const kids = React.Children.toArray(children)
+  const kids = flatten(children)
   const isSkeleton = (c: React.ReactNode) =>
     React.isValidElement(c) && c.type === Skeleton
   const isColumn = (c: React.ReactNode): c is React.ReactElement<ColumnProps> =>

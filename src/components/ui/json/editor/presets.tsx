@@ -12,10 +12,12 @@ import {
 } from "@/store"
 import {
   useEditor,
+  useEditorStore,
   useFieldContext,
   useVariant,
   type Variant,
 } from "@/context/editor"
+import { useField } from "./hooks"
 import * as Schema from "./schema"
 import * as SchemaField from "./field"
 import * as SchemaAction from "./action"
@@ -74,6 +76,26 @@ function GroupFrame({
   )
 }
 
+/** is anything selected — mobile switches tap to "toggle this row" then */
+const useSelecting = () => useEditorStore((s) => s.selected.length > 0)
+
+/** the ⋯ menu; compact keeps description + examples behind Edit details */
+function RowMenu() {
+  const compact = useVariant() === "compact"
+  return (
+    <SchemaField.MenuPart>
+      {compact && (
+        <SchemaAction.EditDetails fields={["description", "examples"]} />
+      )}
+      <SchemaAction.Optional />
+      <SchemaAction.Repeated />
+      <SchemaAction.Nullable />
+      <SchemaAction.Duplicate />
+      <SchemaAction.Remove />
+    </SchemaField.MenuPart>
+  )
+}
+
 /** one template for default / compact / wide; compact moves description + examples into the menu */
 const desktop = (node: SchemaNode) => <DesktopRow node={node} />
 
@@ -104,13 +126,31 @@ function DesktopRow({ node }: { node: SchemaNode }) {
   )
 }
 
-function Head({ node }: { node: SchemaNode }) {
+/** the head line(s) of a row; `readOnly` is the mobile summary: plain text, type shown not picked */
+function Head({
+  node,
+  readOnly,
+  className,
+}: {
+  node: SchemaNode
+  readOnly?: boolean
+  className?: string
+}) {
   const v = useVariant()
   const compact = v === "compact"
   return (
-    <div data-slot="head" className={cn("group/head flex items-start", pad[v])}>
-      <SchemaAction.Drag className="opacity-0 group-hover/head:opacity-100" />
-      <SchemaAction.ChangeType />
+    <div
+      data-slot="head"
+      className={cn("group/head flex items-start", pad[v], className)}
+    >
+      {readOnly ? (
+        <SchemaField.Type />
+      ) : (
+        <>
+          <SchemaAction.Drag className="opacity-0 group-hover/head:opacity-100" />
+          <SchemaAction.ChangeType />
+        </>
+      )}
       <div
         className={cn(
           "flex min-w-0 flex-1 flex-col",
@@ -123,8 +163,8 @@ function Head({ node }: { node: SchemaNode }) {
             v === "wide" ? "min-h-7 gap-2" : "min-h-5 gap-1.5"
           )}
         >
-          <SchemaField.Title />
-          <SchemaField.Key />
+          <SchemaField.Title readOnly={readOnly} />
+          <SchemaField.Key readOnly={readOnly} />
           <SchemaField.Repeated />
           <SchemaField.ChildrenCount />
           <SchemaField.Optional />
@@ -132,28 +172,11 @@ function Head({ node }: { node: SchemaNode }) {
         </div>
         {!compact && (
           <>
-            <SchemaField.Description multiline />
-            <SchemaField.Examples />
+            <SchemaField.Description multiline readOnly={readOnly} />
+            <SchemaField.Examples readOnly={readOnly} />
           </>
         )}
-        <SchemaField.Extra />
-      </div>
-      <div
-        className={cn(
-          "flex shrink-0 items-center gap-0.5 opacity-0 group-hover/head:opacity-100 has-[[aria-expanded=true]]:opacity-100"
-        )}
-      >
-        <SchemaAction.Remove />
-        <SchemaField.MenuPart>
-          {compact && (
-            <SchemaAction.EditDetails fields={["description", "examples"]} />
-          )}
-          <SchemaAction.Optional />
-          <SchemaAction.Repeated />
-          <SchemaAction.Nullable />
-          <SchemaAction.Duplicate />
-          <SchemaAction.Remove />
-        </SchemaField.MenuPart>
+        {!readOnly && <SchemaField.Extra />}
       </div>
     </div>
   )
@@ -166,6 +189,25 @@ const SWIPE = 88
 /** read-only summary; tap opens the sheet, swipe left reveals actions, press-and-drag reorders */
 const mobile = (node: SchemaNode) => <MobileRow node={node} />
 
+/** tap opens the sheet; while a selection is active, tap toggles this row instead */
+function MobileSummary({ node }: { node: SchemaNode }) {
+  const { select } = useField()
+  const selecting = useSelecting()
+  return (
+    <SchemaAction.EditDetails
+      render={<div className="active:bg-muted/60" />}
+      onClick={(e) => {
+        if (selecting) {
+          e.preventDefault()
+          select()
+        }
+      }}
+    >
+      <Head node={node} readOnly />
+    </SchemaAction.EditDetails>
+  )
+}
+
 function MobileRow({ node }: { node: SchemaNode }) {
   const x = useMotionValue(0)
   const head = (
@@ -175,18 +217,13 @@ function MobileRow({ node }: { node: SchemaNode }) {
         "relative overflow-hidden border bg-background",
         node.isGroup
           ? "rounded-t-md border-border"
-          : "rounded-md border-transparent"
+          : "rounded-md border-transparent",
+        "group-data-[selected]/row:border-primary"
       )}
     >
       <div className="absolute inset-y-0 right-0 flex items-start gap-0.5 px-2 py-1">
         <SchemaAction.Remove />
-        <SchemaField.MenuPart>
-          <SchemaAction.Optional />
-          <SchemaAction.Repeated />
-          <SchemaAction.Nullable />
-          <SchemaAction.Duplicate />
-          <SchemaAction.Remove />
-        </SchemaField.MenuPart>
+        <RowMenu />
       </div>
       <motion.div
         drag="x"
@@ -204,35 +241,12 @@ function MobileRow({ node }: { node: SchemaNode }) {
         }}
         className="relative z-10 bg-background"
       >
-        <SchemaAction.EditDetails
-          render={
-            <div
-              data-slot="head"
-              className={cn("flex items-start active:bg-muted/60", pad.mobile)}
-            >
-              <SchemaField.Type />
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <div className="flex min-h-5 min-w-0 items-center gap-1.5">
-                  <SchemaField.Title readOnly />
-                  <SchemaField.Key readOnly />
-                  <SchemaField.Repeated />
-                  <SchemaField.ChildrenCount />
-                  <SchemaField.Optional />
-                  {node.isGroup && (
-                    <SchemaField.NestedToggle className="ml-auto" />
-                  )}
-                </div>
-                <SchemaField.Description readOnly />
-                <SchemaField.Examples readOnly />
-              </div>
-            </div>
-          }
-        />
+        <MobileSummary node={node} />
       </motion.div>
     </div>
   )
   return (
-    <SchemaField.Row dragFrom="anywhere">
+    <SchemaField.Row dragFrom="anywhere" className="group/row">
       <GroupFrame node={node} head={head} />
     </SchemaField.Row>
   )
@@ -263,24 +277,40 @@ function Preset({ variant }: { variant?: Variant }) {
   const render = v === "mobile" ? mobile : desktop
   return (
     <>
-      {v !== "mobile" && (
-        <Schema.Toolbar className="mb-1 flex-wrap gap-1 rounded-md border border-border bg-muted/40 px-2 py-1 data-[state=empty]:hidden">
-          <Schema.SelectAll className="mr-1" />
-          <Schema.SelectionCount className="mr-2 text-xs text-muted-foreground" />
-          <SchemaAction.Optional />
-          <SchemaAction.Repeated />
-          <SchemaAction.Nullable />
-          <SchemaAction.MoveInto />
-          <SchemaAction.Duplicate />
-          <SchemaAction.Remove />
-        </Schema.Toolbar>
-      )}
+      <Schema.Toolbar
+        className={cn(
+          "flex-wrap gap-1 data-[state=empty]:hidden",
+          v === "mobile"
+            ? // floating, thumb reach, scrolls sideways when narrow
+              "fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-40 flex-nowrap overflow-x-auto rounded-xl border border-border bg-popover p-2 shadow-lg [&>*]:shrink-0"
+            : "mb-1 rounded-md border border-border bg-muted/40 px-2 py-1"
+        )}
+      >
+        <Schema.SelectAll className="mr-1" />
+        <Schema.SelectionCount className="mr-2 text-xs text-muted-foreground" />
+        <SchemaAction.Optional />
+        <SchemaAction.Repeated />
+        <SchemaAction.Nullable />
+        <SchemaAction.MoveInto />
+        <SchemaAction.Duplicate />
+        <SchemaAction.Remove />
+      </Schema.Toolbar>
       <Schema.List variant={v} render={render}>
+        {/* mobile: no checkbox — long-press selects, the card border says so */}
         {v !== "mobile" && (
-          <Schema.Column side="left" className="mr-1.5">
-            {/* shown on hover, when checked, and while any selection is active */}
-            <SchemaAction.Select className="mt-[calc(var(--head-py)+0.125rem)] opacity-0 group-hover/row:opacity-100 group-data-[selection=active]/editor:opacity-100 data-indeterminate:opacity-100 data-checked:opacity-100" />
-          </Schema.Column>
+          <>
+            <Schema.Column side="left" className="mr-1.5">
+              {/* shown on hover, when checked, and while any selection is active */}
+              <SchemaAction.Select className="mt-[calc(var(--head-py)+0.125rem)] opacity-0 group-hover/row:opacity-100 group-data-[selection=active]/editor:opacity-100 data-indeterminate:opacity-100 data-checked:opacity-100" />
+            </Schema.Column>
+            <Schema.Column
+              side="right"
+              className="ml-1.5 flex items-center gap-0.5 pt-(--head-py) opacity-0 group-hover/row:opacity-100 has-[[aria-expanded=true]]:opacity-100"
+            >
+              <SchemaAction.Remove />
+              <RowMenu />
+            </Schema.Column>
+          </>
         )}
       </Schema.List>
       <div className="flex justify-end pt-1">
