@@ -659,6 +659,7 @@ export function NestedSummary({ className }: Part) {
 
 const BUTTONS = "button, a, [data-slot=drag], [data-slot=select]"
 const FIELDS = "input, textarea"
+const ROWS = "[data-slot=row]"
 
 const inside = (r: DOMRect, x: number, y: number) =>
   x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
@@ -752,10 +753,12 @@ function RowImpl({
   children,
   dragFrom,
 }: RowProps & { id: string }) {
-  const { store, root } = useEditor()
+  const { store, root, coarse } = useEditor()
   const list = useList()
-  const mobile = list.variant === "mobile"
   const controls = useDragControls()
+  // pointer type of the gesture in flight, and whether a touch hold armed it
+  const touch = React.useRef(false)
+  const armed = React.useRef(false)
   const ref = React.useRef<HTMLDivElement>(null)
   const ghostRef = React.useRef<HTMLDivElement>(null)
   const grab = React.useRef({ x: 0, y: 0, w: 0, h: 0, gap: 0 })
@@ -785,14 +788,34 @@ function RowImpl({
     if (frame.current) cancelAnimationFrame(frame.current.raf)
     frame.current = null
   }
-  // mobile: a press held still selects the row; moving before that drags instead
-  const press = React.useRef<{ timer: number; fired: boolean } | null>(null)
+  // touch: a press held still selects the row and arms the drag; the page
+  // keeps the gesture (and may scroll) until then
+  const press = React.useRef<{
+    timer: number
+    fired: boolean
+    x: number
+    y: number
+  } | null>(null)
   const cancelPress = () => {
     if (press.current) window.clearTimeout(press.current.timer)
     press.current = null
   }
+  const [isArmed, setArmed] = React.useState(false)
+  const disarm = () => {
+    armed.current = false
+    setArmed(false)
+  }
   const [dragging, setDragging] = React.useState(false)
   const [gen, setGen] = React.useState(0)
+  // touch-action is read when the finger lands, so flipping it at the hold is
+  // too late for the gesture already in flight: hold the scroll off by hand
+  React.useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const stop = (e: TouchEvent) => armed.current && e.preventDefault()
+    el.addEventListener("touchmove", stop, { passive: false })
+    return () => el.removeEventListener("touchmove", stop)
+  }, [gen])
   const [mounted, setHasHandle] = React.useState(false)
   const hasHandle = dragFrom ? dragFrom === "handle" : mounted
   const node = useEditorStore((s) => s.byId[id])
@@ -906,12 +929,11 @@ function RowImpl({
         dragMomentum={false}
         dragElastic={0}
         dragConstraints={{ top: 0, bottom: 0 }}
-        dragDirectionLock={mobile}
+        dragDirectionLock={coarse}
         onDirectionLock={(axis) => (dir.current = axis)}
         layout="position"
         onDrag={(_, info) => {
-          if (mobile && dir.current !== "y") return
-          if (press.current?.fired) return
+          if (touch.current && dir.current !== "y") return
           if (!began.current) {
             cancelPress()
             began.current = true
@@ -955,6 +977,7 @@ function RowImpl({
           const at = place(info.point.x, info.point.y)
           geometry.current = null
           document.body.style.userSelect = ""
+          disarm()
           setDragging(false)
           setGen((g) => g + 1)
           justDragged.current = true
@@ -966,30 +989,47 @@ function RowImpl({
         onPointerDown={(e) => {
           if (hasHandle) return
           const t = e.target as HTMLElement
+          // a nested row's press bubbles here: it owns it, not us
+          if (t.closest(ROWS) !== ref.current) return
           if (t.closest(BUTTONS)) return
           const field = t.closest<HTMLElement>(FIELDS)
           if (field && field === document.activeElement) return
           if (field) e.preventDefault()
-          controls.start(e)
-          if (mobile) {
-            cancelPress()
-            const p = { timer: 0, fired: false }
-            p.timer = window.setTimeout(() => {
-              p.fired = true
-              store.getState().toggleSelect(id)
-              navigator.vibrate?.(10)
-              // the tap that ends the press must not open anything
-              justDragged.current = true
-            }, LONG_PRESS)
-            press.current = p
-          }
+          touch.current = e.pointerType === "touch"
+          // fine pointer: the press is the drag
+          if (!touch.current) return controls.start(e)
+          // touch: hold still to select and arm; move first and the page scrolls
+          cancelPress()
+          const native = e.nativeEvent
+          const p = { timer: 0, fired: false, x: e.clientX, y: e.clientY }
+          p.timer = window.setTimeout(() => {
+            p.fired = true
+            armed.current = true
+            setArmed(true)
+            store.getState().toggleSelect(id)
+            navigator.vibrate?.(10)
+            // the tap that ends the press must not open anything
+            justDragged.current = true
+            controls.start(native)
+          }, LONG_PRESS)
+          press.current = p
+        }}
+        onPointerMove={(e) => {
+          const p = press.current
+          if (!p || p.fired) return
+          // travelled before the hold landed: this was a scroll, not a drag
+          if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > SLOP) cancelPress()
         }}
         onPointerUp={() => {
           if (press.current?.fired)
             requestAnimationFrame(() => (justDragged.current = false))
           cancelPress()
+          if (!began.current) disarm()
         }}
-        onPointerCancel={cancelPress}
+        onPointerCancel={() => {
+          cancelPress()
+          disarm()
+        }}
         onClickCapture={(e) => {
           if (justDragged.current) e.stopPropagation()
         }}
@@ -1010,9 +1050,10 @@ function RowImpl({
           "group/row",
           layout,
           !hasHandle &&
-            !mobile &&
+            !coarse &&
             "cursor-grab select-none active:cursor-grabbing",
-          mobile && "touch-none select-none",
+          coarse && "select-none",
+          isArmed && "touch-none",
           // collapsed, not display:none: motion keeps a sane layout snapshot, so no fly-in on settle
           (dragging || carried) && "invisible mt-0! h-0 overflow-hidden",
           className
@@ -1072,8 +1113,11 @@ function RowImpl({
   )
 }
 
-/** mobile: hold this long without moving to select the row */
+/** touch: hold this long without moving to select the row and arm its drag */
 const LONG_PRESS = 400
+
+/** touch: travel further than this before the hold lands and it was a scroll */
+const SLOP = 8
 
 /** ghost shows at most this many carried rows, then "+N more" */
 const GHOST_MAX = 3
