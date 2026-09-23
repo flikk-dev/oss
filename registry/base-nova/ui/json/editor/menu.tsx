@@ -87,8 +87,12 @@ export function EditorSheet({
           data-slot="editor-sheet"
           className={cn(
             // dvh, not vh: vh is the tall viewport, so with the browser chrome
-            // showing the sheet runs past the fold and nothing can reach it
-            "fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col gap-4 overflow-hidden rounded-t-2xl border-t bg-popover p-4 text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-ending-style:translate-y-10 data-ending-style:opacity-0 data-starting-style:translate-y-10 data-starting-style:opacity-0",
+            // showing the sheet runs past the fold and nothing can reach it.
+            // and % too, for when a transformed ancestor is the containing
+            // block: dvh still measures the window, which is the bigger of the
+            // two, and the sheet would overflow that ancestor uncatchably.
+            // touch-manipulation: no double-tap wait before a tap counts
+            "fixed inset-x-0 bottom-0 z-50 flex max-h-[min(85dvh,85%)] touch-manipulation flex-col gap-4 overflow-hidden rounded-t-2xl border-t bg-popover p-4 text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-ending-style:translate-y-10 data-ending-style:opacity-0 data-starting-style:translate-y-10 data-starting-style:opacity-0",
             className,
           )}
         >
