@@ -86,12 +86,18 @@ export function EditorSheet({
         <SheetPrimitive.Popup
           data-slot="editor-sheet"
           className={cn(
-            "fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col gap-4 overflow-y-auto rounded-t-2xl border-t bg-popover p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-ending-style:translate-y-10 data-ending-style:opacity-0 data-starting-style:translate-y-10 data-starting-style:opacity-0",
+            // dvh, not vh: vh is the tall viewport, so with the browser chrome
+            // showing the sheet runs past the fold and nothing can reach it
+            "fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col gap-4 overflow-hidden rounded-t-2xl border-t bg-popover p-4 text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-ending-style:translate-y-10 data-ending-style:opacity-0 data-starting-style:translate-y-10 data-starting-style:opacity-0",
             className,
           )}
         >
           <SheetPrimitive.Title className="text-sm font-normal">{title}</SheetPrimitive.Title>
-          {children}
+          {/* the body scrolls, the title and close stay; min-h-0 or the flex
+              child refuses to shrink and there is nothing to scroll */}
+          <div className="-mx-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+            {children}
+          </div>
           <SheetPrimitive.Close
             render={<Button variant="ghost" size="icon-sm" className="absolute top-3 right-3" />}
           >
