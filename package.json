@@ -3,16 +3,19 @@
   "version": "0.0.1",
   "private": true,
   "license": "MIT",
+  "workspaces": [
+    "apps/*"
+  ],
   "type": "module",
   "scripts": {
-    "dev": "next dev --port=4721",
-    "build": "bun run registry:build && next build",
-    "start": "next start",
-    "lint": "oxlint --fix && oxfmt --write",
-    "typecheck": "tsc --noEmit",
+    "dev": "bun run --cwd apps/page dev",
+    "start": "bun run --cwd apps/page start",
+    "build": "bun run registry:build && bun run --cwd apps/page build",
+    "registry:build": "shadcn build registry.json --output apps/page/public/r",
+    "typecheck": "tsc --noEmit && bun run --cwd apps/page typecheck",
     "test": "bun test",
-    "registry:build": "shadcn build registry.json --output public/r",
-    "check": "oxlint --deny-warnings && oxfmt --check . && tsc --noEmit"
+    "lint": "oxlint --fix && oxfmt --write",
+    "check": "oxlint --deny-warnings && oxfmt --check . && bun run typecheck"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

@@ -14,11 +14,23 @@
     "jsx": "react-jsx",
     "incremental": true,
     "paths": {
-      "@/registry/*": ["./registry/*"],
-      "@/*": ["./apps/page/*"]
+      "@/registry/*": ["../../registry/*"],
+      "@/*": ["./*"]
     },
-    "types": ["bun"]
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
-  "include": ["registry/**/*.ts", "registry/**/*.tsx", "test/**/*.ts", "test/**/*.tsx"],
-  "exclude": ["node_modules", "apps"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "../../registry/**/*.ts",
+    "../../registry/**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "public"]
 }
