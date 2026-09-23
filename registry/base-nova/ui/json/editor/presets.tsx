@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { animate, motion, useMotionValue } from "motion/react";
+import { animate, motion, useMotionValue, useTransform } from "motion/react";
 import { CheckIcon, CircleSlashIcon, Settings2Icon, Trash2Icon } from "lucide-react";
 import {
   createJsonSchema,
@@ -172,7 +172,7 @@ function Head({
 /* --------------------------------- mobile -------------------------------- */
 
 /** one swipe tile; the drawer is two of them, the select tile one */
-const TILE = 56;
+const TILE = 48;
 const SWIPE = TILE * 2;
 
 /** read-only summary; tap opens the sheet, swipe left reveals actions, press-and-drag reorders */
@@ -206,7 +206,7 @@ function MobileRow({ node }: { node: SchemaNode }) {
 }
 
 /** a swipe tile: full height, one centred icon, its own colour */
-const tile = "flex w-(--tile) shrink-0 items-center justify-center [&_svg]:size-5 [&_svg]:shrink-0";
+const tile = "flex w-(--tile) shrink-0 items-center justify-center [&_svg]:size-4 [&_svg]:shrink-0";
 
 /**
  * The summary rides on top of two drawers. Left swipe pulls it off the right
@@ -216,6 +216,13 @@ const tile = "flex w-(--tile) shrink-0 items-center justify-center [&_svg]:size-
 function MobileHead({ node }: { node: SchemaNode }) {
   const { select, selected } = useField();
   const x = useMotionValue(0);
+  // where the summary sat when this gesture began: a drawer that is already
+  // open has to be pushed shut, and that push must not read as a select
+  const from = React.useRef(0);
+  // a narrow row is not as wide as both drawers, so the far one would peek out
+  // from under the summary: each shows only while it is the one being pulled
+  const leftOpen = useTransform(x, [0, 1], [0, 1], { clamp: true });
+  const rightOpen = useTransform(x, [-1, 0], [1, 0], { clamp: true });
   const spring = { type: "spring", stiffness: 500, damping: 40 } as const;
   return (
     <div
@@ -228,14 +235,15 @@ function MobileHead({ node }: { node: SchemaNode }) {
       )}
     >
       {/* swipe right */}
-      <div
+      <motion.div
         aria-hidden
+        style={{ opacity: leftOpen }}
         className={cn(tile, "absolute inset-y-0 left-0 bg-primary text-primary-foreground")}
       >
         {selected ? <CircleSlashIcon /> : <CheckIcon />}
-      </div>
+      </motion.div>
       {/* swipe left; destructive last so a long pull cannot land on it by accident */}
-      <div className="absolute inset-y-0 right-0 flex">
+      <motion.div style={{ opacity: rightOpen }} className="absolute inset-y-0 right-0 flex">
         <SchemaAction.EditDetails
           render={<button className={cn(tile, "bg-muted text-foreground active:bg-muted/70")} />}
         >
@@ -248,22 +256,26 @@ function MobileHead({ node }: { node: SchemaNode }) {
         >
           <Trash2Icon />
         </SchemaAction.Remove>
-      </div>
+      </motion.div>
       <motion.div
         drag="x"
         dragDirectionLock
         dragConstraints={{ left: -SWIPE, right: TILE }}
         dragElastic={0.05}
         style={{ x }}
+        onDragStart={() => {
+          from.current = x.get();
+        }}
         onDragEnd={(_, info) => {
-          const { x: dx } = info.offset;
           const v = info.velocity.x;
+          // pushing an open drawer shut: that is all it is
+          if (from.current < 0) return void animate(x, 0, spring);
           // right: a flick is enough, the drawer never stays open
-          if (dx > TILE / 2 || v > 300) {
+          if (info.offset.x > TILE / 2 || v > 300) {
             select();
             return void animate(x, 0, spring);
           }
-          const open = dx < -SWIPE / 2 || v < -200;
+          const open = info.offset.x < -SWIPE / 2 || v < -200;
           animate(x, open ? -SWIPE : 0, spring);
         }}
         className="relative z-10 bg-background"
