@@ -278,7 +278,19 @@ function DetailsOverlay() {
   // a mobile row is a read-only summary: the type can only be changed here
   const body = <DetailFields fields={details.fields ?? (mobile ? MOBILE_DETAILS : undefined)} />;
   return mobile ? (
-    <EditorSheet open onOpenChange={onOpenChange} title={title || "Edit field"} container={portal}>
+    <EditorSheet
+      open
+      onOpenChange={onOpenChange}
+      title={title || "Edit field"}
+      container={portal}
+      // every edit is already in the store; this is the "I am done" the sheet
+      // otherwise only says with a small x
+      footer={
+        <Button className="w-full" onClick={() => onOpenChange(false)}>
+          Save
+        </Button>
+      }
+    >
       {body}
     </EditorSheet>
   ) : (

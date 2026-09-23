@@ -71,6 +71,7 @@ export function EditorSheet({
   container,
   className,
   children,
+  footer,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -78,6 +79,8 @@ export function EditorSheet({
   container?: SheetPrimitive.Portal.Props["container"];
   className?: string;
   children: React.ReactNode;
+  /** pinned under the scrolling body; for a confirm button */
+  footer?: React.ReactNode;
 }) {
   return (
     <SheetPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -92,16 +95,17 @@ export function EditorSheet({
             // block: dvh still measures the window, which is the bigger of the
             // two, and the sheet would overflow that ancestor uncatchably.
             // touch-manipulation: no double-tap wait before a tap counts
-            "fixed inset-x-0 bottom-0 z-50 flex max-h-[min(85dvh,85%)] touch-manipulation flex-col gap-4 overflow-hidden rounded-t-2xl border-t bg-popover p-4 text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-ending-style:translate-y-10 data-ending-style:opacity-0 data-starting-style:translate-y-10 data-starting-style:opacity-0",
+            "fixed inset-x-0 bottom-0 z-50 flex max-h-[min(85dvh,85%)] touch-manipulation flex-col gap-4 overflow-hidden rounded-t-2xl border-t bg-popover p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-ending-style:translate-y-10 data-ending-style:opacity-0 data-starting-style:translate-y-10 data-starting-style:opacity-0",
             className,
           )}
         >
           <SheetPrimitive.Title className="text-sm font-normal">{title}</SheetPrimitive.Title>
           {/* the body scrolls, the title and close stay; min-h-0 or the flex
               child refuses to shrink and there is nothing to scroll */}
-          <div className="-mx-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+          <div className="-mx-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4">
             {children}
           </div>
+          {footer}
           <SheetPrimitive.Close
             render={<Button variant="ghost" size="icon-sm" className="absolute top-3 right-3" />}
           >
