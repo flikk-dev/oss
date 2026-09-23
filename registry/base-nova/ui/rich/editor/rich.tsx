@@ -140,20 +140,25 @@ function Surface({
    */
   const composing = React.useRef(false);
   /**
-   * Rebuild the subtree on every commit instead of reconciling it.
+   * The value and caret as they were before the IME started writing.
    *
-   * React assumes it owns the DOM it renders into. Here it does not: the
-   * browser writes to a contenteditable directly — an IME most obviously, but
-   * any input we did not intercept as well — so by the time React diffs, its
-   * picture of the children and the live nodes disagree. It then splices new
-   * content into stale nodes, which is what leaves a half-typed token wearing
-   * an old chip and letters stranded beside it.
-   *
-   * Changing this key throws the whole subtree away and rebuilds it from the
-   * value. Node identity is lost every keystroke, which costs nothing: the
-   * caret is ours to restore anyway, and the value is the only truth here.
+   * Reading the DOM back afterwards is what went wrong: an IME edits nodes
+   * React believes it owns and leaves others behind, so `readValue` returned a
+   * string with fragments doubled and every offset after it drifting by one
+   * more per keystroke. compositionend hands us the finished text, and the
+   * snapshot says exactly what it replaced — so the new value is arithmetic on
+   * a string we trust, and the DOM never gets a vote.
    */
-  const [gen, setGen] = React.useState(0);
+  const before = React.useRef<{
+    value: string;
+    start: number;
+    end: number;
+    /** the children React had put there, so the IME's can be told apart */
+    nodes: ChildNode[];
+  } | null>(null);
+  /** remounts the element itself, discarding anything the IME left in it */
+  const [domKey, setDomKey] = React.useState(0);
+  const hadFocus = React.useRef(false);
   /** tokens looked up already, so a rewrite never loops or refetches */
   const tried = React.useRef(new Set<string>());
   const [inFlight, setInFlight] = React.useState<ReadonlySet<string>>(new Set());
@@ -170,22 +175,30 @@ function Surface({
    */
   const [range, setRange] = React.useState<{ start: number; end: number } | null>(null);
 
-  const commit = (next: string, caret: { start: number; end: number }) => {
+  /**
+   * @param typed whether this edit was the user writing characters. Only
+   * writing opens a draft: a delete that merely pulls the caret up against a
+   * committed chip lands *inside* its range too, and treating that as authoring
+   * would melt `@marc` back to letters just because the comma after it went.
+   * A delete still keeps an open draft open, so backspacing mid-word does not
+   * freeze the token you are in the middle of.
+   */
+  const commit = (next: string, caret: { start: number; end: number }, typed = false) => {
     setCaret(caret.start === caret.end ? caret.start : null);
     caretRef.current = caret.start;
     const segs = parse(next, components);
-    // an edit landing in a match means that match is still being written
     const under = segs.find(
       (s): s is Extract<Segment, { type: "field" }> =>
         s.type === "field" && caret.start >= s.match.start && caret.end <= s.match.end,
     );
-    setDraft(under ? { start: under.match.start, end: under.match.end } : null);
+    setDraft((prev) =>
+      under && (typed || prev) ? { start: under.match.start, end: under.match.end } : null,
+    );
     pending.current = {
       start: clampOut(segs, caret.start, -1),
       end: clampOut(segs, caret.end, 1),
     };
     if (controlled === undefined) setUncontrolled(next);
-    setGen((g) => g + 1);
     onValueChange?.(next);
   };
 
@@ -243,6 +256,7 @@ function Surface({
     const sync = () => {
       // a re-render mid-composition would destroy the IME's own range
       if (composing.current) return;
+      hadFocus.current = doc.activeElement === el;
       if (doc.activeElement !== el) {
         setCaret(null);
         setRange(null);
@@ -252,8 +266,10 @@ function Surface({
       caretRef.current = start;
       setCaret(start === end ? start : null);
       setRange(start === end ? null : { start, end });
-      // the caret has left what was being written; let it set
-      setDraft((d) => (d && start >= d.start && end <= d.end ? d : null));
+      // the caret has left what was being written; let it set. the left edge
+      // counts as outside: you are before the token there, not in it — only
+      // the interior and the trailing edge, where typing happens, keep it open
+      setDraft((d) => (d && start > d.start && end <= d.end ? d : null));
     };
     doc.addEventListener("selectionchange", sync);
     el.addEventListener("focus", sync);
@@ -271,6 +287,9 @@ function Surface({
     if (!el || !pending.current) return;
     const { start, end } = pending.current;
     pending.current = null;
+    const active = el.ownerDocument.activeElement;
+    // a remount drops focus on the floor; take it back before placing the caret
+    if (active !== el && hadFocus.current) el.focus();
     if (el.ownerDocument.activeElement === el) writeSelection(el, start, end);
   });
 
@@ -346,17 +365,18 @@ function Surface({
         }
         return { from, to };
       };
-      const apply = (from: number, to: number, insert: string) => {
+      const apply = (from: number, to: number, insert: string, typed = false) => {
         e.preventDefault();
-        commit(current.slice(0, from) + insert + current.slice(to), {
-          start: from + insert.length,
-          end: from + insert.length,
-        });
+        commit(
+          current.slice(0, from) + insert + current.slice(to),
+          { start: from + insert.length, end: from + insert.length },
+          typed,
+        );
       };
 
       if (type === "insertText" || type === "insertReplacementText") {
         const { from, to } = whole(live);
-        return apply(from, to, e.data ?? "");
+        return apply(from, to, e.data ?? "", true);
       }
       if (type === "insertParagraph" || type === "insertLineBreak") {
         e.preventDefault();
@@ -386,20 +406,54 @@ function Surface({
 
     const onStart = () => {
       composing.current = true;
+      const sel = readSelection(el);
+      before.current = {
+        value: readValue(el),
+        ...sel,
+        nodes: Array.from(el.childNodes),
+      };
     };
-    const onEnd = () => {
+    const onEnd = (e: CompositionEvent) => {
       composing.current = false;
-      // the IME already put its text in the DOM; adopt it, and commit rebuilds
-      commit(readValue(el), readSelection(el));
+      const was = before.current;
+      before.current = null;
+      if (!was) return;
+      const text = e.data ?? "";
+      const at = was.start + text.length;
+      const next = was.value.slice(0, was.start) + text + was.value.slice(was.end);
+
+      /**
+       * Take out what the IME added, before React renders over the top.
+       *
+       * Anything that was not a child when composition began is the input
+       * method's, not React's — React will never remove it, so it would sit
+       * there while React renders the same text again beside it. That is the
+       * doubling: おはよう composed once, rendered twice, every offset after it
+       * out by four.
+       *
+       * Precise removal beats remounting the element: a remount would also work
+       * but takes the selection and the focus with it, which is what made every
+       * accepted candidate collapse the selection.
+       */
+      for (const node of Array.from(el.childNodes)) if (!was.nodes.includes(node)) node.remove();
+
+      /**
+       * A remount is still the fallback, for an IME that edited a node React
+       * owns rather than adding one. React only rewrites a node when its own
+       * picture of it changed, so a mutation it cannot see would survive —
+       * and the DOM no longer matching what React last rendered is how we know.
+       */
+      if (readValue(el) !== was.value) setDomKey((k) => k + 1);
+      commit(next, { start: at, end: at }, true);
     };
 
     el.addEventListener("beforeinput", onBeforeInput);
     el.addEventListener("compositionstart", onStart);
-    el.addEventListener("compositionend", onEnd);
+    el.addEventListener("compositionend", onEnd as EventListener);
     return () => {
       el.removeEventListener("beforeinput", onBeforeInput);
       el.removeEventListener("compositionstart", onStart);
-      el.removeEventListener("compositionend", onEnd);
+      el.removeEventListener("compositionend", onEnd as EventListener);
     };
   });
 
@@ -441,6 +495,7 @@ function Surface({
   return (
     <div
       {...rest}
+      key={domKey}
       ref={root}
       role="textbox"
       aria-multiline={multiline}
@@ -468,20 +523,18 @@ function Surface({
       )}
       data-placeholder={placeholder}
     >
-      <React.Fragment key={gen}>
-        {segments.map((s, i) =>
-          s.type === "text" ? (
-            <React.Fragment key={i}>{s.text}</React.Fragment>
-          ) : (
-            <Chip
-              key={i}
-              segment={s}
-              pending={inFlight.has(`${s.field.key}:${s.match.raw}`)}
-              selected={!!range && s.match.start < range.end && s.match.end > range.start}
-            />
-          ),
-        )}
-      </React.Fragment>
+      {segments.map((s, i) =>
+        s.type === "text" ? (
+          <React.Fragment key={i}>{s.text}</React.Fragment>
+        ) : (
+          <Chip
+            key={i}
+            segment={s}
+            pending={inFlight.has(`${s.field.key}:${s.match.raw}`)}
+            selected={!!range && s.match.start < range.end && s.match.end > range.start}
+          />
+        ),
+      )}
     </div>
   );
 }

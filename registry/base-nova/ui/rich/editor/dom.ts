@@ -30,12 +30,10 @@ function leaves(root: HTMLElement): Walk[] {
       at += raw.length;
       return;
     }
-    // a <br> is the newline a contenteditable actually stores
-    if (el.tagName === "BR") {
-      out.push({ node: el, start: at, len: 1 });
-      at += 1;
-      return;
-    }
+    // Every newline in the value is a "\n" React rendered into a text node, so
+    // any <br> here is the filler a browser adds to keep a trailing empty line
+    // reachable. Counting it would add a character the value does not have.
+    if (el.tagName === "BR") return;
     for (const child of Array.from(el.childNodes)) visit(child);
   };
   for (const child of Array.from(root.childNodes)) visit(child);
@@ -47,7 +45,7 @@ export function readValue(root: HTMLElement): string {
     .map((w) =>
       w.node.nodeType === Node.TEXT_NODE
         ? (w.node.nodeValue ?? "")
-        : ((w.node as HTMLElement).getAttribute(RAW) ?? "\n"),
+        : ((w.node as HTMLElement).getAttribute(RAW) ?? ""),
     )
     .join("");
 }

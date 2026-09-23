@@ -117,6 +117,9 @@ function Readout({ value }: { value: string }) {
 
 export function RichDemo() {
   const [line, setLine] = React.useState("Hi @marc, {{trigger.order}} shipped — see #412");
+  const [cjk, setCjk] = React.useState(
+    "おはようございます、@sam さん。\n{{trigger.order}} が発送されました。",
+  );
   const [body, setBody] = React.useState(
     "Hey @ana,\n\nThe run for {{trigger.customer}} finished.\nFiled as #1354.\n\n— @sam",
   );
@@ -150,6 +153,27 @@ export function RichDemo() {
           placeholder="Write something…"
         />
         <Readout value={body} />
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-sm font-medium">Composed input</h2>
+          <span className="text-2xs text-muted-foreground">IME · Japanese, Chinese, Korean</span>
+        </div>
+        <RichTextarea
+          aria-label="Composed input demo"
+          components={FIELDS}
+          value={cjk}
+          onValueChange={setCjk}
+          placeholder="かな入力でどうぞ…"
+        />
+        <Readout value={cjk} />
+        <p className="text-2xs text-muted-foreground">
+          An input method writes into the field directly, which is the one case the component cannot
+          intercept. Worth trying: compose a word and accept a candidate, press Enter, delete
+          backwards, then type latin after it — each of those used to leave the value doubled or
+          every offset drifting by one more per keystroke.
+        </p>
       </section>
 
       <section className="flex flex-col gap-2">
