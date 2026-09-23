@@ -11,7 +11,7 @@ import { defaultTypes, type TypeModule } from "./types";
 
 /** a node without its subtree, as stored */
 export type NodeRecord = Omit<SchemaNode, "children">;
-export type DetailField = "title" | "key" | "description" | "examples";
+export type DetailField = "type" | "title" | "key" | "description" | "examples";
 
 export type EditorState = {
   root: string;

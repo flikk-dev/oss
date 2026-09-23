@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
@@ -14,6 +14,17 @@ export const SITE = "https://oss.flikk.dev/ui";
 const title = "flikk UI: a JSON Schema builder for React";
 const description =
   "Open-source React components from flikk, shipped the shadcn way. A JSON Schema builder you edit as a tree: presets, compound parts, two hooks, drag and drop across the tree, bulk actions. One command copies the source into your app.";
+
+/**
+ * resizes-content: without it the on-screen keyboard overlays the layout
+ * viewport instead of shrinking it, so a `fixed bottom-0` sheet sits behind
+ * the keyboard with nothing to scroll.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),

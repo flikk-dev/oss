@@ -225,6 +225,7 @@ export function DetailFields({
 }) {
   const label = "flex flex-col gap-1 text-2xs text-muted-foreground";
   const parts = {
+    type: ["Type", <TypeRow key="ty" />],
     title: ["Title", <Title key="t" variant="input" />],
     key: ["Key", <Key key="k" variant="input" />],
     description: ["Description", <Description key="d" multiline variant="input" />],
@@ -242,6 +243,27 @@ export function DetailFields({
   );
 }
 
+/** the type picker as a full-width control, for the details overlay */
+function TypeRow() {
+  const { field: node, update: set, type } = useField();
+  return (
+    <TypeMenu
+      title="Field type"
+      current={node.type}
+      onPick={(t) => set({ type: t })}
+      trigger={
+        <Button
+          variant="outline"
+          className="h-8 w-full justify-start gap-2 px-2 text-xs font-normal text-foreground"
+        >
+          <IconTile icon={type.icon} size="sm" />
+          <span className="truncate">{type.label}</span>
+        </Button>
+      }
+    />
+  );
+}
+
 /** the row's details overlay: dialog, or a bottom sheet on mobile; opened by <SchemaAction.EditDetails> */
 function DetailsOverlay() {
   const { id } = useFieldContext();
@@ -253,7 +275,8 @@ function DetailsOverlay() {
     if (!o) store.getState().openDetails(null);
   };
   if (!details) return null;
-  const body = <DetailFields fields={details.fields} />;
+  // a mobile row is a read-only summary: the type can only be changed here
+  const body = <DetailFields fields={details.fields ?? (mobile ? MOBILE_DETAILS : undefined)} />;
   return mobile ? (
     <EditorSheet open onOpenChange={onOpenChange} title={title || "Edit field"} container={portal}>
       {body}
@@ -267,6 +290,8 @@ function DetailsOverlay() {
     </Dialog>
   );
 }
+
+const MOBILE_DETAILS: DetailField[] = ["type", "title", "key", "description", "examples"];
 
 /* -------------------------------- badges --------------------------------- */
 
