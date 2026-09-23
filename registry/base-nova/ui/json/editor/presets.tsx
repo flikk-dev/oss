@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { animate, motion, useMotionValue } from "motion/react";
+import { CheckIcon, CircleSlashIcon, Settings2Icon, Trash2Icon } from "lucide-react";
 import {
   createJsonSchema,
   type Json,
@@ -170,7 +171,9 @@ function Head({
 
 /* --------------------------------- mobile -------------------------------- */
 
-const SWIPE = 88;
+/** one swipe tile; the drawer is two of them, the select tile one */
+const TILE = 56;
+const SWIPE = TILE * 2;
 
 /** read-only summary; tap opens the sheet, swipe left reveals actions, press-and-drag reorders */
 const mobile = (node: SchemaNode) => <MobileRow node={node} />;
@@ -195,44 +198,79 @@ function MobileSummary({ node }: { node: SchemaNode }) {
 }
 
 function MobileRow({ node }: { node: SchemaNode }) {
+  return (
+    <SchemaField.Row dragFrom="anywhere" className="group/row">
+      <GroupFrame node={node} head={<MobileHead node={node} />} />
+    </SchemaField.Row>
+  );
+}
+
+/** a swipe tile: full height, one centred icon, its own colour */
+const tile = "flex w-(--tile) shrink-0 items-center justify-center [&_svg]:size-5 [&_svg]:shrink-0";
+
+/**
+ * The summary rides on top of two drawers. Left swipe pulls it off the right
+ * one (settings, then delete on the outside, where a thumb lands last); right
+ * swipe flashes the left one and toggles the selection.
+ */
+function MobileHead({ node }: { node: SchemaNode }) {
+  const { select, selected } = useField();
   const x = useMotionValue(0);
-  const head = (
+  const spring = { type: "spring", stiffness: 500, damping: 40 } as const;
+  return (
     <div
       data-slot="card"
+      style={{ "--tile": `${TILE}px` } as React.CSSProperties}
       className={cn(
         "relative overflow-hidden border bg-background",
         node.isGroup ? "rounded-t-md border-border" : "rounded-md border-transparent",
         "group-data-[selected]/row:border-primary",
       )}
     >
-      <div className="absolute inset-y-0 right-0 flex items-start gap-0.5 px-2 py-1">
-        <SchemaAction.Remove />
-        <RowMenu />
+      {/* swipe right */}
+      <div
+        aria-hidden
+        className={cn(tile, "absolute inset-y-0 left-0 bg-primary text-primary-foreground")}
+      >
+        {selected ? <CircleSlashIcon /> : <CheckIcon />}
+      </div>
+      {/* swipe left; destructive last so a long pull cannot land on it by accident */}
+      <div className="absolute inset-y-0 right-0 flex">
+        <SchemaAction.EditDetails
+          render={<button className={cn(tile, "bg-muted text-foreground active:bg-muted/70")} />}
+        >
+          <Settings2Icon />
+        </SchemaAction.EditDetails>
+        <SchemaAction.Remove
+          render={
+            <button className={cn(tile, "bg-destructive text-white active:bg-destructive/80")} />
+          }
+        >
+          <Trash2Icon />
+        </SchemaAction.Remove>
       </div>
       <motion.div
         drag="x"
         dragDirectionLock
-        dragConstraints={{ left: -SWIPE, right: 0 }}
+        dragConstraints={{ left: -SWIPE, right: TILE }}
         dragElastic={0.05}
         style={{ x }}
         onDragEnd={(_, info) => {
-          const open = info.offset.x < -SWIPE / 2 || info.velocity.x < -200;
-          animate(x, open ? -SWIPE : 0, {
-            type: "spring",
-            stiffness: 500,
-            damping: 40,
-          });
+          const { x: dx } = info.offset;
+          const v = info.velocity.x;
+          // right: a flick is enough, the drawer never stays open
+          if (dx > TILE / 2 || v > 300) {
+            select();
+            return void animate(x, 0, spring);
+          }
+          const open = dx < -SWIPE / 2 || v < -200;
+          animate(x, open ? -SWIPE : 0, spring);
         }}
         className="relative z-10 bg-background"
       >
         <MobileSummary node={node} />
       </motion.div>
     </div>
-  );
-  return (
-    <SchemaField.Row dragFrom="anywhere" className="group/row">
-      <GroupFrame node={node} head={head} />
-    </SchemaField.Row>
   );
 }
 
