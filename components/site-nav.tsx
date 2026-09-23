@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useTheme } from "next-themes"
-import { MoonIcon, SunIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import Link from "next/link";
+import { useTheme } from "next-themes";
+import { MoonIcon, SunIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-const GITHUB = "https://github.com/flikk-dev/oss"
-const FLIKK = "https://flikk.dev"
+const GITHUB = "https://github.com/flikk-dev/oss";
+const FLIKK = "https://flikk.dev";
 
 export function SiteNav() {
-  const { resolvedTheme, setTheme } = useTheme()
+  const { resolvedTheme, setTheme } = useTheme();
   return (
     <nav className="sticky top-0 z-30 flex items-center gap-4 border-b border-border bg-background/80 px-6 py-2.5 text-sm backdrop-blur supports-backdrop-filter:bg-background/60">
       {/* as flikk forms: the mark leads, the wordmark names it */}
@@ -69,5 +69,5 @@ export function SiteNav() {
         </Button>
       </div>
     </nav>
-  )
+  );
 }

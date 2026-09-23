@@ -1,18 +1,18 @@
 {
   "name": "oss",
   "version": "0.0.1",
-  "type": "module",
   "private": true,
   "license": "MIT",
+  "type": "module",
   "scripts": {
     "dev": "next dev --port=4721",
     "build": "bun run registry:build && next build",
     "start": "next start",
-    "lint": "eslint",
-    "format": "prettier --write \"**/*.{ts,tsx}\"",
+    "lint": "oxlint --fix && oxfmt --write",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "registry:build": "shadcn build registry.json --output public/r"
+    "registry:build": "shadcn build registry.json --output public/r",
+    "check": "oxlint --deny-warnings && oxfmt --check . && tsc --noEmit"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -39,10 +39,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^10",
-    "eslint-config-next": "16.3.4",
-    "prettier": "^3.9.6",
-    "prettier-plugin-tailwindcss": "^0.8.1",
+    "oxfmt": "^0.26.0",
+    "oxlint": "^1.41.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

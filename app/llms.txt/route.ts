@@ -1,4 +1,4 @@
-import { SITE } from "../layout"
+import { SITE } from "../layout";
 
 /** llms.txt: what this site is, for agents and LLM crawlers (llmstxt.org) */
 export function GET() {
@@ -29,8 +29,8 @@ Interaction: you drag a row to any depth, a group as one piece, or a selection a
 
 - flikk: https://flikk.dev
 - GitHub: https://github.com/flikk-dev/oss
-`
+`;
   return new Response(body, {
     headers: { "content-type": "text/plain; charset=utf-8" },
-  })
+  });
 }

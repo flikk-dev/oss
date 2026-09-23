@@ -9,19 +9,8 @@
       "title": "JSON Schema builder",
       "description": "Edit a JSON Schema as a tree: presets, compound parts, two hooks, drag and drop across the tree, bulk actions. JSON Schema draft 2020-12 in and out.",
       "author": "flikk <https://flikk.dev>",
-      "dependencies": [
-        "zustand",
-        "motion",
-        "lucide-react",
-        "@base-ui/react"
-      ],
-      "registryDependencies": [
-        "button",
-        "dropdown-menu",
-        "dialog",
-        "checkbox",
-        "badge"
-      ],
+      "dependencies": ["zustand", "motion", "lucide-react", "@base-ui/react"],
+      "registryDependencies": ["button", "dropdown-menu", "dialog", "checkbox", "badge"],
       "files": [
         {
           "path": "registry/base-nova/ui/json/core/editor.ts",

@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from "react";
 
 /**
  * Tiny TSX tokenizer: enough for the snippets on this page, colours from
@@ -7,19 +7,11 @@ import * as React from "react"
  */
 const KEYWORDS = new Set(
   "import export from default function return const let var if else new async await type interface extends typeof null undefined true false".split(
-    " "
-  )
-)
+    " ",
+  ),
+);
 
-type Kind =
-  | "comment"
-  | "string"
-  | "keyword"
-  | "tag"
-  | "attr"
-  | "number"
-  | "punct"
-  | "plain"
+type Kind = "comment" | "string" | "keyword" | "tag" | "attr" | "number" | "punct" | "plain";
 
 const RULES: [RegExp, Kind][] = [
   [/^\/\/[^\n]*|^\{\/\*[\s\S]*?\*\/\}/, "comment"],
@@ -30,7 +22,7 @@ const RULES: [RegExp, Kind][] = [
   [/^[A-Za-z_$][\w$]*/, "plain"],
   [/^[{}()[\].,;:=<>|&!?+\-*/]/, "punct"],
   [/^\s+|^./, "plain"],
-]
+];
 
 const color: Record<Kind, string> = {
   comment: "text-code-comment italic",
@@ -41,25 +33,22 @@ const color: Record<Kind, string> = {
   number: "text-code-number",
   punct: "text-code-punct",
   plain: "",
-}
+};
 
 export function tokenize(src: string): [Kind, string][] {
-  const out: [Kind, string][] = []
-  let rest = src
+  const out: [Kind, string][] = [];
+  let rest = src;
   while (rest) {
     for (const [re, kind] of RULES) {
-      const m = re.exec(rest)
-      if (!m) continue
-      const text = m[0]
-      out.push([
-        kind === "plain" && KEYWORDS.has(text) ? "keyword" : kind,
-        text,
-      ])
-      rest = rest.slice(text.length)
-      break
+      const m = re.exec(rest);
+      if (!m) continue;
+      const text = m[0];
+      out.push([kind === "plain" && KEYWORDS.has(text) ? "keyword" : kind, text]);
+      rest = rest.slice(text.length);
+      break;
     }
   }
-  return out
+  return out;
 }
 
 export function Highlight({ code }: { code: string }) {
@@ -72,8 +61,8 @@ export function Highlight({ code }: { code: string }) {
           </span>
         ) : (
           <React.Fragment key={i}>{text}</React.Fragment>
-        )
+        ),
       )}
     </>
-  )
+  );
 }

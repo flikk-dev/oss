@@ -1,34 +1,31 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
-import { animate, motion, useMotionValue } from "motion/react"
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { animate, motion, useMotionValue } from "motion/react";
 import {
   createJsonSchema,
   type Json,
   type JsonSchema,
   type JsonSchemaOptions,
   type SchemaNode,
-} from "@/registry/base-nova/ui/json/core"
+} from "@/registry/base-nova/ui/json/core";
 import {
   useEditor,
   useEditorStore,
   useFieldContext,
   useVariant,
   type Variant,
-} from "@/registry/base-nova/ui/json/editor/context"
-import { useField } from "./hooks"
-import * as Schema from "./schema"
-import * as SchemaField from "./field"
-import * as SchemaAction from "./action"
+} from "@/registry/base-nova/ui/json/editor/context";
+import { useField } from "./hooks";
+import * as Schema from "./schema";
+import * as SchemaField from "./field";
+import * as SchemaAction from "./action";
 
 /** the handle, memoised for the owner's lifetime; never re-renders the owner */
-export function useJsonSchema(
-  initial: Json,
-  options?: JsonSchemaOptions
-): JsonSchema {
-  const [schema] = React.useState(() => createJsonSchema(initial, options))
-  return schema
+export function useJsonSchema(initial: Json, options?: JsonSchemaOptions): JsonSchema {
+  const [schema] = React.useState(() => createJsonSchema(initial, options));
+  return schema;
 }
 
 /** re-render on every change with the current JSON; opt-in reactivity */
@@ -36,8 +33,8 @@ export function useJsonSchemaValue(schema: JsonSchema): Json {
   return React.useSyncExternalStore(
     (cb) => schema.subscribe(cb),
     () => schema.toJSON(),
-    () => schema.toJSON()
-  )
+    () => schema.toJSON(),
+  );
 }
 
 /* -------------------------------- desktop -------------------------------- */
@@ -47,24 +44,18 @@ const pad: Record<Variant, string> = {
   default: "gap-1.5 px-3 py-2",
   wide: "gap-3 px-4 py-3",
   mobile: "gap-2 px-3 py-2",
-}
+};
 /** the head's vertical padding as a var on the row, so a column cell can line up with its first line */
 const headPy: Record<Variant, string> = {
   compact: "[--head-py:--spacing(1)]",
   default: "[--head-py:--spacing(2)]",
   wide: "[--head-py:--spacing(3)]",
   mobile: "[--head-py:--spacing(2)]",
-}
+};
 
 /** group rows: head + nested list under one <Nested>; leaves: just the head */
-function GroupFrame({
-  node,
-  head,
-}: {
-  node: SchemaNode
-  head: React.ReactNode
-}) {
-  if (!node.isGroup) return head
+function GroupFrame({ node, head }: { node: SchemaNode; head: React.ReactNode }) {
+  if (!node.isGroup) return head;
   return (
     <SchemaField.Nested>
       {head}
@@ -73,34 +64,32 @@ function GroupFrame({
         <Schema.AddField className="justify-self-end" />
       </SchemaField.NestedList>
     </SchemaField.Nested>
-  )
+  );
 }
 
 /** is anything selected; mobile switches tap to "toggle this row" then */
-const useSelecting = () => useEditorStore((s) => s.selected.length > 0)
+const useSelecting = () => useEditorStore((s) => s.selected.length > 0);
 
 /** the ⋯ menu; compact keeps description + examples behind Edit details */
 function RowMenu() {
-  const compact = useVariant() === "compact"
+  const compact = useVariant() === "compact";
   return (
     <SchemaField.MenuPart>
-      {compact && (
-        <SchemaAction.EditDetails fields={["description", "examples"]} />
-      )}
+      {compact && <SchemaAction.EditDetails fields={["description", "examples"]} />}
       <SchemaAction.Optional />
       <SchemaAction.Repeated />
       <SchemaAction.Nullable />
       <SchemaAction.Duplicate />
       <SchemaAction.Remove />
     </SchemaField.MenuPart>
-  )
+  );
 }
 
 /** one template for default / compact / wide; compact moves description + examples into the menu */
-const desktop = (node: SchemaNode) => <DesktopRow node={node} />
+const desktop = (node: SchemaNode) => <DesktopRow node={node} />;
 
 function DesktopRow({ node }: { node: SchemaNode }) {
-  const v = useVariant()
+  const v = useVariant();
   return (
     <SchemaField.Row dragFrom="anywhere" className={cn("group/row", headPy[v])}>
       <GroupFrame
@@ -115,7 +104,7 @@ function DesktopRow({ node }: { node: SchemaNode }) {
                 ? "rounded-t-md border-border"
                 : "rounded-md border-transparent has-[>[data-slot=head]:hover]:border-border",
               // selected: the hover look, kept
-              "group-data-[selected]/row:border-border group-data-[selected]/row:bg-muted/40 group-data-[selected]/row:[&_[data-slot=head]>*]:opacity-100"
+              "group-data-[selected]/row:border-border group-data-[selected]/row:bg-muted/40 group-data-[selected]/row:[&_[data-slot=head]>*]:opacity-100",
             )}
           >
             <Head node={node} />
@@ -123,7 +112,7 @@ function DesktopRow({ node }: { node: SchemaNode }) {
         }
       />
     </SchemaField.Row>
-  )
+  );
 }
 
 /** the head line(s) of a row; `readOnly` is the mobile summary: plain text, type shown not picked */
@@ -132,17 +121,14 @@ function Head({
   readOnly,
   className,
 }: {
-  node: SchemaNode
-  readOnly?: boolean
-  className?: string
+  node: SchemaNode;
+  readOnly?: boolean;
+  className?: string;
 }) {
-  const v = useVariant()
-  const compact = v === "compact"
+  const v = useVariant();
+  const compact = v === "compact";
   return (
-    <div
-      data-slot="head"
-      className={cn("group/head flex items-start", pad[v], className)}
-    >
+    <div data-slot="head" className={cn("group/head flex items-start", pad[v], className)}>
       {readOnly ? (
         <SchemaField.Type />
       ) : (
@@ -154,13 +140,13 @@ function Head({
       <div
         className={cn(
           "flex min-w-0 flex-1 flex-col",
-          v === "wide" ? "gap-1" : compact ? "gap-0" : "gap-0.5"
+          v === "wide" ? "gap-1" : compact ? "gap-0" : "gap-0.5",
         )}
       >
         <div
           className={cn(
             "flex min-w-0 items-center",
-            v === "wide" ? "min-h-7 gap-2" : "min-h-5 gap-1.5"
+            v === "wide" ? "min-h-7 gap-2" : "min-h-5 gap-1.5",
           )}
         >
           <SchemaField.Title readOnly={readOnly} />
@@ -179,46 +165,44 @@ function Head({
         {!readOnly && <SchemaField.Extra />}
       </div>
     </div>
-  )
+  );
 }
 
 /* --------------------------------- mobile -------------------------------- */
 
-const SWIPE = 88
+const SWIPE = 88;
 
 /** read-only summary; tap opens the sheet, swipe left reveals actions, press-and-drag reorders */
-const mobile = (node: SchemaNode) => <MobileRow node={node} />
+const mobile = (node: SchemaNode) => <MobileRow node={node} />;
 
 /** tap opens the sheet; while a selection is active, tap toggles this row instead */
 function MobileSummary({ node }: { node: SchemaNode }) {
-  const { select } = useField()
-  const selecting = useSelecting()
+  const { select } = useField();
+  const selecting = useSelecting();
   return (
     <SchemaAction.EditDetails
       render={<div className="active:bg-muted/60" />}
       onClick={(e) => {
         if (selecting) {
-          e.preventDefault()
-          select()
+          e.preventDefault();
+          select();
         }
       }}
     >
       <Head node={node} readOnly />
     </SchemaAction.EditDetails>
-  )
+  );
 }
 
 function MobileRow({ node }: { node: SchemaNode }) {
-  const x = useMotionValue(0)
+  const x = useMotionValue(0);
   const head = (
     <div
       data-slot="card"
       className={cn(
         "relative overflow-hidden border bg-background",
-        node.isGroup
-          ? "rounded-t-md border-border"
-          : "rounded-md border-transparent",
-        "group-data-[selected]/row:border-primary"
+        node.isGroup ? "rounded-t-md border-border" : "rounded-md border-transparent",
+        "group-data-[selected]/row:border-primary",
       )}
     >
       <div className="absolute inset-y-0 right-0 flex items-start gap-0.5 px-2 py-1">
@@ -232,24 +216,24 @@ function MobileRow({ node }: { node: SchemaNode }) {
         dragElastic={0.05}
         style={{ x }}
         onDragEnd={(_, info) => {
-          const open = info.offset.x < -SWIPE / 2 || info.velocity.x < -200
+          const open = info.offset.x < -SWIPE / 2 || info.velocity.x < -200;
           animate(x, open ? -SWIPE : 0, {
             type: "spring",
             stiffness: 500,
             damping: 40,
-          })
+          });
         }}
         className="relative z-10 bg-background"
       >
         <MobileSummary node={node} />
       </motion.div>
     </div>
-  )
+  );
   return (
     <SchemaField.Row dragFrom="anywhere" className="group/row">
       <GroupFrame node={node} head={head} />
     </SchemaField.Row>
-  )
+  );
 }
 
 /* --------------------------------- preset -------------------------------- */
@@ -260,28 +244,24 @@ export function JsonSchemaEditor({
   portalContainer,
   className,
 }: {
-  schema: JsonSchema
+  schema: JsonSchema;
   /** default: `mobile` on a coarse pointer, else `default` */
-  variant?: Variant
+  variant?: Variant;
   /** keep sheets, menus and the mobile toolbar inside this element */
-  portalContainer?: React.RefObject<HTMLElement | null>
-  className?: string
+  portalContainer?: React.RefObject<HTMLElement | null>;
+  className?: string;
 }) {
   return (
-    <Schema.Root
-      store={schema}
-      portalContainer={portalContainer}
-      className={className}
-    >
+    <Schema.Root store={schema} portalContainer={portalContainer} className={className}>
       <Preset variant={variant} />
     </Schema.Root>
-  )
+  );
 }
 
 function Preset({ variant }: { variant?: Variant }) {
-  const { coarse } = useEditor()
-  const v: Variant = variant ?? (coarse ? "mobile" : "default")
-  const render = v === "mobile" ? mobile : desktop
+  const { coarse } = useEditor();
+  const v: Variant = variant ?? (coarse ? "mobile" : "default");
+  const render = v === "mobile" ? mobile : desktop;
   return (
     <>
       {v === "mobile" ? (
@@ -316,8 +296,10 @@ function Preset({ variant }: { variant?: Variant }) {
         </Schema.Toolbar>
       )}
       <Schema.List variant={v} render={render}>
-        {/* mobile: no checkbox; long-press selects, the card border says so */}
-        {v !== "mobile" && (
+        {/* touch: no gutters. these reveal on hover, which a finger never does,
+            so they would only reserve width; long-press selects and the
+            toolbar carries the actions */}
+        {!coarse && (
           <>
             <Schema.Column side="left" className="mr-1.5">
               {/* shown on hover, when checked, and while any selection is active */}
@@ -337,5 +319,5 @@ function Preset({ variant }: { variant?: Variant }) {
         <Schema.AddField />
       </div>
     </>
-  )
+  );
 }

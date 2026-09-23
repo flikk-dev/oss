@@ -76,11 +76,11 @@ const row = (field) => (
 </Schema.Root>
 ```
 
-| Namespace | Parts |
-|---|---|
-| `Schema` | `Root` `List` `Column` `Skeleton` `AddField` `Toolbar` `SelectionMenu` `SelectAll` `SelectionCount` |
-| `SchemaField` | `Row` `Type` `Title` `Key` `Description` `Examples` `Optional` `Repeated` `Nullable` `ChildrenCount` `Extra` `Menu` `Nested` `NestedToggle` `NestedList` `NestedSummary` |
-| `SchemaAction` | `Drag` `Select` `ChangeType` `Optional` `Repeated` `Nullable` `Duplicate` `Remove` `EditDetails` `MoveInto` `ClearSelection` `Command` `Primitive` |
+| Namespace      | Parts                                                                                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Schema`       | `Root` `List` `Column` `Skeleton` `AddField` `Toolbar` `SelectionMenu` `SelectAll` `SelectionCount`                                                                      |
+| `SchemaField`  | `Row` `Type` `Title` `Key` `Description` `Examples` `Optional` `Repeated` `Nullable` `ChildrenCount` `Extra` `Menu` `Nested` `NestedToggle` `NestedList` `NestedSummary` |
+| `SchemaAction` | `Drag` `Select` `ChangeType` `Optional` `Repeated` `Nullable` `Duplicate` `Remove` `EditDetails` `MoveInto` `ClearSelection` `Command` `Primitive`                       |
 
 `SchemaField` parts show or edit the field. `SchemaAction` parts run a command. Where you place an action decides its shape: an icon button in a row, an item in a menu, a labelled button in a toolbar. Inside a toolbar it runs on the selection.
 
@@ -96,16 +96,16 @@ What every part promises:
 Two hooks, your own markup.
 
 ```tsx
-import { useSchema, useField } from "@/components/ui/json/editor"
+import { useSchema, useField } from "@/components/ui/json/editor";
 
-const { schema, setSchema, fields, selectedFields, setSelectedFields, issues } = useSchema()
-schema.fields                                         // the tree, live
-fields.add({ type: "string", title: "Nickname" }, "profile")
-fields.update("profile.email", { optional: true })   // fields are addressed by slug path
-fields.move(selectedFields, "archive")
-fields.drop(["profile.age"])
+const { schema, setSchema, fields, selectedFields, setSelectedFields, issues } = useSchema();
+schema.fields; // the tree, live
+fields.add({ type: "string", title: "Nickname" }, "profile");
+fields.update("profile.email", { optional: true }); // fields are addressed by slug path
+fields.move(selectedFields, "archive");
+fields.drop(["profile.age"]);
 
-const { field, type, update, drop, duplicate, childrenCount, issue, selected, select } = useField() // inside a row
+const { field, type, update, drop, duplicate, childrenCount, issue, selected, select } = useField(); // inside a row
 ```
 
 We wrote the built-in parts on these two hooks, so you can rebuild any of them.

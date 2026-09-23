@@ -1,4 +1,4 @@
-import type { ComponentType } from "react"
+import type { ComponentType } from "react";
 import {
   ALargeSmallIcon,
   BinaryIcon,
@@ -12,47 +12,47 @@ import {
   SplitIcon,
   ToggleLeftIcon,
   type LucideIcon,
-} from "lucide-react"
-import type { SchemaNode } from "./tree"
+} from "lucide-react";
+import type { SchemaNode } from "./tree";
 
-export type Json = Record<string, unknown>
+export type Json = Record<string, unknown>;
 
 /**
  * A type is a module: everything type-specific lives here, the editor never
  * branches on `node.type`. Register custom ones through `createJsonSchema(json, { types })`.
  */
 export type TypeModule = {
-  key: string
-  label: string
-  description: string
-  icon: LucideIcon
+  key: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
   /** tailwind classes for the icon tile; colours come from --type-* tokens */
-  color: string
+  color: string;
   /** node → JSON Schema (without title / description / examples / extra) */
-  schema: (node: SchemaNode) => Json
+  schema: (node: SchemaNode) => Json;
   /** node → plausible example value */
-  example: (node: SchemaNode) => unknown
+  example: (node: SchemaNode) => unknown;
   /** parsing: does this module own the given schema? first match in registry order wins */
-  matches: (schema: Json) => boolean
+  matches: (schema: Json) => boolean;
   /** has child nodes (object properties, choice alternatives) */
-  children: boolean
+  children: boolean;
   /** which child types may be dropped inside; true = any */
-  accepts: readonly string[] | boolean
+  accepts: readonly string[] | boolean;
   /** takes example values */
-  examples: boolean
+  examples: boolean;
   /** badge text for the child count */
-  countLabel?: (n: number) => string
+  countLabel?: (n: number) => string;
   /** optional type-owned UI rendered in the row */
   Extra?: ComponentType<{
-    node: SchemaNode
-    set: (patch: Partial<SchemaNode>) => void
-  }>
-}
+    node: SchemaNode;
+    set: (patch: Partial<SchemaNode>) => void;
+  }>;
+};
 
-type Optional = "children" | "accepts" | "examples" | "matches" | "example"
+type Optional = "children" | "accepts" | "examples" | "matches" | "example";
 
 export function defineType(
-  def: Omit<TypeModule, Optional> & Partial<Pick<TypeModule, Optional>>
+  def: Omit<TypeModule, Optional> & Partial<Pick<TypeModule, Optional>>,
 ): TypeModule {
   return {
     children: false,
@@ -61,10 +61,10 @@ export function defineType(
     matches: (s) => s.type === def.key,
     example: (n) => n.examples[0] ?? "",
     ...def,
-  }
+  };
 }
 
-const first = (n: SchemaNode) => n.examples[0]
+const first = (n: SchemaNode) => n.examples[0];
 
 /** built-in registry; order matters for parsing (specific before generic) */
 export const types = {
@@ -91,9 +91,7 @@ export const types = {
     countLabel: (n) => `${n} ${n === 1 ? "option" : "options"}`,
     // a choice of only fixed values is a string enum
     schema: (n) =>
-      n.children?.length && n.children.every((c) => c.type === "const")
-        ? { type: "string" }
-        : {},
+      n.children?.length && n.children.every((c) => c.type === "const") ? { type: "string" } : {},
     example: () => null,
     matches: (s) => Array.isArray(s.oneOf),
   }),
@@ -139,8 +137,7 @@ export const types = {
     color: "bg-type-date/10 text-type-date",
     schema: () => ({ type: "string", format: "date-time" }),
     example: (n) => first(n) ?? "2026-01-01T00:00:00Z",
-    matches: (s) =>
-      s.type === "string" && (s.format === "date-time" || s.format === "date"),
+    matches: (s) => s.type === "string" && (s.format === "date-time" || s.format === "date"),
   }),
   string: defineType({
     key: "string",
@@ -188,11 +185,11 @@ export const types = {
     example: () => null,
     examples: false,
   }),
-} satisfies Record<string, TypeModule>
+} satisfies Record<string, TypeModule>;
 
-export type BuiltinTypeKey = keyof typeof types
+export type BuiltinTypeKey = keyof typeof types;
 
-export const defaultTypes: TypeModule[] = Object.values(types)
+export const defaultTypes: TypeModule[] = Object.values(types);
 
 /** groups for the type menu */
 export const typeGroups: { key: string; label: string; types: string[] }[] = [
@@ -204,4 +201,4 @@ export const typeGroups: { key: string; label: string; types: string[] }[] = [
   { key: "structures", label: "Structures", types: ["object", "oneOf"] },
   { key: "formats", label: "Formats", types: ["date", "email", "url"] },
   { key: "special", label: "Special", types: ["null"] },
-]
+];

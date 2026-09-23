@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useStore } from "zustand"
-import { cn } from "@/lib/utils"
-import { useShallow } from "zustand/react/shallow"
-import { EllipsisIcon, PlusIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import type { JsonSchema } from "@/registry/base-nova/ui/json/core"
+import * as React from "react";
+import { useStore } from "zustand";
+import { cn } from "@/lib/utils";
+import { useShallow } from "zustand/react/shallow";
+import { EllipsisIcon, PlusIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { JsonSchema } from "@/registry/base-nova/ui/json/core";
 import {
   ActionScopeContext,
   EditorContext,
@@ -20,24 +20,24 @@ import {
   type RenderRow,
   type Variant,
   useVariant,
-} from "@/registry/base-nova/ui/json/editor/context"
-import { Menu, TypeMenu } from "./menu"
-import { Row } from "./field"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@/registry/base-nova/ui/json/editor/context";
+import { Menu, TypeMenu } from "./menu";
+import { Row } from "./field";
+import { Checkbox } from "@/components/ui/checkbox";
 
 /* ---------------------------------- root --------------------------------- */
 
 function useCoarsePointer() {
-  const [coarse, setCoarse] = React.useState(false)
+  const [coarse, setCoarse] = React.useState(false);
   React.useEffect(() => {
-    const mq = window.matchMedia?.("(pointer: coarse)")
-    if (!mq) return
-    const update = () => setCoarse(mq.matches)
-    update()
-    mq.addEventListener?.("change", update)
-    return () => mq.removeEventListener?.("change", update)
-  }, [])
-  return coarse
+    const mq = window.matchMedia?.("(pointer: coarse)");
+    if (!mq) return;
+    const update = () => setCoarse(mq.matches);
+    update();
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
+  }, []);
+  return coarse;
 }
 
 export function Root({
@@ -46,14 +46,14 @@ export function Root({
   className,
   children,
 }: {
-  store: JsonSchema
+  store: JsonSchema;
   /** where popups render; hand it a frame to keep sheets and menus inside (a phone mock, a panel) */
-  portalContainer?: React.RefObject<HTMLElement | null>
-  className?: string
-  children: React.ReactNode
+  portalContainer?: React.RefObject<HTMLElement | null>;
+  className?: string;
+  children: React.ReactNode;
 }) {
-  const ref = React.useRef<HTMLDivElement>(null)
-  const coarse = useCoarsePointer()
+  const ref = React.useRef<HTMLDivElement>(null);
+  const coarse = useCoarsePointer();
   const ctx = React.useMemo(
     () => ({
       schema,
@@ -63,9 +63,9 @@ export function Root({
       coarse,
       portal: portalContainer,
     }),
-    [schema, coarse, portalContainer]
-  )
-  const selecting = useStore(schema.store, (s) => s.selected.length > 0)
+    [schema, coarse, portalContainer],
+  );
+  const selecting = useStore(schema.store, (s) => s.selected.length > 0);
   return (
     <EditorContext.Provider value={ctx}>
       <div
@@ -77,7 +77,7 @@ export function Root({
         {children}
       </div>
     </EditorContext.Provider>
-  )
+  );
 }
 
 /* ---------------------------------- list --------------------------------- */
@@ -93,26 +93,25 @@ const gap: Record<Variant, string> = {
   default: "[--row-gap:0.375rem]",
   wide: "[--row-gap:0.75rem]",
   mobile: "[--row-gap:0.25rem]",
-}
+};
 /** what one level of nesting insets the content column: the frame's padding + its border */
 const indent: Record<Variant, string> = {
   compact: "[--indent:calc(--spacing(1)+1px)]",
   default: "[--indent:calc(--spacing(1.5)+1px)]",
   wide: "[--indent:calc(--spacing(2)+1px)]",
   mobile: "[--indent:calc(--spacing(1.5)+1px)]",
-}
-export const gridCols = (cols: 1 | 3) =>
-  cols === 3 ? "auto minmax(0,1fr) auto" : "minmax(0,1fr)"
+};
+export const gridCols = (cols: 1 | 3) => (cols === 3 ? "auto minmax(0,1fr) auto" : "minmax(0,1fr)");
 
-const SkeletonContext = React.createContext<React.ReactElement | null>(null)
+const SkeletonContext = React.createContext<React.ReactElement | null>(null);
 
 /** children with fragments unwrapped, so `<>{cols}</>` still declares columns */
 const flatten = (children: React.ReactNode): React.ReactNode[] =>
   React.Children.toArray(children).flatMap((c) =>
     React.isValidElement(c) && c.type === React.Fragment
       ? flatten((c.props as { children?: React.ReactNode }).children)
-      : [c]
-  )
+      : [c],
+  );
 
 /**
  * One sibling set. `render` draws each row; nested lists inherit it (and the
@@ -128,24 +127,23 @@ export function List({
   className,
   children,
 }: {
-  parentId?: string
-  depth?: number
-  variant?: Variant
-  render?: RenderRow
-  className?: string
-  children?: React.ReactNode
+  parentId?: string;
+  depth?: number;
+  variant?: Variant;
+  render?: RenderRow;
+  className?: string;
+  children?: React.ReactNode;
 }) {
-  const { store, coarse } = useEditor()
-  const parent = React.useContext(ListContext)
-  const kids = flatten(children)
-  const isSkeleton = (c: React.ReactNode) =>
-    React.isValidElement(c) && c.type === Skeleton
+  const { store, coarse } = useEditor();
+  const parent = React.useContext(ListContext);
+  const kids = flatten(children);
+  const isSkeleton = (c: React.ReactNode) => React.isValidElement(c) && c.type === Skeleton;
   const isColumn = (c: React.ReactNode): c is React.ReactElement<ColumnProps> =>
-    React.isValidElement(c) && c.type === Column
-  const custom = kids.find(isSkeleton) as React.ReactElement | undefined
-  const cols = kids.filter(isColumn)
+    React.isValidElement(c) && c.type === Column;
+  const custom = kids.find(isSkeleton) as React.ReactElement | undefined;
+  const cols = kids.filter(isColumn);
   // anything else (an AddField, your own bar) lands after the rows, inside the list's context
-  const rest = kids.filter((c) => !isSkeleton(c) && !isColumn(c))
+  const rest = kids.filter((c) => !isSkeleton(c) && !isColumn(c));
   const columns = React.useMemo(
     () =>
       cols.length
@@ -155,15 +153,13 @@ export function List({
           }
         : undefined,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [children]
-  )
+    [children],
+  );
   const ctx = React.useMemo(() => {
-    const r = render ?? parent?.render
+    const r = render ?? parent?.render;
     if (!r)
-      throw new Error(
-        "<Schema.List> needs a render (or an enclosing list to inherit one from)"
-      )
-    const cols = columns ?? parent?.columns
+      throw new Error("<Schema.List> needs a render (or an enclosing list to inherit one from)");
+    const cols = columns ?? parent?.columns;
     return {
       parentId: parentId ?? parent?.parentId ?? store.getState().root,
       depth: depth ?? (parent ? parent.depth : 0),
@@ -172,21 +168,21 @@ export function List({
       ghost: parent?.ghost,
       columns: cols,
       cols: (cols ? 3 : 1) as 1 | 3,
-    }
-  }, [render, columns, parent, parentId, depth, variant, coarse, store])
+    };
+  }, [render, columns, parent, parentId, depth, variant, coarse, store]);
   // a list that starts a grid: the root, or one declaring columns its parent lacks
-  const own = !parent || ctx.cols !== parent.cols
+  const own = !parent || ctx.cols !== parent.cols;
 
-  const ids = useEditorStore(useShallow((s) => s.children[ctx.parentId] ?? []))
+  const ids = useEditorStore(useShallow((s) => s.children[ctx.parentId] ?? []));
   const drop = useEditorStore((s) =>
-    !ctx.ghost && s.drop?.parentId === ctx.parentId ? s.drop : null
-  )
-  const visible = drop ? ids.filter((x) => !drop.ids.includes(x)) : ids
+    !ctx.ghost && s.drop?.parentId === ctx.parentId ? s.drop : null,
+  );
+  const visible = drop ? ids.filter((x) => !drop.ids.includes(x)) : ids;
   const skeleton = drop && (
     <SkeletonContext.Provider value={custom ?? null}>
       <SkeletonSlot height={drop.height} />
     </SkeletonContext.Provider>
-  )
+  );
 
   return (
     <ListContext.Provider value={ctx}>
@@ -211,7 +207,7 @@ export function List({
           // row rhythm as margins, so a collapsed (dragged) row takes no space;
           // anything that is not a row (an AddField, your bar) sits on the content column, inset like a row
           "[&>*]:relative [&>*]:[grid-column:var(--content-col)] [&>*]:mx-[calc(var(--depth)*var(--indent))] [&>*+*]:mt-(--row-gap)",
-          className
+          className,
         )}
       >
         {ids.map((id) => (
@@ -224,7 +220,7 @@ export function List({
         {rest}
       </div>
     </ListContext.Provider>
-  )
+  );
 }
 
 /**
@@ -232,35 +228,30 @@ export function List({
  * drag moves the skeleton the list re-renders, the rows must not.
  */
 const RowFor = React.memo(function RowFor({ id }: { id: string }) {
-  const { render } = useList()
-  const node = useEditorStore((s) => s.byId[id])
-  if (!node) return null
-  return (
-    <RowIdContext.Provider value={id}>
-      {render({ ...node })}
-    </RowIdContext.Provider>
-  )
-})
+  const { render } = useList();
+  const node = useEditorStore((s) => s.byId[id]);
+  if (!node) return null;
+  return <RowIdContext.Provider value={id}>{render({ ...node })}</RowIdContext.Provider>;
+});
 
 function SkeletonSlot({ height }: { height: number }) {
-  const custom = React.useContext(SkeletonContext)
+  const custom = React.useContext(SkeletonContext);
   return custom ? (
-    React.cloneElement(
-      custom as React.ReactElement<{ style?: React.CSSProperties }>,
-      { style: { height } }
-    )
+    React.cloneElement(custom as React.ReactElement<{ style?: React.CSSProperties }>, {
+      style: { height },
+    })
   ) : (
     <Skeleton style={{ height }} />
-  )
+  );
 }
 
 export type ColumnProps = {
   /** which side of the row content; default left */
-  side?: "left" | "right"
-  className?: string
-  style?: React.CSSProperties
-  children: React.ReactNode
-}
+  side?: "left" | "right";
+  className?: string;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+};
 
 /**
  * A cell every row of the list draws beside its content, outside the
@@ -270,14 +261,10 @@ export type ColumnProps = {
  */
 export function Column({ side = "left", className, children }: ColumnProps) {
   return (
-    <div
-      data-slot="column"
-      data-side={side}
-      className={cn("shrink-0", className)}
-    >
+    <div data-slot="column" data-side={side} className={cn("shrink-0", className)}>
       {children}
     </div>
-  )
+  );
 }
 
 /** drop-slot placeholder; place inside <Schema.List> to restyle it */
@@ -285,8 +272,8 @@ export function Skeleton({
   className,
   style,
 }: {
-  className?: string
-  style?: React.CSSProperties
+  className?: string;
+  style?: React.CSSProperties;
 }) {
   return (
     <div
@@ -295,10 +282,10 @@ export function Skeleton({
       style={style}
       className={cn(
         "col-span-full! mx-0! rounded-md border-2 border-dashed border-primary/40 bg-primary/5",
-        className
+        className,
       )}
     />
-  )
+  );
 }
 
 /* ---------------------------------- add ---------------------------------- */
@@ -308,19 +295,19 @@ export function AddField({
   className,
   children,
 }: {
-  className?: string
-  children?: React.ReactNode
+  className?: string;
+  children?: React.ReactNode;
 }) {
-  const { store } = useEditor()
-  const list = React.useContext(ListContext)
-  const parentId = list?.parentId ?? store.getState().root
+  const { store } = useEditor();
+  const list = React.useContext(ListContext);
+  const parentId = list?.parentId ?? store.getState().root;
   // one step under the field title of the variant
   const size = {
     compact: "h-4 gap-1 px-1 text-2xs [&_svg]:size-2.5",
     default: "h-5 gap-1 px-1.5 text-2xs [&_svg]:size-3",
     wide: "h-7 gap-1.5 px-2 text-xs [&_svg]:size-3.5",
     mobile: "h-8 gap-1.5 px-2 text-xs [&_svg]:size-3.5",
-  }[useVariant()]
+  }[useVariant()];
   return (
     <TypeMenu
       title="New field type"
@@ -330,17 +317,13 @@ export function AddField({
           data-slot="add-field"
           variant="ghost"
           size="xs"
-          className={cn(
-            "text-muted-foreground hover:text-foreground",
-            size,
-            className
-          )}
+          className={cn("text-muted-foreground hover:text-foreground", size, className)}
         >
           <PlusIcon /> {children ?? "Add field"}
         </Button>
       }
     />
-  )
+  );
 }
 
 /* -------------------------------- toolbar -------------------------------- */
@@ -352,11 +335,11 @@ export function Toolbar({
   children,
 }: {
   /** density of the actions inside; mobile makes menus bottom sheets */
-  variant?: Variant
-  className?: string
-  children: React.ReactNode
+  variant?: Variant;
+  className?: string;
+  children: React.ReactNode;
 }) {
-  const n = useEditorStore((s) => s.selected.length)
+  const n = useEditorStore((s) => s.selected.length);
   return (
     <VariantContext.Provider value={variant ?? null}>
       <ToolbarContext.Provider value={true}>
@@ -372,7 +355,7 @@ export function Toolbar({
         </ActionScopeContext.Provider>
       </ToolbarContext.Provider>
     </VariantContext.Provider>
-  )
+  );
 }
 
 /** the ⋯ menu of a toolbar: SchemaAction.* inside apply to the selection */
@@ -381,9 +364,9 @@ export function SelectionMenu({
   children,
   label = "More",
 }: {
-  className?: string
-  children: React.ReactNode
-  label?: string
+  className?: string;
+  children: React.ReactNode;
+  label?: string;
 }) {
   return (
     <ActionScopeContext.Provider value="menu">
@@ -405,18 +388,18 @@ export function SelectionMenu({
         {children}
       </Menu>
     </ActionScopeContext.Provider>
-  )
+  );
 }
 
 export function SelectAll({ className }: { className?: string }) {
-  const { store } = useEditor()
+  const { store } = useEditor();
   const { all, some } = useEditorStore(
     useShallow((s) => {
-      const ids = Object.keys(s.byId).filter((id) => id !== s.root)
-      const n = s.selected.length
-      return { all: n > 0 && n === ids.length, some: n > 0 && n < ids.length }
-    })
-  )
+      const ids = Object.keys(s.byId).filter((id) => id !== s.root);
+      const n = s.selected.length;
+      return { all: n > 0 && n === ids.length, some: n > 0 && n < ids.length };
+    }),
+  );
   return (
     <Checkbox
       data-slot="select-all"
@@ -424,33 +407,31 @@ export function SelectAll({ className }: { className?: string }) {
       checked={all}
       indeterminate={some}
       onCheckedChange={(checked) => {
-        const s = store.getState()
-        s.select(
-          checked ? Object.keys(s.byId).filter((id) => id !== s.root) : []
-        )
+        const s = store.getState();
+        s.select(checked ? Object.keys(s.byId).filter((id) => id !== s.root) : []);
       }}
       className={className}
     />
-  )
+  );
 }
 
 export function SelectionCount({
   className,
   render,
 }: {
-  className?: string
+  className?: string;
   render?: (
     props: React.HTMLAttributes<HTMLElement>,
-    state: { count: number }
-  ) => React.ReactElement
+    state: { count: number },
+  ) => React.ReactElement;
 }) {
-  const count = useEditorStore((s) => s.selected.length)
+  const count = useEditorStore((s) => s.selected.length);
   const props = {
     "data-slot": "selection-count",
     className: cn("text-xs text-muted-foreground", className),
-  }
-  if (render) return render(props, { count })
-  return <span {...props}>{count} selected</span>
+  };
+  if (render) return render(props, { count });
+  return <span {...props}>{count} selected</span>;
 }
 
-export { Row }
+export { Row };

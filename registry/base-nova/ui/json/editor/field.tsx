@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { createPortal } from "react-dom"
-import { cn } from "@/lib/utils"
-import { motion, useDragControls } from "motion/react"
-import { useShallow } from "zustand/react/shallow"
-import { useRender } from "@base-ui/react/use-render"
-import { ChevronDownIcon, EllipsisIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { uniqueSlug } from "@/registry/base-nova/ui/json/core/slug"
-import type { DetailField } from "@/registry/base-nova/ui/json/core/editor"
+import * as React from "react";
+import { createPortal } from "react-dom";
+import { cn } from "@/lib/utils";
+import { motion, useDragControls } from "motion/react";
+import { useShallow } from "zustand/react/shallow";
+import { useRender } from "@base-ui/react/use-render";
+import { ChevronDownIcon, EllipsisIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { uniqueSlug } from "@/registry/base-nova/ui/json/core/slug";
+import type { DetailField } from "@/registry/base-nova/ui/json/core/editor";
 import {
   ActionScopeContext,
   FieldContext,
@@ -23,61 +23,54 @@ import {
   useTypeModule,
   useVariant,
   type Variant,
-} from "@/registry/base-nova/ui/json/editor/context"
-import { Editable, type EditableProps, type RenderProp } from "./editable"
-import { useField } from "./hooks"
-import { EditorSheet, IconTile, Menu, TypeMenu } from "./menu"
+} from "@/registry/base-nova/ui/json/editor/context";
+import { Editable, type EditableProps, type RenderProp } from "./editable";
+import { useField } from "./hooks";
+import { EditorSheet, IconTile, Menu, TypeMenu } from "./menu";
 
-type Size = Record<Variant, string>
+type Size = Record<Variant, string>;
 const text: Size = {
   compact: "text-sm",
   default: "text-sm",
   wide: "text-base",
   mobile: "text-sm",
-}
+};
 const small: Size = {
   compact: "text-xs",
   default: "text-xs",
   wide: "text-sm",
   mobile: "text-xs",
-}
+};
 const tiny: Size = {
   compact: "text-2xs",
   default: "text-2xs",
   wide: "text-xs",
   mobile: "text-2xs",
-}
+};
 const tile: Record<Variant, "xs" | "sm" | "md" | "lg"> = {
   compact: "sm",
   default: "md",
   wide: "lg",
   mobile: "md",
-}
+};
 
-type Part = { className?: string }
+type Part = { className?: string };
 /** `render` swaps the element for yours (Base UI style); behaviour is merged in, our styling is not */
-type Rendered = Part & { render?: RenderProp }
-type Field = Rendered &
-  Pick<EditableProps, "placeholder" | "readOnly" | "variant">
+type Rendered = Part & { render?: RenderProp };
+type Field = Rendered & Pick<EditableProps, "placeholder" | "readOnly" | "variant">;
 /** flag / count badges */
-type BadgeVariant = "muted" | "outline" | "secondary"
+type BadgeVariant = "muted" | "outline" | "secondary";
 const badgeLook: Record<BadgeVariant, string> = {
   muted: "bg-muted text-muted-foreground",
   outline: "border border-border text-muted-foreground",
   secondary: "bg-secondary text-secondary-foreground",
-}
+};
 
 /* --------------------------------- text ---------------------------------- */
 
-export function Title({
-  className,
-  placeholder = "Untitled",
-  readOnly,
-  render,
-  variant,
-}: Field) {
-  const { field: node, update: set } = useField()
-  const v = useVariant()
+export function Title({ className, placeholder = "Untitled", readOnly, render, variant }: Field) {
+  const { field: node, update: set } = useField();
+  const v = useVariant();
   return (
     <Editable
       data-slot="title"
@@ -88,34 +81,21 @@ export function Title({
       value={node.title}
       onChange={(title) => set({ title })}
       placeholder={placeholder}
-      className={
-        render ? className : cn("truncate text-foreground", text[v], className)
-      }
+      className={render ? className : cn("truncate text-foreground", text[v], className)}
     />
-  )
+  );
 }
 
-export function Key({
-  className,
-  placeholder = "key",
-  readOnly,
-  render,
-  variant,
-}: Field) {
-  const { field: node, update: set } = useField()
-  const id = node.id
-  const v = useVariant()
-  const { store } = useEditor()
+export function Key({ className, placeholder = "key", readOnly, render, variant }: Field) {
+  const { field: node, update: set } = useField();
+  const id = node.id;
+  const v = useVariant();
+  const { store } = useEditor();
   const conflict = useEditorStore((s) => {
-    const siblings = s.children[s.parentOf[id]] ?? []
-    return (
-      node.key.length > 0 &&
-      siblings.some((x) => x !== id && s.byId[x].key === node.key)
-    )
-  })
-  const conflictTitle = conflict
-    ? `"${node.key}" already used by a sibling`
-    : undefined
+    const siblings = s.children[s.parentOf[id]] ?? [];
+    return node.key.length > 0 && siblings.some((x) => x !== id && s.byId[x].key === node.key);
+  });
+  const conflictTitle = conflict ? `"${node.key}" already used by a sibling` : undefined;
   const input = (
     <Editable
       aria-label="Key"
@@ -126,13 +106,11 @@ export function Key({
       onChange={(key) => set({ key })}
       onCommit={(key) => {
         // conflicts are marked live; on commit, resolve by suffix
-        const s = store.getState()
+        const s = store.getState();
         const taken = new Set(
-          (s.children[s.parentOf[id]] ?? [])
-            .filter((x) => x !== id)
-            .map((x) => s.byId[x].key)
-        )
-        if (taken.has(key)) set({ key: uniqueSlug(key, taken, s.slugCase) })
+          (s.children[s.parentOf[id]] ?? []).filter((x) => x !== id).map((x) => s.byId[x].key),
+        );
+        if (taken.has(key)) set({ key: uniqueSlug(key, taken, s.slugCase) });
       }}
       placeholder={placeholder}
       {...(render || variant === "input"
@@ -141,16 +119,16 @@ export function Key({
             className: cn(
               variant === "input" && "font-mono",
               conflict && "text-destructive",
-              className
+              className,
             ),
             title: conflictTitle,
             "aria-invalid": conflict || undefined,
           }
         : {})}
     />
-  )
+  );
   // your element and the input variant stand alone; inline gets the "@" prefix
-  if (render || variant === "input") return input
+  if (render || variant === "input") return input;
   return (
     <span
       data-slot="key"
@@ -158,7 +136,7 @@ export function Key({
         "flex min-w-0 shrink-0 items-baseline font-mono text-muted-foreground",
         tiny[v],
         conflict && "text-destructive [&_input]:text-destructive",
-        className
+        className,
       )}
       title={conflictTitle}
       aria-invalid={conflict || undefined}
@@ -168,7 +146,7 @@ export function Key({
       </span>
       {input}
     </span>
-  )
+  );
 }
 
 export function Description({
@@ -179,8 +157,8 @@ export function Description({
   render,
   variant,
 }: Field & { multiline?: boolean }) {
-  const { field: node, update: set } = useField()
-  const v = useVariant()
+  const { field: node, update: set } = useField();
+  const v = useVariant();
   return (
     <Editable
       data-slot="description"
@@ -193,12 +171,10 @@ export function Description({
       onChange={(description) => set({ description })}
       placeholder={placeholder}
       className={
-        render
-          ? className
-          : cn("min-w-0 self-start text-muted-foreground", small[v], className)
+        render ? className : cn("min-w-0 self-start text-muted-foreground", small[v], className)
       }
     />
-  )
+  );
 }
 
 /** comma-separated; parsed on commit so typing "a, " is not trimmed live */
@@ -209,13 +185,13 @@ export function Examples({
   render,
   variant,
 }: Field) {
-  const { field: node, update: set } = useField()
-  const v = useVariant()
-  const mod = useTypeModule(node.type)
-  const joined = node.examples.join(", ")
-  const [draft, setDraft] = React.useState(joined)
-  React.useEffect(() => setDraft(joined), [joined])
-  if (!mod.examples) return null
+  const { field: node, update: set } = useField();
+  const v = useVariant();
+  const mod = useTypeModule(node.type);
+  const joined = node.examples.join(", ");
+  const [draft, setDraft] = React.useState(joined);
+  React.useEffect(() => setDraft(joined), [joined]);
+  if (!mod.examples) return null;
   return (
     <Editable
       data-slot="examples"
@@ -235,34 +211,25 @@ export function Examples({
       }
       placeholder={placeholder}
       className={
-        render
-          ? className
-          : cn(
-              "min-w-0 self-start text-muted-foreground/70",
-              small[v],
-              className
-            )
+        render ? className : cn("min-w-0 self-start text-muted-foreground/70", small[v], className)
       }
     />
-  )
+  );
 }
 
 /** labelled inputs for the details dialog / sheet */
 export function DetailFields({
   fields = ["title", "key", "description", "examples"],
 }: {
-  fields?: DetailField[]
+  fields?: DetailField[];
 }) {
-  const label = "flex flex-col gap-1 text-2xs text-muted-foreground"
+  const label = "flex flex-col gap-1 text-2xs text-muted-foreground";
   const parts = {
     title: ["Title", <Title key="t" variant="input" />],
     key: ["Key", <Key key="k" variant="input" />],
-    description: [
-      "Description",
-      <Description key="d" multiline variant="input" />,
-    ],
+    description: ["Description", <Description key="d" multiline variant="input" />],
     examples: ["Examples", <Examples key="e" variant="input" />],
-  } as const
+  } as const;
   return (
     <div className="flex flex-col gap-3">
       {fields.map((f) => (
@@ -272,51 +239,42 @@ export function DetailFields({
         </label>
       ))}
     </div>
-  )
+  );
 }
 
 /** the row's details overlay: dialog, or a bottom sheet on mobile; opened by <SchemaAction.EditDetails> */
 function DetailsOverlay() {
-  const { id } = useFieldContext()
-  const { store, portal } = useEditor()
-  const details = useEditorStore((s) =>
-    s.details?.id === id ? s.details : null
-  )
-  const title = useEditorStore((s) => s.byId[id]?.title)
-  const mobile = useVariant() === "mobile"
+  const { id } = useFieldContext();
+  const { store, portal } = useEditor();
+  const details = useEditorStore((s) => (s.details?.id === id ? s.details : null));
+  const title = useEditorStore((s) => s.byId[id]?.title);
+  const mobile = useVariant() === "mobile";
   const onOpenChange = (o: boolean) => {
-    if (!o) store.getState().openDetails(null)
-  }
-  if (!details) return null
-  const body = <DetailFields fields={details.fields} />
+    if (!o) store.getState().openDetails(null);
+  };
+  if (!details) return null;
+  const body = <DetailFields fields={details.fields} />;
   return mobile ? (
-    <EditorSheet
-      open
-      onOpenChange={onOpenChange}
-      title={title || "Edit field"}
-      container={portal}
-    >
+    <EditorSheet open onOpenChange={onOpenChange} title={title || "Edit field"} container={portal}>
       {body}
     </EditorSheet>
   ) : (
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm gap-3 p-4">
-        <DialogTitle className="text-xs font-medium">
-          {title || "Untitled"}
-        </DialogTitle>
+        <DialogTitle className="text-xs font-medium">{title || "Untitled"}</DialogTitle>
         {body}
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 /* -------------------------------- badges --------------------------------- */
 
 type BadgeProps = Rendered & {
-  children?: React.ReactNode
-  title?: string
-  variant?: BadgeVariant
-}
+  children?: React.ReactNode;
+  title?: string;
+  variant?: BadgeVariant;
+};
 
 /** flag badge; `render` swaps the element (shadcn <Badge />), children the text */
 function Badge({
@@ -329,7 +287,7 @@ function Badge({
   render,
   variant = "muted",
 }: BadgeProps & { on: boolean; slot: string; label: string }) {
-  const v = useVariant()
+  const v = useVariant();
   return useRender({
     render,
     enabled: on,
@@ -343,18 +301,16 @@ function Badge({
         ? className
         : cn("shrink-0 rounded px-1", badgeLook[variant], tiny[v], className),
     },
-  })
+  });
 }
 
 export function Optional(props: BadgeProps) {
-  const { field: node } = useField()
-  return (
-    <Badge on={node.optional} slot="optional" label="optional" {...props} />
-  )
+  const { field: node } = useField();
+  return <Badge on={node.optional} slot="optional" label="optional" {...props} />;
 }
 
 export function Repeated(props: BadgeProps) {
-  const { field: node } = useField()
+  const { field: node } = useField();
   return (
     <Badge
       on={node.repeated}
@@ -364,14 +320,12 @@ export function Repeated(props: BadgeProps) {
       {...props}
       className={cn(!props.render && "font-mono", props.className)}
     />
-  )
+  );
 }
 
 export function Nullable(props: BadgeProps) {
-  const { field: node } = useField()
-  return (
-    <Badge on={node.nullable} slot="nullable" label="nullable" {...props} />
-  )
+  const { field: node } = useField();
+  return <Badge on={node.nullable} slot="nullable" label="nullable" {...props} />;
 }
 
 export function ChildrenCount({
@@ -379,11 +333,11 @@ export function ChildrenCount({
   render,
   variant = "muted",
 }: Rendered & { variant?: BadgeVariant }) {
-  const { field: node } = useField()
-  const id = node.id
-  const mod = useTypeModule(node.type)
-  const count = useEditorStore((s) => s.children[id]?.length ?? 0)
-  const v = useVariant()
+  const { field: node } = useField();
+  const id = node.id;
+  const mod = useTypeModule(node.type);
+  const count = useEditorStore((s) => s.children[id]?.length ?? 0);
+  const v = useVariant();
   const el = useRender({
     render,
     state: { count },
@@ -397,8 +351,8 @@ export function ChildrenCount({
       children: mod.countLabel ? mod.countLabel(count) : String(count),
     },
     enabled: node.isGroup,
-  })
-  return el
+  });
+  return el;
 }
 
 /* --------------------------------- type ---------------------------------- */
@@ -408,7 +362,7 @@ const typeBadge: Size = {
   default: "h-5 gap-1 pr-1.5 text-xs",
   wide: "h-7 gap-1.5 pr-2 text-sm",
   mobile: "h-6 gap-1 pr-2 text-xs",
-}
+};
 
 /**
  * The field's type. `icon` (default): the tile alone. `badge`: tile + label in
@@ -419,10 +373,10 @@ export function Type({
   render,
   variant = "icon",
 }: Rendered & { variant?: "icon" | "badge" }) {
-  const { field: node } = useField()
-  const mod = useTypeModule(node.type)
-  const v = useVariant()
-  const badge = variant === "badge"
+  const { field: node } = useField();
+  const mod = useTypeModule(node.type);
+  const v = useVariant();
+  const badge = variant === "badge";
   return useRender({
     render,
     defaultTagName: "span",
@@ -434,39 +388,33 @@ export function Type({
         ? className
         : cn(
             "flex shrink-0 items-center",
-            badge &&
-              cn(
-                "rounded-md border border-border text-foreground",
-                typeBadge[v]
-              ),
-            className
+            badge && cn("rounded-md border border-border text-foreground", typeBadge[v]),
+            className,
           ),
       children: (
         <>
           <IconTile
             icon={mod.icon}
-            color={
-              v === "compact" ? mod.color.replace(/bg-\S+/, "") : mod.color
-            }
+            color={v === "compact" ? mod.color.replace(/bg-\S+/, "") : mod.color}
             size={tile[v]}
           />
           {badge && mod.label}
         </>
       ),
     },
-  })
+  });
 }
 
 /** the type module's own UI, if it has one */
 export function Extra(props: Part) {
-  const { field: node, update: set } = useField()
-  const mod = useTypeModule(node.type)
-  if (!mod.Extra) return null
+  const { field: node, update: set } = useField();
+  const mod = useTypeModule(node.type);
+  if (!mod.Extra) return null;
   return (
     <div data-slot="extra" className={props.className}>
       <mod.Extra node={{ ...node }} set={set} />
     </div>
-  )
+  );
 }
 
 /* ---------------------------- menu / nested ----------------------------- */
@@ -477,14 +425,14 @@ export function MenuPart({
   children,
   label = "Field settings",
 }: Part & { children: React.ReactNode; label?: string }) {
-  const { field: node } = useField()
-  const v = useVariant()
+  const { field: node } = useField();
+  const v = useVariant();
   const size = {
     compact: "size-5",
     default: "size-5",
     wide: "size-7",
     mobile: "size-9",
-  }[v]
+  }[v];
   return (
     <ActionScopeContext.Provider value="menu">
       <Menu
@@ -506,26 +454,23 @@ export function MenuPart({
         {children}
       </Menu>
     </ActionScopeContext.Provider>
-  )
+  );
 }
 
 /** set inside <SchemaField.Nested>; NestedToggle / NestedList refuse to render outside it */
-const NestedContext = React.createContext(false)
+const NestedContext = React.createContext(false);
 const useNested = (part: string) => {
   if (!React.useContext(NestedContext))
-    throw new Error(`<SchemaField.${part}> must be inside <SchemaField.Nested>`)
-}
+    throw new Error(`<SchemaField.${part}> must be inside <SchemaField.Nested>`);
+};
 
 /**
  * The accordion of a group row: owns open / closed, hosts the toggle and the
  * list. Null on leaves. Free-form children: put the toggle where you like.
  */
-export function Nested({
-  className,
-  children,
-}: Part & { children: React.ReactNode }) {
-  const { node } = useFieldContext()
-  if (!node.isGroup) return null
+export function Nested({ className, children }: Part & { children: React.ReactNode }) {
+  const { node } = useFieldContext();
+  if (!node.isGroup) return null;
   return (
     <NestedContext.Provider value={true}>
       <div
@@ -536,7 +481,7 @@ export function Nested({
         {children}
       </div>
     </NestedContext.Provider>
-  )
+  );
 }
 
 /** the chevron that opens / closes NestedList */
@@ -544,16 +489,16 @@ export function NestedToggle({
   className,
   render,
 }: Part & { render?: React.ComponentProps<typeof Button>["render"] }) {
-  useNested("NestedToggle")
-  const { node, set } = useFieldContext()
-  const v = useVariant()
-  const open = !node.collapsed
+  useNested("NestedToggle");
+  const { node, set } = useFieldContext();
+  const v = useVariant();
+  const open = !node.collapsed;
   const size = {
     compact: "size-4",
     default: "size-5",
     wide: "size-7",
     mobile: "size-8",
-  }[v]
+  }[v];
   const props = {
     "data-slot": "nested-toggle",
     "data-state": open ? "open" : "closed",
@@ -561,7 +506,7 @@ export function NestedToggle({
     "aria-expanded": open,
     onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
     onClick: () => set({ collapsed: open }),
-  }
+  };
   return (
     <Button
       {...props}
@@ -570,11 +515,9 @@ export function NestedToggle({
       render={render}
       className={cn(size, "text-muted-foreground", className)}
     >
-      <ChevronDownIcon
-        className={cn("transition-transform", !open && "-rotate-90")}
-      />
+      <ChevronDownIcon className={cn("transition-transform", !open && "-rotate-90")} />
     </Button>
-  )
+  );
 }
 
 /**
@@ -586,21 +529,21 @@ export function NestedList({
   children,
   open: forced,
 }: Part & {
-  children?: React.ReactNode
+  children?: React.ReactNode;
   /** always draw the rows, for when something else (a panel) hides the list */
-  open?: boolean
+  open?: boolean;
 }) {
-  useNested("NestedList")
-  const { node, id } = useFieldContext()
-  const list = useList()
-  const v = useVariant()
-  const open = forced || !node.collapsed
+  useNested("NestedList");
+  const { node, id } = useFieldContext();
+  const list = useList();
+  const v = useVariant();
+  const open = forced || !node.collapsed;
   const pad = {
     compact: "[--frame-pad:--spacing(1)]",
     default: "[--frame-pad:--spacing(1.5)]",
     wide: "[--frame-pad:--spacing(2)]",
     mobile: "[--frame-pad:--spacing(1.5)]",
-  }[v]
+  }[v];
   return (
     <div
       data-slot="nested-list"
@@ -611,7 +554,7 @@ export function NestedList({
         "relative col-span-full! row-start-2! mx-0! grid min-w-0 grid-cols-subgrid py-(--frame-pad)",
         "[&>*]:relative [&>*]:[grid-column:var(--content-col)] [&>*]:mx-[calc(var(--depth)*var(--indent))] [&>*+*]:mt-(--row-gap)",
         pad,
-        className
+        className,
       )}
     >
       <div
@@ -622,47 +565,41 @@ export function NestedList({
       />
       {open ? (
         // an explicit <Schema.List> child inherits this group as its parent; none → same template, next level
-        <ListContext.Provider
-          value={{ ...list, parentId: id, depth: list.depth + 1 }}
-        >
+        <ListContext.Provider value={{ ...list, parentId: id, depth: list.depth + 1 }}>
           {children ?? <List />}
         </ListContext.Provider>
       ) : (
         <NestedSummary />
       )}
     </div>
-  )
+  );
 }
 
 /** "3 hidden" / "empty" line of a collapsed group; null while open */
 export function NestedSummary({ className }: Part) {
-  useNested("NestedSummary")
-  const { node, id } = useFieldContext()
-  const v = useVariant()
-  const count = useEditorStore((s) => s.children[id]?.length ?? 0)
-  if (!node.collapsed) return null
+  useNested("NestedSummary");
+  const { node, id } = useFieldContext();
+  const v = useVariant();
+  const count = useEditorStore((s) => s.children[id]?.length ?? 0);
+  if (!node.collapsed) return null;
   return (
     <div
       data-slot="nested-summary"
-      className={cn(
-        "relative px-2 py-1 text-muted-foreground",
-        tiny[v],
-        className
-      )}
+      className={cn("relative px-2 py-1 text-muted-foreground", tiny[v], className)}
     >
       {count ? `${count} hidden` : "empty, drop fields here"}
     </div>
-  )
+  );
 }
 
 /* ---------------------------------- row ---------------------------------- */
 
-const BUTTONS = "button, a, [data-slot=drag], [data-slot=select]"
-const FIELDS = "input, textarea"
-const ROWS = "[data-slot=row]"
+const BUTTONS = "button, a, [data-slot=drag], [data-slot=select]";
+const FIELDS = "input, textarea";
+const ROWS = "[data-slot=row]";
 
 const inside = (r: DOMRect, x: number, y: number) =>
-  x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
+  x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
 
 /**
  * What a drag hit-tests against, walked once at drag start: the DOM does not
@@ -670,38 +607,32 @@ const inside = (r: DOMRect, x: number, y: number) =>
  * Rects are read per frame; the queries are not.
  */
 type DragGeometry = {
-  rows: { el: HTMLElement; nested: HTMLElement | null }[]
-  frames: HTMLElement[]
-}
+  rows: { el: HTMLElement; nested: HTMLElement | null }[];
+  frames: HTMLElement[];
+};
 
 function snapshot(root: HTMLElement, self: HTMLElement): DragGeometry {
-  const live = (el: Element) =>
-    !self.contains(el) && !el.closest("[data-ghost]")
+  const live = (el: Element) => !self.contains(el) && !el.closest("[data-ghost]");
   const rows = Array.from(root.querySelectorAll<HTMLElement>("[data-slot=row]"))
     .filter(live)
     .map((el) => {
-      const nested = el.querySelector<HTMLElement>(
-        ":scope [data-slot=nested-list]"
-      )
+      const nested = el.querySelector<HTMLElement>(":scope [data-slot=nested-list]");
       return {
         el,
-        nested:
-          nested && nested.closest("[data-slot=row]") === el ? nested : null,
-      }
-    })
+        nested: nested && nested.closest("[data-slot=row]") === el ? nested : null,
+      };
+    });
   const frames = Array.from(
-    root.querySelectorAll<HTMLElement>(
-      "[data-slot=nested-list][data-state=open]"
-    )
-  ).filter(live)
-  return { rows, frames }
+    root.querySelectorAll<HTMLElement>("[data-slot=nested-list][data-state=open]"),
+  ).filter(live);
+  return { rows, frames };
 }
 
 /** a row's "head" = its box minus its nested frame, if any */
 function headCentre({ el, nested }: DragGeometry["rows"][number]) {
-  const r = el.getBoundingClientRect()
-  const bottom = nested ? nested.getBoundingClientRect().top : r.bottom
-  return (r.top + bottom) / 2
+  const r = el.getBoundingClientRect();
+  const bottom = nested ? nested.getBoundingClientRect().top : r.bottom;
+  return (r.top + bottom) / 2;
 }
 
 /**
@@ -710,166 +641,146 @@ function headCentre({ el, nested }: DragGeometry["rows"][number]) {
  * the row we insert before. If the pointer is still inside a nested frame whose
  * rows are all above it (its padding / add-field area), append there.
  */
-function resolveDrop(
-  { rows, frames }: DragGeometry,
-  x: number,
-  y: number,
-  rootId: string
-) {
-  const before = rows.find((r) => y < headCentre(r))?.el
-  let frame: HTMLElement | null = null
+function resolveDrop({ rows, frames }: DragGeometry, x: number, y: number, rootId: string) {
+  const before = rows.find((r) => y < headCentre(r))?.el;
+  let frame: HTMLElement | null = null;
   for (const f of frames) {
-    if (!inside(f.getBoundingClientRect(), x, y)) continue
-    if (!frame || frame.contains(f)) frame = f
+    if (!inside(f.getBoundingClientRect(), x, y)) continue;
+    if (!frame || frame.contains(f)) frame = f;
   }
   if (frame && !(before && frame.contains(before)))
     return {
       parentId: frame.closest<HTMLElement>("[data-slot=row]")!.dataset.id!,
       beforeId: null,
-    }
+    };
   return {
     parentId: before?.dataset.parent ?? rootId,
     beforeId: before?.dataset.id ?? null,
-  }
+  };
 }
 
 export type RowProps = {
-  className?: string
-  children?: React.ReactNode
+  className?: string;
+  children?: React.ReactNode;
   /** default: only from a mounted <SchemaAction.Drag>, else anywhere on the row */
-  dragFrom?: "handle" | "anywhere"
-}
+  dragFrom?: "handle" | "anywhere";
+};
 
 export function Row(props: RowProps) {
-  const id = React.useContext(RowIdContext)
-  if (!id)
-    throw new Error("<SchemaField.Row> must be rendered by <Schema.List>")
-  return <RowImpl id={id} {...props} />
+  const id = React.useContext(RowIdContext);
+  if (!id) throw new Error("<SchemaField.Row> must be rendered by <Schema.List>");
+  return <RowImpl id={id} {...props} />;
 }
 
-function RowImpl({
-  id,
-  className,
-  children,
-  dragFrom,
-}: RowProps & { id: string }) {
-  const { store, root, coarse } = useEditor()
-  const list = useList()
-  const controls = useDragControls()
+function RowImpl({ id, className, children, dragFrom }: RowProps & { id: string }) {
+  const { store, root, coarse } = useEditor();
+  const list = useList();
+  const controls = useDragControls();
   // pointer type of the gesture in flight, and whether a touch hold armed it
-  const touch = React.useRef(false)
-  const armed = React.useRef(false)
-  const ref = React.useRef<HTMLDivElement>(null)
-  const ghostRef = React.useRef<HTMLDivElement>(null)
-  const grab = React.useRef({ x: 0, y: 0, w: 0, h: 0, gap: 0 })
-  const began = React.useRef(false)
+  const touch = React.useRef(false);
+  const armed = React.useRef(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  const ghostRef = React.useRef<HTMLDivElement>(null);
+  const grab = React.useRef({ x: 0, y: 0, w: 0, h: 0, gap: 0 });
+  const began = React.useRef(false);
   // the click that ends a drag must not reach row content (e.g. a tap-to-open summary)
-  const justDragged = React.useRef(false)
-  const dir = React.useRef<"x" | "y" | null>(null)
+  const justDragged = React.useRef(false);
+  const dir = React.useRef<"x" | "y" | null>(null);
   // pointer events outrun frames; one hit-test per frame is plenty
-  const frame = React.useRef<{ raf: number; x: number; y: number } | null>(null)
+  const frame = React.useRef<{ raf: number; x: number; y: number } | null>(null);
   const placeSoon = (x: number, y: number) => {
     if (frame.current) {
-      frame.current.x = x
-      frame.current.y = y
-      return
+      frame.current.x = x;
+      frame.current.y = y;
+      return;
     }
     frame.current = {
       x,
       y,
       raf: requestAnimationFrame(() => {
-        const f = frame.current!
-        frame.current = null
-        place(f.x, f.y)
+        const f = frame.current!;
+        frame.current = null;
+        place(f.x, f.y);
       }),
-    }
-  }
+    };
+  };
   const cancelFrame = () => {
-    if (frame.current) cancelAnimationFrame(frame.current.raf)
-    frame.current = null
-  }
+    if (frame.current) cancelAnimationFrame(frame.current.raf);
+    frame.current = null;
+  };
   // touch: a press held still selects the row and arms the drag; the page
   // keeps the gesture (and may scroll) until then
   const press = React.useRef<{
-    timer: number
-    fired: boolean
-    x: number
-    y: number
-  } | null>(null)
+    timer: number;
+    fired: boolean;
+    x: number;
+    y: number;
+  } | null>(null);
   const cancelPress = () => {
-    if (press.current) window.clearTimeout(press.current.timer)
-    press.current = null
-  }
-  const [isArmed, setArmed] = React.useState(false)
+    if (press.current) window.clearTimeout(press.current.timer);
+    press.current = null;
+  };
+  const [isArmed, setArmed] = React.useState(false);
   const disarm = () => {
-    armed.current = false
-    setArmed(false)
-  }
-  const [dragging, setDragging] = React.useState(false)
-  const [gen, setGen] = React.useState(0)
+    armed.current = false;
+    setArmed(false);
+  };
+  const [dragging, setDragging] = React.useState(false);
+  const [gen, setGen] = React.useState(0);
   // touch-action is read when the finger lands, so flipping it at the hold is
   // too late for the gesture already in flight: hold the scroll off by hand
   React.useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const stop = (e: TouchEvent) => armed.current && e.preventDefault()
-    el.addEventListener("touchmove", stop, { passive: false })
-    return () => el.removeEventListener("touchmove", stop)
-  }, [gen])
-  const [mounted, setHasHandle] = React.useState(false)
-  const hasHandle = dragFrom ? dragFrom === "handle" : mounted
-  const node = useEditorStore((s) => s.byId[id])
-  const selected = useEditorStore((s) => s.selected.includes(id))
+    const el = ref.current;
+    if (!el) return;
+    const stop = (e: TouchEvent) => armed.current && e.preventDefault();
+    el.addEventListener("touchmove", stop, { passive: false });
+    return () => el.removeEventListener("touchmove", stop);
+  }, [gen]);
+  const [mounted, setHasHandle] = React.useState(false);
+  const hasHandle = dragFrom ? dragFrom === "handle" : mounted;
+  const node = useEditorStore((s) => s.byId[id]);
+  const selected = useEditorStore((s) => s.selected.includes(id));
   // this row travels with a selection someone else is dragging
   const carried = useEditorStore(
-    (s) =>
-      !list.ghost && !!s.drop && s.drop.id !== id && s.drop.ids.includes(id)
-  )
+    (s) => !list.ghost && !!s.drop && s.drop.id !== id && s.drop.ids.includes(id),
+  );
   // everything this drag carries, document order, for the ghost
-  const ghostIds = useEditorStore(
-    useShallow((s) => (s.drop?.id === id ? s.drop.ids : [id]))
-  )
-  const count = ghostIds.length
+  const ghostIds = useEditorStore(useShallow((s) => (s.drop?.id === id ? s.drop.ids : [id])));
+  const count = ghostIds.length;
   const startDrag = React.useCallback(
     (e: React.PointerEvent | PointerEvent) => controls.start(e as PointerEvent),
-    [controls]
-  )
+    [controls],
+  );
   const ctx = React.useMemo(
     () => ({ id, hasHandle, setHasHandle, startDrag }),
-    [id, hasHandle, startDrag]
-  )
+    [id, hasHandle, startDrag],
+  );
 
-  const geometry = React.useRef<DragGeometry | null>(null)
+  const geometry = React.useRef<DragGeometry | null>(null);
   const place = (px: number, py: number) => {
-    const el = ref.current
-    if (!el || !root.current) return null
-    const x = px - window.scrollX
-    const y = py - window.scrollY
-    const g = ghostRef.current
-    if (g)
-      g.style.transform = `translate(${x - grab.current.x}px, ${y - grab.current.y}px)`
-    geometry.current ??= snapshot(root.current, el)
-    const { parentId, beforeId } = resolveDrop(
-      geometry.current,
-      x,
-      y,
-      store.getState().root
-    )
-    const st = store.getState()
-    const ids = st.moving(id)
-    const siblings = st.children[parentId].filter((s) => !ids.includes(s))
-    const index = beforeId ? siblings.indexOf(beforeId) : siblings.length
+    const el = ref.current;
+    if (!el || !root.current) return null;
+    const x = px - window.scrollX;
+    const y = py - window.scrollY;
+    const g = ghostRef.current;
+    if (g) g.style.transform = `translate(${x - grab.current.x}px, ${y - grab.current.y}px)`;
+    geometry.current ??= snapshot(root.current, el);
+    const { parentId, beforeId } = resolveDrop(geometry.current, x, y, store.getState().root);
+    const st = store.getState();
+    const ids = st.moving(id);
+    const siblings = st.children[parentId].filter((s) => !ids.includes(s));
+    const index = beforeId ? siblings.indexOf(beforeId) : siblings.length;
     st.setDrop({
       id,
       ids,
       parentId,
       index,
       height: grab.current.h + grab.current.gap * (ids.length - 1),
-    })
-    return { ids, parentId, index }
-  }
+    });
+    return { ids, parentId, index };
+  };
 
-  if (!node) return null
+  if (!node) return null;
   // the row is a subgrid: [left cells | template | right cells]; the template's
   // elements go on the content column, inset by depth; a NestedList spans all
   const body = (
@@ -888,7 +799,7 @@ function RowImpl({
         className={cn(
           "contents",
           "[&>*]:[grid-column:var(--content-col)] [&>*]:row-start-1 [&>*]:mx-[calc(var(--depth)*var(--indent))]",
-          "[&>[data-slot=nested]>*]:[grid-column:var(--content-col)] [&>[data-slot=nested]>*]:row-start-1 [&>[data-slot=nested]>*]:mx-[calc(var(--depth)*var(--indent))]"
+          "[&>[data-slot=nested]>*]:[grid-column:var(--content-col)] [&>[data-slot=nested]>*]:row-start-1 [&>[data-slot=nested]>*]:mx-[calc(var(--depth)*var(--indent))]",
         )}
       >
         {children}
@@ -903,10 +814,9 @@ function RowImpl({
         </div>
       ) : null}
     </>
-  )
-  const layout =
-    "relative col-span-full! mx-0! grid min-w-0 grid-cols-subgrid items-start"
-  const depthVar = { "--depth": list.depth } as React.CSSProperties
+  );
+  const layout = "relative col-span-full! mx-0! grid min-w-0 grid-cols-subgrid items-start";
+  const depthVar = { "--depth": list.depth } as React.CSSProperties;
   if (list.ghost)
     return (
       <FieldContext.Provider value={ctx}>
@@ -914,7 +824,7 @@ function RowImpl({
           {body}
         </div>
       </FieldContext.Provider>
-    )
+    );
 
   return (
     <FieldContext.Provider value={ctx}>
@@ -933,108 +843,103 @@ function RowImpl({
         onDirectionLock={(axis) => (dir.current = axis)}
         layout="position"
         onDrag={(_, info) => {
-          if (touch.current && dir.current !== "y") return
+          if (touch.current && dir.current !== "y") return;
           if (!began.current) {
-            cancelPress()
-            began.current = true
-            const r = ref.current!.getBoundingClientRect()
+            cancelPress();
+            began.current = true;
+            const r = ref.current!.getBoundingClientRect();
             // the slot is as tall as everything that moves: this row, or the selection it belongs to
-            const moving = store.getState().moving(id)
-            const gapVar = getComputedStyle(ref.current!)
-              .getPropertyValue("--row-gap")
-              .trim()
+            const moving = store.getState().moving(id);
+            const gapVar = getComputedStyle(ref.current!).getPropertyValue("--row-gap").trim();
             const gap =
               (parseFloat(gapVar) || 0) *
               (gapVar.endsWith("rem")
-                ? parseFloat(
-                    getComputedStyle(document.documentElement).fontSize
-                  )
-                : 1)
+                ? parseFloat(getComputedStyle(document.documentElement).fontSize)
+                : 1);
             const h = moving.reduce((sum, m) => {
               const el = root.current?.querySelector<HTMLElement>(
-                `[data-slot=row][data-id="${m}"]`
-              )
-              return sum + (el ? el.getBoundingClientRect().height : 0)
-            }, 0)
+                `[data-slot=row][data-id="${m}"]`,
+              );
+              return sum + (el ? el.getBoundingClientRect().height : 0);
+            }, 0);
             grab.current = {
               x: info.point.x - window.scrollX - r.left,
               y: info.point.y - window.scrollY - r.top,
               w: r.width,
               h: h || r.height,
               gap,
-            }
-            document.body.style.userSelect = "none"
-            setDragging(true)
+            };
+            document.body.style.userSelect = "none";
+            setDragging(true);
           }
-          placeSoon(info.point.x, info.point.y)
+          placeSoon(info.point.x, info.point.y);
         }}
         onDragEnd={(_, info) => {
-          dir.current = null
-          cancelPress()
-          cancelFrame()
-          if (!began.current) return
-          began.current = false
-          const at = place(info.point.x, info.point.y)
-          geometry.current = null
-          document.body.style.userSelect = ""
-          disarm()
-          setDragging(false)
-          setGen((g) => g + 1)
-          justDragged.current = true
-          requestAnimationFrame(() => (justDragged.current = false))
-          store.getState().setDrop(null)
-          if (at) store.getState().move(at.ids, at.parentId, at.index)
+          dir.current = null;
+          cancelPress();
+          cancelFrame();
+          if (!began.current) return;
+          began.current = false;
+          const at = place(info.point.x, info.point.y);
+          geometry.current = null;
+          document.body.style.userSelect = "";
+          disarm();
+          setDragging(false);
+          setGen((g) => g + 1);
+          justDragged.current = true;
+          requestAnimationFrame(() => (justDragged.current = false));
+          store.getState().setDrop(null);
+          if (at) store.getState().move(at.ids, at.parentId, at.index);
         }}
         // press and drag from anywhere unless a Drag handle is mounted; buttons excluded, an unfocused input drags too
         onPointerDown={(e) => {
-          if (hasHandle) return
-          const t = e.target as HTMLElement
+          if (hasHandle) return;
+          const t = e.target as HTMLElement;
           // a nested row's press bubbles here: it owns it, not us
-          if (t.closest(ROWS) !== ref.current) return
-          if (t.closest(BUTTONS)) return
-          const field = t.closest<HTMLElement>(FIELDS)
-          if (field && field === document.activeElement) return
-          if (field) e.preventDefault()
-          touch.current = e.pointerType === "touch"
+          if (t.closest(ROWS) !== ref.current) return;
+          if (t.closest(BUTTONS)) return;
+          const field = t.closest<HTMLElement>(FIELDS);
+          if (field && field === document.activeElement) return;
+          if (field) e.preventDefault();
+          touch.current = e.pointerType === "touch";
           // fine pointer: the press is the drag
-          if (!touch.current) return controls.start(e)
+          if (!touch.current) return controls.start(e);
           // touch: hold still to select and arm; move first and the page scrolls
-          cancelPress()
-          const native = e.nativeEvent
-          const p = { timer: 0, fired: false, x: e.clientX, y: e.clientY }
+          cancelPress();
+          const native = e.nativeEvent;
+          const p = { timer: 0, fired: false, x: e.clientX, y: e.clientY };
           p.timer = window.setTimeout(() => {
-            p.fired = true
-            armed.current = true
-            setArmed(true)
-            store.getState().toggleSelect(id)
-            navigator.vibrate?.(10)
+            p.fired = true;
+            armed.current = true;
+            setArmed(true);
+            store.getState().toggleSelect(id);
+            navigator.vibrate?.(10);
             // the tap that ends the press must not open anything
-            justDragged.current = true
-            controls.start(native)
-          }, LONG_PRESS)
-          press.current = p
+            justDragged.current = true;
+            controls.start(native);
+          }, LONG_PRESS);
+          press.current = p;
         }}
         onPointerMove={(e) => {
-          const p = press.current
-          if (!p || p.fired) return
+          const p = press.current;
+          if (!p || p.fired) return;
           // travelled before the hold landed: this was a scroll, not a drag
-          if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > SLOP) cancelPress()
+          if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > SLOP) cancelPress();
         }}
         onPointerUp={() => {
-          if (press.current?.fired)
-            requestAnimationFrame(() => (justDragged.current = false))
-          cancelPress()
-          if (!began.current) disarm()
+          if (press.current?.fired) requestAnimationFrame(() => (justDragged.current = false));
+          cancelPress();
+          if (!began.current) disarm();
         }}
         onPointerCancel={() => {
-          cancelPress()
-          disarm()
+          cancelPress();
+          disarm();
         }}
         onClickCapture={(e) => {
-          if (justDragged.current) e.stopPropagation()
+          if (justDragged.current) e.stopPropagation();
         }}
         onClick={(e) => {
-          ;(e.target as HTMLElement).closest<HTMLElement>(FIELDS)?.focus()
+          (e.target as HTMLElement).closest<HTMLElement>(FIELDS)?.focus();
         }}
         data-slot="row"
         data-id={id}
@@ -1049,14 +954,12 @@ function RowImpl({
         className={cn(
           "group/row",
           layout,
-          !hasHandle &&
-            !coarse &&
-            "cursor-grab select-none active:cursor-grabbing",
+          !hasHandle && !coarse && "cursor-grab select-none active:cursor-grabbing",
           coarse && "select-none",
           isArmed && "touch-none",
           // collapsed, not display:none: motion keeps a sane layout snapshot, so no fly-in on settle
           (dragging || carried) && "invisible mt-0! h-0 overflow-hidden",
-          className
+          className,
         )}
       >
         {body}
@@ -1092,47 +995,40 @@ function RowImpl({
                   </RowImpl>
                 ) : (
                   <GhostRow key={gid} id={gid} />
-                )
+                ),
               )}
               {ghostIds.length > GHOST_MAX && (
                 <div
                   data-slot="ghost-more"
-                  className={cn(
-                    "px-2 py-1 text-center text-muted-foreground",
-                    tiny[list.variant]
-                  )}
+                  className={cn("px-2 py-1 text-center text-muted-foreground", tiny[list.variant])}
                 >
                   +{ghostIds.length - GHOST_MAX} more
                 </div>
               )}
             </ListContext.Provider>
           </div>,
-          document.body
+          document.body,
         )}
     </FieldContext.Provider>
-  )
+  );
 }
 
 /** touch: hold this long without moving to select the row and arm its drag */
-const LONG_PRESS = 400
+const LONG_PRESS = 400;
 
 /** touch: travel further than this before the hold lands and it was a scroll */
-const SLOP = 8
+const SLOP = 8;
 
 /** ghost shows at most this many carried rows, then "+N more" */
-const GHOST_MAX = 3
+const GHOST_MAX = 3;
 
 /** a carried row drawn in the ghost with the list's own template */
 function GhostRow({ id }: { id: string }) {
-  const { render } = useList()
-  const node = useEditorStore((s) => s.byId[id])
-  if (!node) return null
-  return (
-    <RowIdContext.Provider value={id}>
-      {render({ ...node })}
-    </RowIdContext.Provider>
-  )
+  const { render } = useList();
+  const node = useEditorStore((s) => s.byId[id]);
+  if (!node) return null;
+  return <RowIdContext.Provider value={id}>{render({ ...node })}</RowIdContext.Provider>;
 }
 
 // after Row so the cycle (row → nested → list → row) resolves at call time
-import { List, gridCols } from "./schema"
+import { List, gridCols } from "./schema";

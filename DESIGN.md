@@ -58,16 +58,16 @@ changes. (Same idea as `FieldModule` in flikk tables.)
 
 Three namespaces. Display and mutation are separate; every name carries its object.
 
-| Namespace | Parts |
-|---|---|
-| `Schema` | `Root`, `List`, `Skeleton`, `Ghost`, `AddField`, `Toolbar`, `SelectAll`, `SelectionCount` |
-| `SchemaField` | `Row`, `Type`, `Title`, `Key`, `Description`, `Examples`, `Optional`, `Repeated`, `Nullable`, `ChildrenCount`, `Extra`, `Menu`, `Nested`, `NestedToggle`, `NestedList` |
-| `SchemaAction` | `Drag`, `Select`, `ChangeType`, `Optional`, `Repeated`, `Nullable`, `Duplicate`, `Remove`, `EditDetails`, `MoveInto`, `Primitive` |
+| Namespace      | Parts                                                                                                                                                                  |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Schema`       | `Root`, `List`, `Skeleton`, `Ghost`, `AddField`, `Toolbar`, `SelectAll`, `SelectionCount`                                                                              |
+| `SchemaField`  | `Row`, `Type`, `Title`, `Key`, `Description`, `Examples`, `Optional`, `Repeated`, `Nullable`, `ChildrenCount`, `Extra`, `Menu`, `Nested`, `NestedToggle`, `NestedList` |
+| `SchemaAction` | `Drag`, `Select`, `ChangeType`, `Optional`, `Repeated`, `Nullable`, `Duplicate`, `Remove`, `EditDetails`, `MoveInto`, `Primitive`                                      |
 
 `SchemaField` = bound to node data: editors (Title, Key…) and displays (badges,
 Type icon, ChildrenCount). `SchemaAction` = commands: a click or gesture that
 mutates (Drag → move, Select → selection, ChangeType → type, Remove…).
-`SchemaField.Optional` *shows* the state; `SchemaAction.Optional` *changes* it.
+`SchemaField.Optional` _shows_ the state; `SchemaAction.Optional` _changes_ it.
 `NestedToggle` stays a field part: `collapsed` is view state, never in the JSON.
 
 Rules:
@@ -156,7 +156,9 @@ One tree-wide model, owned by `Schema.Root`:
 ## Selection and bulk actions
 
 ```tsx
-<Schema.Toolbar>                     // data-state="empty|active"
+<Schema.Toolbar>
+  {" "}
+  // data-state="empty|active"
   <Schema.SelectAll /> <Schema.SelectionCount />
   <SchemaAction.Optional /> <SchemaAction.Remove /> <SchemaAction.MoveInto />
 </Schema.Toolbar>

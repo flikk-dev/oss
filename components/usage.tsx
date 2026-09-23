@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
-import { CodeBlock } from "./code-block"
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { CodeBlock } from "./code-block";
 
 const tabs = [
   {
@@ -84,11 +84,11 @@ function Sidebar() {
   return <pre>{JSON.stringify(schema.fields, null, 2)}</pre>
 }`,
   },
-] as const
+] as const;
 
 export function Usage() {
-  const [key, setKey] = React.useState<(typeof tabs)[number]["key"]>("preset")
-  const tab = tabs.find((t) => t.key === key)!
+  const [key, setKey] = React.useState<(typeof tabs)[number]["key"]>("preset");
+  const tab = tabs.find((t) => t.key === key)!;
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-1 border-b border-border">
@@ -100,17 +100,15 @@ export function Usage() {
               "-mb-px border-b-2 px-3 py-2 text-sm",
               t.key === key
                 ? "border-foreground text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
             {t.label}
           </button>
         ))}
-        <span className="ml-auto hidden text-xs text-muted-foreground sm:block">
-          {tab.blurb}
-        </span>
+        <span className="ml-auto hidden text-xs text-muted-foreground sm:block">{tab.blurb}</span>
       </div>
       <CodeBlock code={tab.code} />
     </div>
-  )
+  );
 }

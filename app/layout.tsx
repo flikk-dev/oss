@@ -1,19 +1,19 @@
-import { Suspense } from "react"
-import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Suspense } from "react";
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 
-import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { SiteNav } from "@/components/site-nav"
-import { cn } from "@/lib/utils"
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { SiteNav } from "@/components/site-nav";
+import { cn } from "@/lib/utils";
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-sans" })
-const fontMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
+const fontMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
-export const SITE = "https://oss.flikk.dev/ui"
-const title = "flikk UI: a JSON Schema builder for React"
+export const SITE = "https://oss.flikk.dev/ui";
+const title = "flikk UI: a JSON Schema builder for React";
 const description =
-  "Open-source React components from flikk, shipped the shadcn way. A JSON Schema builder you edit as a tree: presets, compound parts, two hooks, drag and drop across the tree, bulk actions. One command copies the source into your app."
+  "Open-source React components from flikk, shipped the shadcn way. A JSON Schema builder you edit as a tree: presets, compound parts, two hooks, drag and drop across the tree, bulk actions. One command copies the source into your app.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
@@ -49,11 +49,9 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   icons: { icon: "/icon.png", apple: "/icon.png" },
-}
+};
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"
@@ -92,5 +90,5 @@ export default function RootLayout({
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }

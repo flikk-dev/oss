@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   JsonSchemaEditor,
   useJsonSchema,
   useJsonSchemaValue,
   type Variant,
-} from "@/registry/base-nova/ui/json/editor"
+} from "@/registry/base-nova/ui/json/editor";
 import {
   fromJsonSchema,
   toExample,
   validate,
   type Json,
   type JsonSchema,
-} from "@/registry/base-nova/ui/json/core"
+} from "@/registry/base-nova/ui/json/core";
 
 const sample: Json = {
   type: "object",
@@ -123,33 +123,20 @@ const sample: Json = {
       examples: ["2026-09-14T10:00:00Z"],
     },
   },
-  required: [
-    "id",
-    "fullName",
-    "email",
-    "active",
-    "address",
-    "contact",
-    "createdAt",
-  ],
+  required: ["id", "fullName", "email", "active", "address", "contact", "createdAt"],
   additionalProperties: false,
-}
+};
 
-type Shape = "off" | "schema" | "example"
+type Shape = "off" | "schema" | "example";
 
 /** the one reactive consumer: opts in with useJsonSchemaValue */
 function ShapePanel({ schema, shape }: { schema: JsonSchema; shape: Shape }) {
-  const json = useJsonSchemaValue(schema)
+  const json = useJsonSchemaValue(schema);
   const text = React.useMemo(
-    () =>
-      JSON.stringify(
-        shape === "schema" ? json : toExample(fromJsonSchema(json)),
-        null,
-        2
-      ),
-    [json, shape]
-  )
-  const { issues } = React.useMemo(() => validate(fromJsonSchema(json)), [json])
+    () => JSON.stringify(shape === "schema" ? json : toExample(fromJsonSchema(json)), null, 2),
+    [json, shape],
+  );
+  const { issues } = React.useMemo(() => validate(fromJsonSchema(json)), [json]);
   return (
     <div className="flex min-w-0 flex-col gap-2">
       {issues.length > 0 && (
@@ -163,16 +150,16 @@ function ShapePanel({ schema, shape }: { schema: JsonSchema; shape: Shape }) {
         {text}
       </pre>
     </div>
-  )
+  );
 }
 
 export function EditorPreview({ variant }: { variant: Variant }) {
-  const schema = useJsonSchema(sample)
-  const [shape, setShape] = React.useState<Shape>("schema")
-  const mobile = variant === "mobile"
+  const schema = useJsonSchema(sample);
+  const [shape, setShape] = React.useState<Shape>("schema");
+  const mobile = variant === "mobile";
   // the phone: fixed height, scrolls inside; a transform makes it the containing
   // block for the editor's fixed toolbar, and popups portal into it
-  const phone = React.useRef<HTMLDivElement>(null)
+  const phone = React.useRef<HTMLDivElement>(null);
 
   const editor = (
     <div className={cn("rounded-xl border bg-card", mobile ? "p-2" : "p-3")}>
@@ -182,7 +169,7 @@ export function EditorPreview({ variant }: { variant: Variant }) {
         portalContainer={mobile ? phone : undefined}
       />
     </div>
-  )
+  );
 
   return (
     <div className="flex flex-col gap-3">
@@ -216,7 +203,7 @@ export function EditorPreview({ variant }: { variant: Variant }) {
       <div
         className={cn(
           "grid gap-4",
-          shape !== "off" && "lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
+          shape !== "off" && "lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]",
         )}
       >
         {mobile ? (
@@ -228,9 +215,7 @@ export function EditorPreview({ variant }: { variant: Variant }) {
               <div className="absolute inset-x-0 top-0 z-10 flex h-8 items-center justify-center bg-background">
                 <div className="h-1.5 w-20 rounded-full bg-foreground/20" />
               </div>
-              <div className="h-full overflow-y-auto px-3 pt-8 pb-3">
-                {editor}
-              </div>
+              <div className="h-full overflow-y-auto px-3 pt-8 pb-3">{editor}</div>
             </div>
           </div>
         ) : (
@@ -239,5 +224,5 @@ export function EditorPreview({ variant }: { variant: Variant }) {
         {shape !== "off" && <ShapePanel schema={schema} shape={shape} />}
       </div>
     </div>
-  )
+  );
 }

@@ -1,30 +1,23 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
-import { XIcon } from "lucide-react"
-import { CheckIcon } from "lucide-react"
+} from "@/components/ui/dropdown-menu";
+import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
+import { XIcon } from "lucide-react";
+import { CheckIcon } from "lucide-react";
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import {
-  typeGroups,
-  type TypeModule,
-} from "@/registry/base-nova/ui/json/core/types"
-import {
-  useEditor,
-  useVariant,
-  type Variant,
-} from "@/registry/base-nova/ui/json/editor/context"
+} from "@/components/ui/dropdown-menu";
+import { typeGroups, type TypeModule } from "@/registry/base-nova/ui/json/core/types";
+import { useEditor, useVariant, type Variant } from "@/registry/base-nova/ui/json/editor/context";
 
 /**
  * One popup engine for every menu: dropdown on desktop, bottom sheet on
@@ -64,7 +57,7 @@ export const menuStyle: Record<
     icon: "size-6",
     svg: "size-3.5",
   },
-}
+};
 
 /**
  * Bottom sheet for the mobile variant, on Base UI's Dialog. Same look as
@@ -79,12 +72,12 @@ export function EditorSheet({
   className,
   children,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  title: string
-  container?: SheetPrimitive.Portal.Props["container"]
-  className?: string
-  children: React.ReactNode
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  container?: SheetPrimitive.Portal.Props["container"];
+  className?: string;
+  children: React.ReactNode;
 }) {
   return (
     <SheetPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -94,21 +87,13 @@ export function EditorSheet({
           data-slot="editor-sheet"
           className={cn(
             "fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col gap-4 overflow-y-auto rounded-t-2xl border-t bg-popover p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-ending-style:translate-y-10 data-ending-style:opacity-0 data-starting-style:translate-y-10 data-starting-style:opacity-0",
-            className
+            className,
           )}
         >
-          <SheetPrimitive.Title className="text-sm font-normal">
-            {title}
-          </SheetPrimitive.Title>
+          <SheetPrimitive.Title className="text-sm font-normal">{title}</SheetPrimitive.Title>
           {children}
           <SheetPrimitive.Close
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="absolute top-3 right-3"
-              />
-            }
+            render={<Button variant="ghost" size="icon-sm" className="absolute top-3 right-3" />}
           >
             <XIcon />
             <span className="sr-only">Close</span>
@@ -116,11 +101,11 @@ export function EditorSheet({
         </SheetPrimitive.Popup>
       </SheetPrimitive.Portal>
     </SheetPrimitive.Root>
-  )
+  );
 }
 
-type MenuCtx = { close: () => void; sheet: boolean }
-export const MenuContext = React.createContext<MenuCtx | null>(null)
+type MenuCtx = { close: () => void; sheet: boolean };
+export const MenuContext = React.createContext<MenuCtx | null>(null);
 
 export function Menu({
   trigger,
@@ -129,64 +114,53 @@ export function Menu({
   className,
   children,
 }: {
-  trigger: React.ReactElement
+  trigger: React.ReactElement;
   /** sheet heading on mobile */
-  title: string
-  align?: "start" | "end"
-  className?: string
-  children: React.ReactNode
+  title: string;
+  align?: "start" | "end";
+  className?: string;
+  children: React.ReactNode;
 }) {
-  const variant = useVariant()
-  const { portal } = useEditor()
-  const st = menuStyle[variant]
-  const [open, setOpen] = React.useState(false)
+  const variant = useVariant();
+  const { portal } = useEditor();
+  const st = menuStyle[variant];
+  const [open, setOpen] = React.useState(false);
   const ctx = React.useMemo(
     () => ({ close: () => setOpen(false), sheet: variant === "mobile" }),
-    [variant]
-  )
+    [variant],
+  );
 
   if (variant === "mobile")
     return (
       <MenuContext.Provider value={ctx}>
-        {React.cloneElement(
-          trigger as React.ReactElement<Record<string, unknown>>,
-          {
-            "aria-haspopup": "dialog",
-            "aria-expanded": open,
-            onClick: () => setOpen(true),
-          }
-        )}
-        <EditorSheet
-          open={open}
-          onOpenChange={setOpen}
-          title={title}
-          container={portal}
-        >
+        {React.cloneElement(trigger as React.ReactElement<Record<string, unknown>>, {
+          "aria-haspopup": "dialog",
+          "aria-expanded": open,
+          onClick: () => setOpen(true),
+        })}
+        <EditorSheet open={open} onOpenChange={setOpen} title={title} container={portal}>
           <div
             className={cn(
               "flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border",
-              className
+              className,
             )}
           >
             {children}
           </div>
         </EditorSheet>
       </MenuContext.Provider>
-    )
+    );
 
   return (
     <MenuContext.Provider value={ctx}>
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger render={trigger} />
-        <DropdownMenuContent
-          align={align}
-          className={cn(st.content, className)}
-        >
+        <DropdownMenuContent align={align} className={cn(st.content, className)}>
           {children}
         </DropdownMenuContent>
       </DropdownMenu>
     </MenuContext.Provider>
-  )
+  );
 }
 
 /** one item: a Button inside a sheet, a DropdownMenuItem otherwise. Density from the variant. */
@@ -196,13 +170,13 @@ export function MenuItem({
   children,
   ...rest
 }: {
-  onClick: (e: React.MouseEvent) => void
-  className?: string
-  children: React.ReactNode
-  render?: React.ComponentProps<typeof Button>["render"]
+  onClick: (e: React.MouseEvent) => void;
+  className?: string;
+  children: React.ReactNode;
+  render?: React.ComponentProps<typeof Button>["render"];
 } & Record<`data-${string}` | `aria-${string}`, unknown>) {
-  const st = menuStyle[useVariant()]
-  const menu = React.useContext(MenuContext)
+  const st = menuStyle[useVariant()];
+  const menu = React.useContext(MenuContext);
   return menu?.sheet ? (
     <Button
       variant="ghost"
@@ -221,19 +195,15 @@ export function MenuItem({
     >
       {children}
     </DropdownMenuItem>
-  )
+  );
 }
 
 /** section heading inside a Menu */
 export function MenuLabel({ children }: { children: React.ReactNode }) {
-  const st = menuStyle[useVariant()]
+  const st = menuStyle[useVariant()];
   return (
-    <div
-      className={cn("px-2 py-1 font-normal text-muted-foreground", st.label)}
-    >
-      {children}
-    </div>
-  )
+    <div className={cn("px-2 py-1 font-normal text-muted-foreground", st.label)}>{children}</div>
+  );
 }
 
 /** icon tile used by type triggers and menu items */
@@ -243,29 +213,25 @@ export function IconTile({
   size,
   className,
 }: {
-  icon: React.ComponentType<{ className?: string }>
-  color?: string
-  size?: "xs" | "sm" | "md" | "lg"
-  className?: string
+  icon: React.ComponentType<{ className?: string }>;
+  color?: string;
+  size?: "xs" | "sm" | "md" | "lg";
+  className?: string;
 }) {
-  const tile = { xs: "size-3.5", sm: "size-4", md: "size-5", lg: "size-7" }[
-    size ?? "md"
-  ]
-  const svg = { xs: "size-2.5", sm: "size-3", md: "size-3", lg: "size-4" }[
-    size ?? "md"
-  ]
+  const tile = { xs: "size-3.5", sm: "size-4", md: "size-5", lg: "size-7" }[size ?? "md"];
+  const svg = { xs: "size-2.5", sm: "size-3", md: "size-3", lg: "size-4" }[size ?? "md"];
   return (
     <span
       className={cn(
         "flex shrink-0 items-center justify-center rounded-md",
         tile,
         color ?? "text-muted-foreground",
-        className
+        className,
       )}
     >
       <Icon className={svg} />
     </span>
-  )
+  );
 }
 
 /* -------------------------------- type menu ------------------------------ */
@@ -277,25 +243,22 @@ export function TypeMenu({
   current,
   onPick,
 }: {
-  trigger: React.ReactElement
-  title: string
-  current?: string
-  onPick: (key: string) => void
+  trigger: React.ReactElement;
+  title: string;
+  current?: string;
+  onPick: (key: string) => void;
 }) {
-  const { types } = useEditor()
-  const v = useVariant()
-  const known = new Set(typeGroups.flatMap((g) => g.types))
+  const { types } = useEditor();
+  const v = useVariant();
+  const known = new Set(typeGroups.flatMap((g) => g.types));
   const groups = typeGroups
     .map((g) => ({
       ...g,
-      mods: g.types
-        .map((k) => types.find((t) => t.key === k))
-        .filter((t): t is TypeModule => !!t),
+      mods: g.types.map((k) => types.find((t) => t.key === k)).filter((t): t is TypeModule => !!t),
     }))
-    .filter((g) => g.mods.length)
-  const custom = types.filter((t) => !known.has(t.key))
-  if (custom.length)
-    groups.push({ key: "custom", label: "Custom", types: [], mods: custom })
+    .filter((g) => g.mods.length);
+  const custom = types.filter((t) => !known.has(t.key));
+  if (custom.length) groups.push({ key: "custom", label: "Custom", types: [], mods: custom });
   return (
     <Menu title={title} trigger={trigger}>
       {groups.map((g, i) => (
@@ -315,7 +278,7 @@ export function TypeMenu({
         </React.Fragment>
       ))}
     </Menu>
-  )
+  );
 }
 
 function TypeItem({
@@ -323,17 +286,17 @@ function TypeItem({
   selected,
   onSelect,
 }: {
-  mod: TypeModule
-  selected: boolean
-  onSelect: () => void
+  mod: TypeModule;
+  selected: boolean;
+  onSelect: () => void;
 }) {
-  const v = useVariant()
-  const menu = React.useContext(MenuContext)
+  const v = useVariant();
+  const menu = React.useContext(MenuContext);
   return (
     <MenuItem
       onClick={() => {
-        onSelect()
-        menu?.close()
+        onSelect();
+        menu?.close();
       }}
     >
       <IconTile
@@ -344,14 +307,10 @@ function TypeItem({
       <span className="min-w-0 flex-1">
         <span className="block truncate">{mod.label}</span>
         {v === "wide" && (
-          <span className="block truncate text-xs text-muted-foreground">
-            {mod.description}
-          </span>
+          <span className="block truncate text-xs text-muted-foreground">{mod.description}</span>
         )}
       </span>
-      {selected && (
-        <CheckIcon className="size-3.5 shrink-0 text-muted-foreground" />
-      )}
+      {selected && <CheckIcon className="size-3.5 shrink-0 text-muted-foreground" />}
     </MenuItem>
-  )
+  );
 }

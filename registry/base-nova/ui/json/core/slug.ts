@@ -1,4 +1,4 @@
-export type SlugCase = "kebab" | "camel" | "snake"
+export type SlugCase = "kebab" | "camel" | "snake";
 
 const words = (s: string) =>
   s
@@ -9,17 +9,17 @@ const words = (s: string) =>
     .trim()
     .split(/\s+/)
     .filter(Boolean)
-    .map((w) => w.toLowerCase())
+    .map((w) => w.toLowerCase());
 
 /** "Created at" → created-at | createdAt | created_at */
 export function slugify(title: string, kase: SlugCase): string {
-  const w = words(title)
-  if (!w.length) return ""
+  const w = words(title);
+  if (!w.length) return "";
   switch (kase) {
     case "kebab":
-      return w.join("-")
+      return w.join("-");
     case "snake":
-      return w.join("_")
+      return w.join("_");
     case "camel":
       return (
         w[0] +
@@ -27,7 +27,7 @@ export function slugify(title: string, kase: SlugCase): string {
           .slice(1)
           .map((x) => x[0].toUpperCase() + x.slice(1))
           .join("")
-      )
+      );
   }
 }
 
@@ -35,22 +35,17 @@ const suffixSep: Record<SlugCase, string> = {
   kebab: "-",
   snake: "_",
   camel: "",
-}
+};
 
 /** first of base, base2, base3… (sep per case) not in taken */
-export function uniqueSlug(
-  base: string,
-  taken: Set<string>,
-  kase: SlugCase
-): string {
-  if (!base || !taken.has(base)) return base
+export function uniqueSlug(base: string, taken: Set<string>, kase: SlugCase): string {
+  if (!base || !taken.has(base)) return base;
   // strip an existing numeric suffix so "email2" → "email" → "email3"
-  const sep = suffixSep[kase]
-  const root =
-    base.replace(new RegExp(`${sep ? "\\" + sep : ""}\\d+$`), "") || base
+  const sep = suffixSep[kase];
+  const root = base.replace(new RegExp(`${sep ? "\\" + sep : ""}\\d+$`), "") || base;
   for (let n = 2; n < 1000; n++) {
-    const candidate = `${root}${sep}${n}`
-    if (!taken.has(candidate)) return candidate
+    const candidate = `${root}${sep}${n}`;
+    if (!taken.has(candidate)) return candidate;
   }
-  return base
+  return base;
 }

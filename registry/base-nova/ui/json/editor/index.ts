@@ -7,9 +7,9 @@
  * Or compose: <Schema.Root store={schema}><Schema.List render={row} /></Schema.Root>
  * with SchemaField.* / SchemaAction.* inside `row`.
  */
-import * as SchemaParts from "./schema"
-import * as FieldParts from "./field"
-import * as ActionParts from "./action"
+import * as SchemaParts from "./schema";
+import * as FieldParts from "./field";
+import * as ActionParts from "./action";
 export const Schema = {
   Root: SchemaParts.Root,
   List: SchemaParts.List,
@@ -20,7 +20,7 @@ export const Schema = {
   SelectionMenu: SchemaParts.SelectionMenu,
   SelectAll: SchemaParts.SelectAll,
   SelectionCount: SchemaParts.SelectionCount,
-}
+};
 
 export const SchemaField = {
   Row: FieldParts.Row,
@@ -39,7 +39,7 @@ export const SchemaField = {
   NestedToggle: FieldParts.NestedToggle,
   NestedList: FieldParts.NestedList,
   NestedSummary: FieldParts.NestedSummary,
-}
+};
 
 export const SchemaAction = {
   Primitive: ActionParts.ActionPrimitive,
@@ -55,10 +55,10 @@ export const SchemaAction = {
   EditDetails: ActionParts.EditDetails,
   MoveInto: ActionParts.MoveInto,
   ClearSelection: ActionParts.ClearSelection,
-}
+};
 
-export { JsonSchemaEditor, useJsonSchema, useJsonSchemaValue } from "./presets"
-export { useSchema, useField, type NewField } from "./hooks"
-export type { Field, FieldPatch } from "@/registry/base-nova/ui/json/core"
-export type { Variant } from "@/registry/base-nova/ui/json/editor/context"
-export type { CommandContext } from "./action"
+export { JsonSchemaEditor, useJsonSchema, useJsonSchemaValue } from "./presets";
+export { useSchema, useField, type NewField } from "./hooks";
+export type { Field, FieldPatch } from "@/registry/base-nova/ui/json/core";
+export type { Variant } from "@/registry/base-nova/ui/json/editor/context";
+export type { CommandContext } from "./action";
