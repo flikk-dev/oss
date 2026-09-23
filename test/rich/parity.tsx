@@ -94,6 +94,58 @@ export async function expectParity(a: Subject, b: Subject, initial: string, step
   expect(ta).toEqual(tb);
 }
 
+/* ------------------------------- events ---------------------------------- */
+
+/**
+ * What the field told the outside world, per step.
+ *
+ * A drop-in has to be observable, not just correct: a form library watches
+ * `input`, a dirty check watches `change`, an editor toolbar watches `select`.
+ * Comparing state alone would pass a component that silently tells nobody
+ * anything, which is exactly what a contenteditable does by default.
+ */
+export async function traceEvents(
+  subject: Subject,
+  initial: string,
+  steps: Step[],
+): Promise<string[][]> {
+  const user = userEvent.setup({ document });
+  const view = render(subject.render({ defaultValue: initial }));
+  const el = subject.target(view);
+  const seen: string[] = [];
+  const kinds = ["beforeinput", "input", "change", "select", "focus", "blur"];
+  for (const k of kinds) el.addEventListener(k, () => seen.push(k));
+  el.focus();
+  subject.setSelection(view, initial.length, initial.length);
+  const out: string[][] = [];
+  for (const step of steps) {
+    seen.length = 0;
+    if ("select" in step) subject.setSelection(view, ...step.select);
+    else await user.keyboard(step.keys);
+    out.push([...seen]);
+  }
+  // `change` only lands on blur, and only when something actually changed
+  seen.length = 0;
+  el.blur();
+  out.push([...seen]);
+  view.unmount();
+  return out;
+}
+
+export async function expectEventParity(a: Subject, b: Subject, initial: string, steps: Step[]) {
+  const [ea, eb] = [await traceEvents(a, initial, steps), await traceEvents(b, initial, steps)];
+  const names = [...steps.map((s) => s.name), "blur"];
+  for (let i = 0; i < names.length; i++) {
+    if (ea[i]!.join(" ") !== eb[i]!.join(" "))
+      throw new Error(
+        `different events after: ${names.slice(0, i + 1).join(" → ")}\n` +
+          `  ${a.name}: ${ea[i]!.join(" ") || "(none)"}\n` +
+          `  ${b.name}: ${eb[i]!.join(" ") || "(none)"}`,
+      );
+  }
+  expect(ea).toEqual(eb);
+}
+
 /* ------------------------------ the scripts ------------------------------ */
 
 /** everything a plain text field does, and every one of these must match */

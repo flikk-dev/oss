@@ -16,12 +16,26 @@ import { RAW, readSelection, readValue, toOffset as domOffset, writeSelection } 
  * to be a div; every token the host declares becomes one object inside it.
  */
 
+type Snapshot = { value: string; start: number; end: number };
+
+/** what an edit was, for folding a run of them into one undo step */
+type EditKind = "type" | "delete" | "other" | "silent";
+
 export type RichHandle = {
   readonly value: string;
   readonly selectionStart: number;
   readonly selectionEnd: number;
   setSelectionRange: (start: number, end: number) => void;
   focus: () => void;
+  /**
+   * Step back through the edits, value and caret together.
+   *
+   * Ours to own rather than the browser's: intercepting every input to keep
+   * chips whole desynchronises the native history, so `historyUndo` is
+   * cancelled and answered here instead.
+   */
+  undo: () => void;
+  redo: () => void;
 };
 
 type Props = {
@@ -167,6 +181,21 @@ function Surface({
   latest.current = value;
   const caretRef = React.useRef(0);
   /**
+   * History is whole values, not edits.
+   *
+   * Everything this component shows is derived from one string, so a snapshot
+   * of that string plus the caret *is* the state — there is nothing else to put
+   * back. Undo replaces the value wholesale and the chips re-derive themselves,
+   * which is why no chip bookkeeping appears anywhere below.
+   *
+   * Runs of the same kind fold into one entry, so undo steps back over a word
+   * rather than a letter; changing kind starts a new one, which keeps a delete
+   * from being swallowed by the typing before it.
+   */
+  const past = React.useRef<Snapshot[]>([]);
+  const future = React.useRef<Snapshot[]>([]);
+  const lastKind = React.useRef<EditKind | null>(null);
+  /**
    * The live selection, so a chip inside it can paint itself.
    *
    * The browser will not do it: a chip is `contenteditable=false`, and native
@@ -183,7 +212,51 @@ function Surface({
    * A delete still keeps an open draft open, so backspacing mid-word does not
    * freeze the token you are in the middle of.
    */
-  const commit = (next: string, caret: { start: number; end: number }, typed = false) => {
+  /** put a value back without recording that as an edit of its own */
+  const restore = (snap: Snapshot) => {
+    setCaret(snap.start === snap.end ? snap.start : null);
+    caretRef.current = snap.start;
+    setDraft(null);
+    lastKind.current = null;
+    pending.current = { start: snap.start, end: snap.end };
+    if (controlled === undefined) setUncontrolled(snap.value);
+    onValueChange?.(snap.value);
+  };
+
+  const here = (): Snapshot => ({
+    value: latest.current,
+    start: caretRef.current,
+    end: caretRef.current,
+  });
+
+  const undo = () => {
+    const snap = past.current.pop();
+    if (!snap) return;
+    future.current.push(here());
+    restore(snap);
+  };
+
+  const redo = () => {
+    const snap = future.current.pop();
+    if (!snap) return;
+    past.current.push(here());
+    restore(snap);
+  };
+
+  const commit = (
+    next: string,
+    caret: { start: number; end: number },
+    typed = false,
+    kind: EditKind = "other",
+  ) => {
+    if (kind !== "silent") {
+      // record what this edit is leaving behind, so undo lands back on it
+      if (kind !== lastKind.current || kind === "other")
+        past.current.push({ value, start: caretRef.current, end: caretRef.current });
+      lastKind.current = kind;
+      // a future only survives until you write a different one
+      future.current.length = 0;
+    }
     setCaret(caret.start === caret.end ? caret.start : null);
     caretRef.current = caret.start;
     const segs = parse(next, components);
@@ -231,10 +304,14 @@ function Surface({
           const shift = settled.length - raw.length;
           const c = caretRef.current;
           const moved = c > at ? c + shift : c;
-          commit(now.slice(0, at) + settled + now.slice(at + raw.length), {
-            start: moved,
-            end: moved,
-          });
+          commit(
+            now.slice(0, at) + settled + now.slice(at + raw.length),
+            { start: moved, end: moved },
+            false,
+            // the lookup settling is not something the user did; undo should
+            // step over the token they typed, not the answer that arrived
+            "silent",
+          );
         })
         .catch(() => {})
         .finally(() =>
@@ -312,6 +389,8 @@ function Surface({
         writeSelection(el, clampOut(segs, start, -1), clampOut(segs, end, 1));
       },
       focus: () => root.current?.focus(),
+      undo,
+      redo,
     }),
     [value, components],
   );
@@ -365,24 +444,31 @@ function Surface({
         }
         return { from, to };
       };
-      const apply = (from: number, to: number, insert: string, typed = false) => {
+      const apply = (
+        from: number,
+        to: number,
+        insert: string,
+        typed = false,
+        kind: EditKind = "other",
+      ) => {
         e.preventDefault();
         commit(
           current.slice(0, from) + insert + current.slice(to),
           { start: from + insert.length, end: from + insert.length },
           typed,
+          kind,
         );
       };
 
       if (type === "insertText" || type === "insertReplacementText") {
         const { from, to } = whole(live);
-        return apply(from, to, e.data ?? "", true);
+        return apply(from, to, e.data ?? "", true, "type");
       }
       if (type === "insertParagraph" || type === "insertLineBreak") {
         e.preventDefault();
         if (!multiline) return; // a single-line field swallows Enter, like <input>
         const { from, to } = whole(live);
-        return apply(from, to, "\n");
+        return apply(from, to, "\n", false, "type");
       }
       if (type === "insertFromPaste" || type === "insertFromDrop") {
         e.preventDefault();
@@ -399,9 +485,18 @@ function Surface({
               : { start: t.start, end: Math.min(current.length, t.end + 1) };
         const { from, to } = whole(range);
         if (from === to) return void e.preventDefault();
-        return apply(from, to, "");
+        return apply(from, to, "", false, "delete");
       }
-      if (type === "historyUndo" || type === "historyRedo") e.preventDefault();
+      // the browser's own history is desynchronised by everything above, so
+      // its keystroke is answered from ours instead of being merely swallowed
+      if (type === "historyUndo") {
+        e.preventDefault();
+        return undo();
+      }
+      if (type === "historyRedo") {
+        e.preventDefault();
+        return redo();
+      }
     };
 
     const onStart = () => {
@@ -444,7 +539,7 @@ function Surface({
        * and the DOM no longer matching what React last rendered is how we know.
        */
       if (readValue(el) !== was.value) setDomKey((k) => k + 1);
-      commit(next, { start: at, end: at }, true);
+      commit(next, { start: at, end: at }, true, "type");
     };
 
     el.addEventListener("beforeinput", onBeforeInput);
