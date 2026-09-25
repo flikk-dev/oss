@@ -2,12 +2,7 @@
 
 import * as React from "react";
 import { BracesIcon, HashIcon } from "lucide-react";
-import {
-  defineInputField,
-  parse,
-  RichInput,
-  RichTextarea,
-} from "@/registry/base-nova/ui/rich/editor";
+import { defineInputField, RichInput, RichTextarea } from "@/registry/base-nova/ui/rich/editor";
 
 /** stand-ins for whatever a host would actually look these up in */
 const PEOPLE: Record<string, string> = {
@@ -41,11 +36,11 @@ function Mention({ name }: { name: string }) {
 
 /**
  * Both @ signs, because a Japanese IME types the full-width one (U+FF20) and a
- * US keyboard types U+0040 — the same character to a reader, two code points to
+ * US keyboard types U+0040. The same character to a reader, two code points to
  * a regex. Which spellings count is the host's call, not the component's.
  *
  * Two patterns, because a mention is async. `@sam` names a lookup but carries
- * no answer, so it can only render after a fetch — and pasting it elsewhere
+ * no answer, so it can only render after a fetch, and pasting it elsewhere
  * would need the same fetch again. `resolve` rewrites it into
  * `@[Sam Okoye](sam)`, which the second pattern matches and renders straight
  * from its own groups. The value ends up carrying the answer, so a copy-paste
@@ -63,9 +58,9 @@ const user = defineInputField("user", {
   className:
     "font-medium text-foreground decoration-foreground/25 underline-offset-2 hover:underline",
   render: {
-    // @sam — only the slug, so the name is a guess until the lookup lands
+    // @sam: only the slug, so the name is a guess until the lookup lands
     draft: ({ groups }) => <Mention name={PEOPLE[groups[0]!.toLowerCase()] ?? groups[0]!} />,
-    // @[Sam Okoye](sam) — the name is right there in the value
+    // @[Sam Okoye](sam): the name is right there in the value
     resolved: ({ groups }) => <Mention name={groups[0]!} />,
   },
 });
@@ -98,93 +93,49 @@ const issue = defineInputField("issue", {
 
 const FIELDS = [user, ref, issue];
 
-function Readout({ value }: { value: string }) {
-  const segs = parse(value, FIELDS);
-  const chips = segs.filter((s) => s.type === "field").length;
+export function RichDemo() {
+  const [line, setLine] = React.useState("Hi @marc, {{trigger.order}} shipped, see #412");
   return (
-    <div className="flex flex-col gap-1 text-2xs">
-      <div className="flex gap-3 text-muted-foreground">
-        <span>
-          {value.length} chars · {chips} {chips === 1 ? "chip" : "chips"}
-        </span>
-      </div>
-      <pre className="overflow-x-auto rounded-sm bg-muted/50 px-2 py-1.5 font-mono break-all whitespace-pre-wrap">
-        {value || " "}
-      </pre>
-    </div>
+    <RichInput
+      aria-label="Rich input"
+      components={FIELDS}
+      value={line}
+      onValueChange={setLine}
+      placeholder="Try @marc, {{trigger.x}} or #412"
+    />
   );
 }
 
-export function RichDemo() {
-  const [line, setLine] = React.useState("Hi @marc, {{trigger.order}} shipped — see #412");
+export function RichTextareaDemo() {
+  const [body, setBody] = React.useState(
+    "Hey @ana,\n\nThe run for {{trigger.customer}} finished.\nFiled as #1354.\n\n@sam",
+  );
+  return (
+    <RichTextarea
+      aria-label="Rich textarea"
+      components={FIELDS}
+      value={body}
+      onValueChange={setBody}
+      placeholder="Write something"
+    />
+  );
+}
+
+export function PlainDemo() {
+  return <RichInput aria-label="Plain rich input" placeholder="Just a text field" />;
+}
+
+export function ComposedDemo() {
   const [cjk, setCjk] = React.useState(
     "おはようございます、@sam さん。\n{{trigger.order}} が発送されました。",
   );
-  const [body, setBody] = React.useState(
-    "Hey @ana,\n\nThe run for {{trigger.customer}} finished.\nFiled as #1354.\n\n— @sam",
-  );
   return (
-    <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-medium">RichInput</h2>
-          <span className="text-2xs text-muted-foreground">single line · Enter does nothing</span>
-        </div>
-        <RichInput
-          aria-label="Rich input demo"
-          components={FIELDS}
-          value={line}
-          onValueChange={setLine}
-          placeholder="Try @marc, {{trigger.x}} or #412…"
-        />
-        <Readout value={line} />
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-medium">RichTextarea</h2>
-          <span className="text-2xs text-muted-foreground">multiline · Enter breaks</span>
-        </div>
-        <RichTextarea
-          aria-label="Rich textarea demo"
-          components={FIELDS}
-          value={body}
-          onValueChange={setBody}
-          placeholder="Write something…"
-        />
-        <Readout value={body} />
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-medium">Composed input</h2>
-          <span className="text-2xs text-muted-foreground">IME · Japanese, Chinese, Korean</span>
-        </div>
-        <RichTextarea
-          aria-label="Composed input demo"
-          components={FIELDS}
-          value={cjk}
-          onValueChange={setCjk}
-          placeholder="かな入力でどうぞ…"
-        />
-        <Readout value={cjk} />
-        <p className="text-2xs text-muted-foreground">
-          An input method writes into the field directly, which is the one case the component cannot
-          intercept. Worth trying: compose a word and accept a candidate, press Enter, delete
-          backwards, then type latin after it — each of those used to leave the value doubled or
-          every offset drifting by one more per keystroke.
-        </p>
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-medium">No fields declared</h2>
-          <span className="text-2xs text-muted-foreground">
-            must behave exactly like &lt;input&gt;
-          </span>
-        </div>
-        <RichInput aria-label="Plain rich input" placeholder="Just a text field…" />
-      </section>
-    </div>
+    <RichTextarea
+      aria-label="Composed input"
+      components={FIELDS}
+      value={cjk}
+      onValueChange={setCjk}
+      placeholder="かな入力でどうぞ"
+    />
   );
 }

@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: SITE,
-    siteName: "flikk UI",
+    siteName: "flikk open source",
     title,
     description,
   },
@@ -76,7 +76,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "SoftwareSourceCode",
-              name: "flikk UI: JSON Schema builder",
+              name: "flikk open source",
               description,
               url: SITE,
               codeRepository: "https://github.com/flikk-dev/oss",

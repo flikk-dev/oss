@@ -25,11 +25,6 @@ export function DocsNav({ entries }: { entries: Entry[] }) {
             )}
           >
             {e.name}
-            {e.status === "in progress" && (
-              <span className="rounded-xs border border-border px-1 font-mono text-3xs tracking-wide text-muted-foreground uppercase">
-                wip
-              </span>
-            )}
           </Link>
         );
       })}

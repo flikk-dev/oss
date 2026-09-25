@@ -1,7 +1,7 @@
 /**
  * What flikk has open-sourced.
  *
- * One entry per thing, and every list on the site reads from here — the docs
+ * One entry per thing, and every list on the site reads from here: the docs
  * sidebar, the docs index, the landing page, the sitemap. Publishing the next
  * one is a row in this array plus its page.
  */

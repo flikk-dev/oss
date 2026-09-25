@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-export const alt = "flikk UI: a JSON Schema builder for React";
+export const alt = "flikk open source";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -44,7 +44,7 @@ export default async function Image() {
             letterSpacing: -2,
           }}
         >
-          Use flikk&apos;s components
+          The parts of flikk
         </div>
         <div
           style={{
@@ -55,11 +55,11 @@ export default async function Image() {
             color: "#ec4e02",
           }}
         >
-          in your own projects.
+          that were never ours to keep.
         </div>
       </div>
       <div style={{ display: "flex", fontSize: 30, color: "#6f6e80" }}>
-        A JSON Schema builder, shipped the shadcn way. MIT.
+        React components you copy into your app. MIT.
       </div>
     </div>,
     size,
