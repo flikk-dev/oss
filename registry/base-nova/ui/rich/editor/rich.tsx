@@ -225,6 +225,9 @@ function Surface({
    * raises one `select`. Reporting only real movement collapses that back.
    */
   const lastSel = React.useRef({ start: 0, end: 0 });
+  /** the draft, readable from listeners that were registered once */
+  const draftRef = React.useRef<{ start: number; end: number } | null>(null);
+  draftRef.current = draft;
   /**
    * The live selection, so a chip inside it can paint itself.
    *
@@ -374,7 +377,33 @@ function Surface({
         setRange(null);
         return setDraft(null);
       }
-      const { start, end } = readSelection(el);
+      /**
+       * A caret cannot live inside an atomic token.
+       *
+       * Browsers usually step over a `contenteditable=false` element on their
+       * own, but "usually" is not a guarantee, and anything that sets a
+       * selection by offset — a host, a restored range, a stray arrow — can
+       * land in the middle of one. Push it out the way it was travelling, so
+       * the next keystroke cannot split a chip down the middle.
+       */
+      const here = readSelection(el);
+      if (here.start === here.end) {
+        const d = draftRef.current;
+        const stuck = parse(readValue(el), components).find(
+          (seg) =>
+            seg.type === "field" &&
+            !seg.field.editable &&
+            here.start > seg.match.start &&
+            here.start < seg.match.end &&
+            !(d && d.start <= seg.match.start && d.end >= seg.match.end),
+        );
+        if (stuck && stuck.type === "field") {
+          const back = here.start < lastSel.current.start;
+          const to = back ? stuck.match.start : stuck.match.end;
+          return writeSelection(el, to, to);
+        }
+      }
+      const { start, end } = here;
       const moved = start !== lastSel.current.start || end !== lastSel.current.end;
       lastSel.current = { start, end };
       caretRef.current = start;

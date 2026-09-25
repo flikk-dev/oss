@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit && bun run --cwd apps/page typecheck",
     "test": "bun test",
     "lint": "oxlint --fix && oxfmt --write",
-    "check": "oxlint --deny-warnings && oxfmt --check . && bun run typecheck"
+    "check": "oxlint --deny-warnings && oxfmt --check . && bun run typecheck",
+    "test:fuzz": "FUZZ=1 bun test test/rich/fuzz.test.tsx"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

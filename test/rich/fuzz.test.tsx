@@ -1,15 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import * as React from "react";
-import type { RenderResult } from "@testing-library/react";
+import { render, type RenderResult } from "@testing-library/react";
 import {
   defineInputField,
   parse,
   RichInput,
+  RichTextarea,
   serialize,
   type InputField,
 } from "@/registry/base-nova/ui/rich/editor";
 import { type RichHandle } from "@/registry/base-nova/ui/rich/editor";
-import { expectParity, trace, type Step, type Subject } from "./parity";
+import userEvent from "@testing-library/user-event";
+import { expectParity, type Step, type Subject } from "./parity";
 
 /**
  * The handwritten scripts say what we thought to check. These say what we did
@@ -54,12 +56,17 @@ function script(seed: number, steps: number, newlines = false) {
   for (let i = 0; i < steps; i++) {
     const roll = r();
     if (roll < 0.35) {
-      const text = chars(1 + Math.floor(r() * 3));
-      // user-event reads {} and [] as key syntax, so they go in escaped
-      out.push({
-        name: `type ${JSON.stringify(text)}`,
-        keys: text.replace(/[{[]/g, "$&$&"),
-      });
+      /**
+       * Braces and brackets are never *typed*.
+       *
+       * user-event reads `{Key}` and `[Code]` as key descriptors, and escaping
+       * only the openers leaves `}` to close a descriptor that was never
+       * opened — which makes the keystrokes, not the component, the thing under
+       * test. They still appear in generated initial values, so `{{ref}}`
+       * tokens get selected, deleted and split as much as any other.
+       */
+      const text = chars(1 + Math.floor(r() * 3)).replace(/[{}[\]]/g, "a");
+      out.push({ name: `type ${JSON.stringify(text)}`, keys: text });
     } else if (roll < 0.52) out.push({ name: "backspace", keys: "{Backspace}" });
     else if (roll < 0.64) out.push({ name: "delete", keys: "{Delete}" });
     else if (roll < 0.85) {
@@ -82,6 +89,43 @@ function script(seed: number, steps: number, newlines = false) {
 /* ---------------------------- the subjects ------------------------------- */
 
 const handles = new WeakMap<object, RichHandle>();
+
+const nativeTextarea: Subject = {
+  name: "<textarea>",
+  kind: "textarea",
+  render: ({ defaultValue }) => <textarea data-testid="subject" defaultValue={defaultValue} />,
+  read: (view: RenderResult) => {
+    const el = view.getByTestId("subject") as HTMLTextAreaElement;
+    return { value: el.value, start: el.selectionStart ?? 0, end: el.selectionEnd ?? 0 };
+  },
+  setSelection: (view: RenderResult, start: number, end: number) =>
+    (view.getByTestId("subject") as HTMLTextAreaElement).setSelectionRange(start, end),
+  target: (view: RenderResult) => view.getByTestId("subject"),
+};
+
+const richTextarea = (): Subject => {
+  const key = {};
+  const Mount = ({ defaultValue }: { defaultValue: string }) => (
+    <RichTextarea
+      ref={(h) => {
+        if (h) handles.set(key, h);
+      }}
+      data-testid="subject"
+      defaultValue={defaultValue}
+    />
+  );
+  return {
+    name: "<RichTextarea>",
+    kind: "textarea",
+    render: ({ defaultValue }) => <Mount defaultValue={defaultValue} />,
+    read: () => {
+      const h = handles.get(key)!;
+      return { value: h.value, start: h.selectionStart, end: h.selectionEnd };
+    },
+    setSelection: (_v, start, end) => handles.get(key)!.setSelectionRange(start, end),
+    target: (view: RenderResult) => view.getByTestId("subject"),
+  };
+};
 
 const nativeInput: Subject = {
   name: "<input>",
@@ -132,10 +176,16 @@ const FIELDS = [
 
 /* ------------------------------- the runs -------------------------------- */
 
-const RUNS = 100;
-const STEPS = 12;
+/**
+ * Off by default: three hundred scripts take minutes, which is too slow to sit
+ * in front of every `bun test`. `bun run test:fuzz` runs it, and FUZZ_RUNS
+ * turns it up when something needs shaking out harder.
+ */
+const RUNS = Number(process.env.FUZZ_RUNS ?? 100);
+const STEPS = Number(process.env.FUZZ_STEPS ?? 12);
+const when = describe.skipIf(process.env.FUZZ !== "1");
 
-describe(`${RUNS} generated scripts, with no fields, are a plain text field`, () => {
+when(`${RUNS} generated scripts, with no fields, are a plain text field`, () => {
   for (let seed = 1; seed <= RUNS; seed++) {
     test(`seed ${seed}`, async () => {
       const s = script(seed, STEPS);
@@ -151,17 +201,72 @@ describe(`${RUNS} generated scripts, with no fields, are a plain text field`, ()
   }
 });
 
-describe(`${RUNS} generated scripts, with fields, hold the invariants`, () => {
+/**
+ * Walk the rendered field and report where each chip actually sits.
+ *
+ * The invariant is about chips, not about matches: a token still being typed
+ * parses as a field but renders as plain text, and a caret inside *that* is
+ * correct. Only what is really a chip on screen can strand one.
+ */
+function chipRanges(el: HTMLElement): [number, number][] {
+  const out: [number, number][] = [];
+  let at = 0;
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      at += node.nodeValue?.length ?? 0;
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const raw = (node as HTMLElement).getAttribute("data-raw");
+    if (raw !== null) {
+      out.push([at, at + raw.length]);
+      at += raw.length;
+      return;
+    }
+    for (const kid of Array.from(node.childNodes)) walk(kid);
+  };
+  for (const kid of Array.from(el.childNodes)) walk(kid);
+  return out;
+}
+
+when(`${RUNS} generated scripts: RichTextarea is a <textarea>, newlines and all`, () => {
+  for (let seed = 1; seed <= RUNS; seed++) {
+    test(`seed ${seed}`, async () => {
+      const s = script(seed, STEPS, true);
+      try {
+        await expectParity(nativeTextarea, richTextarea(), s.initial, s.steps);
+      } catch (e) {
+        throw new Error(
+          `seed ${seed} · initial ${JSON.stringify(s.initial)}\n` +
+            `steps: ${s.steps.map((x) => x.name).join(", ")}\n${(e as Error).message}`,
+        );
+      }
+    });
+  }
+});
+
+when(`${RUNS} generated scripts, with fields, hold the invariants`, () => {
   for (let seed = 1; seed <= RUNS; seed++) {
     test(`seed ${seed}`, async () => {
       const s = script(seed, STEPS);
-      const states = await trace(richInput(FIELDS), s.initial, s.steps);
-      for (const [i, st] of states.entries()) {
-        const where = `seed ${seed}, after ${s.steps[i]!.name}, value ${JSON.stringify(st.value)}`;
+      const subject = richInput(FIELDS);
+      const u = userEvent.setup({ document });
+      const view = render(subject.render({ defaultValue: s.initial }));
+      const el = subject.target(view);
+      el.focus();
+      subject.setSelection(view, s.initial.length, s.initial.length);
+
+      for (const step of s.steps) {
+        if ("select" in step) subject.setSelection(view, ...step.select);
+        else await u.keyboard(step.keys);
+        const st = subject.read(view);
+        const where = `seed ${seed}, after ${step.name}, value ${JSON.stringify(st.value)}`;
         const segs = parse(st.value, FIELDS);
-        // the value is whatever the segments say it is, exactly
+
+        // the value is exactly what its segments say it is
         expect(serialize(segs), where).toBe(st.value);
-        // segments tile the value: no gaps, no overlaps, in order
+
+        // and they tile it: in order, no gaps, no overlaps
         let at = 0;
         for (const seg of segs) {
           const [from, to] =
@@ -170,14 +275,15 @@ describe(`${RUNS} generated scripts, with fields, hold the invariants`, () => {
           at = to;
         }
         expect(at, where).toBe(st.value.length);
-        // and a caret is never stranded inside a token
-        for (const seg of segs)
-          if (seg.type === "field")
-            expect(
-              st.start > seg.match.start && st.start < seg.match.end,
-              `${where}: caret ${st.start} inside ${JSON.stringify(seg.match.raw)}`,
-            ).toBe(false);
+
+        // no caret is ever stranded inside something rendered as one object
+        for (const [from, to] of chipRanges(el))
+          expect(
+            st.start > from && st.start < to,
+            `${where}: caret ${st.start} inside the chip at ${from}-${to}`,
+          ).toBe(false);
       }
+      view.unmount();
     });
   }
 });
