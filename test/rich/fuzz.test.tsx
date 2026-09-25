@@ -43,7 +43,7 @@ const ALPHABET = [..."aab@@{{}}##112  "];
  * rather than the platform's. Where a newline genuinely belongs — a textarea —
  * it is generated and compared.
  */
-function script(seed: number, steps: number, newlines = false) {
+function script(seed: number, steps: number, newlines = false, homeEnd = true) {
   const r = rng(seed);
   const alphabet = newlines ? [...ALPHABET, "\n"] : ALPHABET;
   const pick = <T,>(xs: readonly T[]) => xs[Math.floor(r() * xs.length)]!;
@@ -57,27 +57,24 @@ function script(seed: number, steps: number, newlines = false) {
     const roll = r();
     if (roll < 0.35) {
       /**
-       * Braces and brackets are never *typed*.
-       *
-       * user-event reads `{Key}` and `[Code]` as key descriptors, and escaping
-       * only the openers leaves `}` to close a descriptor that was never
-       * opened — which makes the keystrokes, not the component, the thing under
-       * test. They still appear in generated initial values, so `{{ref}}`
-       * tokens get selected, deleted and split as much as any other.
+       * user-event reads `{Key}` and `[Code]` as key descriptors, so the
+       * OPENERS are doubled to type them literally. The closers are not:
+       * `}}` types two braces, where a bare `}` types one.
        */
-      const text = chars(1 + Math.floor(r() * 3)).replace(/[{}[\]]/g, "a");
-      out.push({ name: `type ${JSON.stringify(text)}`, keys: text });
+      const text = chars(1 + Math.floor(r() * 3));
+      out.push({
+        name: `type ${JSON.stringify(text)}`,
+        keys: text.replace(/[{[]/g, "$&$&"),
+      });
     } else if (roll < 0.52) out.push({ name: "backspace", keys: "{Backspace}" });
     else if (roll < 0.64) out.push({ name: "delete", keys: "{Delete}" });
     else if (roll < 0.85) {
       const n = 1 + Math.floor(r() * 3);
       const dir = r() < 0.5 ? "ArrowLeft" : "ArrowRight";
       out.push({ name: `${dir} x${n}`, keys: `{${dir}>${n}/}` });
+    } else if (roll < 0.94 && homeEnd) {
+      out.push(roll < 0.9 ? { name: "home", keys: "{Home}" } : { name: "end", keys: "{End}" });
     } else {
-      // Home and End are not generated: a run can delete the field down to
-      // empty, and user-event cannot aim them at a contenteditable with no
-      // child node. The handwritten "caret movement" script covers them.
-
       const a = Math.floor(r() * 12);
       const b = Math.floor(r() * 12);
       out.push({ name: `select ${a}-${b}`, select: [Math.min(a, b), Math.max(a, b)] });
@@ -248,7 +245,15 @@ when(`${RUNS} generated scripts: RichTextarea is a <textarea>, newlines and all`
 when(`${RUNS} generated scripts, with fields, hold the invariants`, () => {
   for (let seed = 1; seed <= RUNS; seed++) {
     test(`seed ${seed}`, async () => {
-      const s = script(seed, STEPS);
+      /**
+       * No Home or End here.
+       *
+       * user-event places a caret in a contenteditable by reaching for its
+       * first child as a text node, and a value that starts with a chip does
+       * not have one — it throws rather than no-ops. The parity runs declare no
+       * fields, so their first child is always text and they keep the coverage.
+       */
+      const s = script(seed, STEPS, false, false);
       const subject = richInput(FIELDS);
       const u = userEvent.setup({ document });
       const view = render(subject.render({ defaultValue: s.initial }));

@@ -62,7 +62,14 @@ export async function trace(subject: Subject, initial: string, steps: Step[]): P
   const out: State[] = [];
   for (const step of steps) {
     if ("select" in step) subject.setSelection(view, ...step.select);
-    else await user.keyboard(step.keys);
+    /**
+     * Home and End cannot be aimed at a contenteditable with no child node —
+     * user-event throws rather than no-ops. Skipping them on an empty field
+     * keeps both subjects on the same script, which is better than dropping
+     * the keys from the alphabet: that left them untested on a full one too.
+     * Both subjects skip together, because by here their values agree.
+     */ else if (!(/\{(Home|End)\}/.test(step.keys) && subject.read(view).value === ""))
+      await user.keyboard(step.keys);
     out.push(subject.read(view));
   }
   view.unmount();
