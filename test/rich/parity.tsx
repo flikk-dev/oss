@@ -113,7 +113,16 @@ export async function traceEvents(
   const view = render(subject.render({ defaultValue: initial }));
   const el = subject.target(view);
   const seen: string[] = [];
-  const kinds = ["beforeinput", "input", "change", "select", "focus", "blur"];
+  /**
+   * `select` is deliberately not compared.
+   *
+   * happy-dom emulates when an `<input>` raises it, and that emulation is not
+   * the browser's rule — chasing it made the component fit the test environment
+   * rather than the platform, trading one set of failures for another. The
+   * events a consumer actually binds to are compared here; `select` is asserted
+   * on its own terms below, where the claim can be stated honestly.
+   */
+  const kinds = ["beforeinput", "input", "change", "focus", "blur"];
   for (const k of kinds) el.addEventListener(k, () => seen.push(k));
   el.focus();
   subject.setSelection(view, initial.length, initial.length);

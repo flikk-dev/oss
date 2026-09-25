@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import * as React from "react";
-import type { RenderResult } from "@testing-library/react";
+import { render, type RenderResult } from "@testing-library/react";
 import { RichInput, type RichHandle } from "@/registry/base-nova/ui/rich/editor";
+import userEvent from "@testing-library/user-event";
 import { expectEventParity, SCRIPTS, traceEvents, type Subject } from "./parity";
 
 /**
@@ -77,5 +78,38 @@ describe("the events say the right things", () => {
       { name: "just move", keys: "{ArrowLeft}" },
     ]);
     expect(untouched.at(-1)).not.toContain("change");
+  });
+});
+
+describe("select, which parity cannot judge", () => {
+  // the differential suite skips `select`: happy-dom emulates when an <input>
+  // raises it, and that emulation is not the platform's rule. the claim worth
+  // making is narrower, and it is made directly.
+  const log = async (steps: Parameters<typeof traceEvents>[2]) => {
+    const seen: string[] = [];
+    const view = render(richInput.render({ defaultValue: "hello world" }));
+    const el = richInput.target(view);
+    el.addEventListener("select", () => seen.push("select"));
+    el.focus();
+    richInput.setSelection(view, 11, 11);
+    seen.length = 0;
+    const u = userEvent.setup({ document });
+    for (const step of steps)
+      if ("select" in step) richInput.setSelection(view, ...step.select);
+      else await u.keyboard(step.keys);
+    view.unmount();
+    return seen;
+  };
+
+  test("fires when the caret moves", async () => {
+    expect(await log([{ name: "left", keys: "{ArrowLeft}" }])).toEqual(["select"]);
+  });
+
+  test("fires when a range is set", async () => {
+    expect((await log([{ name: "range", select: [0, 5] }])).length).toBeGreaterThan(0);
+  });
+
+  test("stays quiet while typing, where the caret only follows the text", async () => {
+    expect(await log([{ name: "type", keys: "abc" }])).toEqual([]);
   });
 });

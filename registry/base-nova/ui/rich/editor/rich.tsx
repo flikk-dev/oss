@@ -109,8 +109,18 @@ function Surface({
   ...rest
 }: Props & { multiline: boolean }) {
   const root = React.useRef<HTMLDivElement>(null);
-  const [uncontrolled, setUncontrolled] = React.useState(defaultValue);
-  const value = controlled ?? uncontrolled;
+  /** what this field will hold as literal text */
+  const text = React.useCallback(
+    (s: string) => (multiline ? s : s.replace(/\r?\n/g, "")),
+    [multiline],
+  );
+  const [uncontrolled, setUncontrolled] = React.useState(() => text(defaultValue));
+  /**
+   * A single line holds one. An `<input>` strips newlines out of its value as
+   * well as out of what you type into it, so a defaultValue with one in it is
+   * not a one-line field with a secret second line — it is a shorter string.
+   */
+  const value = text(controlled ?? uncontrolled);
   const [caret, setCaret] = React.useState<number | null>(null);
   /**
    * The token being authored right now, if any.
@@ -196,6 +206,26 @@ function Surface({
   const future = React.useRef<Snapshot[]>([]);
   const lastKind = React.useRef<EditKind | null>(null);
   /**
+   * Being observable is part of being a text field.
+   *
+   * Every edit is cancelled at `beforeinput`, and cancelling it cancels the
+   * `input` that would have followed — so a form library, an autosave or a
+   * dirty check hears nothing. These raise what the browser no longer will.
+   */
+  const emitted = React.useRef<{ value: string; start: number; end: number } | null>(null);
+  /** the value when focus arrived, since `change` only fires if it differs */
+  const atFocus = React.useRef<string | null>(null);
+  /** an edit moves the caret, and a native field stays quiet about that */
+  const editing = React.useRef(false);
+  /**
+   * The selection we last reported.
+   *
+   * Placing a caret takes two steps — clear the ranges, add the new one — and
+   * each fires `selectionchange`, where a native field's setSelectionRange
+   * raises one `select`. Reporting only real movement collapses that back.
+   */
+  const lastSel = React.useRef({ start: 0, end: 0 });
+  /**
    * The live selection, so a chip inside it can paint itself.
    *
    * The browser will not do it: a chip is `contenteditable=false`, and native
@@ -220,6 +250,8 @@ function Surface({
     lastKind.current = null;
     pending.current = { start: snap.start, end: snap.end };
     if (controlled === undefined) setUncontrolled(snap.value);
+    emitted.current = { value: snap.value, start: snap.start, end: snap.end };
+    editing.current = true;
     onValueChange?.(snap.value);
   };
 
@@ -272,6 +304,8 @@ function Surface({
       end: clampOut(segs, caret.end, 1),
     };
     if (controlled === undefined) setUncontrolled(next);
+    emitted.current = { value: next, ...caret };
+    editing.current = true;
     onValueChange?.(next);
   };
 
@@ -334,13 +368,18 @@ function Surface({
       // a re-render mid-composition would destroy the IME's own range
       if (composing.current) return;
       hadFocus.current = doc.activeElement === el;
+      if (hadFocus.current && atFocus.current === null) atFocus.current = latest.current;
       if (doc.activeElement !== el) {
         setCaret(null);
         setRange(null);
         return setDraft(null);
       }
       const { start, end } = readSelection(el);
+      const moved = start !== lastSel.current.start || end !== lastSel.current.end;
+      lastSel.current = { start, end };
       caretRef.current = start;
+      if (editing.current) editing.current = false;
+      else if (moved) el.dispatchEvent(new Event("select", { bubbles: true }));
       setCaret(start === end ? start : null);
       setRange(start === end ? null : { start, end });
       // the caret has left what was being written; let it set. the left edge
@@ -348,15 +387,36 @@ function Surface({
       // the interior and the trailing edge, where typing happens, keep it open
       setDraft((d) => (d && start > d.start && end <= d.end ? d : null));
     };
+    /**
+     * `change` is not `input`: it fires once, on the way out, and only when
+     * the field is leaving different from how it was found. A dirty check
+     * listens to this one precisely because it stays quiet while you type.
+     */
+    const onBlur = () => {
+      const was = atFocus.current;
+      atFocus.current = null;
+      if (was !== null && was !== latest.current)
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+
     doc.addEventListener("selectionchange", sync);
     el.addEventListener("focus", sync);
+    el.addEventListener("blur", onBlur);
     el.addEventListener("blur", sync);
     return () => {
       doc.removeEventListener("selectionchange", sync);
       el.removeEventListener("focus", sync);
+      el.removeEventListener("blur", onBlur);
       el.removeEventListener("blur", sync);
     };
   }, []);
+
+  React.useEffect(() => {
+    const el = root.current;
+    if (!el || !emitted.current) return;
+    emitted.current = null;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  });
 
   // the DOM is ours: React renders the value, then we put the caret back
   React.useLayoutEffect(() => {
@@ -385,8 +445,15 @@ function Surface({
       setSelectionRange: (start, end) => {
         const el = root.current;
         if (!el) return;
-        const segs = parse(readValue(el), components);
-        writeSelection(el, clampOut(segs, start, -1), clampOut(segs, end, 1));
+        const current = readValue(el);
+        const segs = parse(current, components);
+        // an <input> takes any pair of numbers and makes sense of them: inside
+        // the value, and the right way round. Left unclamped, an offset past
+        // the end puts the DOM selection somewhere the arrow keys cannot move
+        // from at all
+        const fit = (n: number) => Math.max(0, Math.min(current.length, n));
+        const [a, b] = [fit(start), fit(end)].sort((x, y) => x - y) as [number, number];
+        writeSelection(el, clampOut(segs, a, -1), clampOut(segs, b, 1));
       },
       focus: () => root.current?.focus(),
       undo,
@@ -462,7 +529,10 @@ function Surface({
 
       if (type === "insertText" || type === "insertReplacementText") {
         const { from, to } = whole(live);
-        return apply(from, to, e.data ?? "", true, "type");
+        // a single line stays one: suppressing Enter is not enough, because a
+        // newline also arrives as ordinary text — from an IME, a macro, or a
+        // dictation engine — and an <input> drops those too
+        return apply(from, to, text(e.data ?? ""), true, "type");
       }
       if (type === "insertParagraph" || type === "insertLineBreak") {
         e.preventDefault();
@@ -577,13 +647,12 @@ function Surface({
     const el = root.current;
     if (!el || disabled) return;
     e.preventDefault();
-    const raw = e.clipboardData.getData("text/plain");
-    const text = multiline ? raw : raw.replace(/\r?\n/g, " ");
+    const pasted = text(e.clipboardData.getData("text/plain"));
     const current = readValue(el);
     const { start, end } = readSelection(el);
-    commit(current.slice(0, start) + text + current.slice(end), {
-      start: start + text.length,
-      end: start + text.length,
+    commit(current.slice(0, start) + pasted + current.slice(end), {
+      start: start + pasted.length,
+      end: start + pasted.length,
     });
   };
 
