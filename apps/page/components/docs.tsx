@@ -59,7 +59,7 @@ function Toc({ items }: { items: TocItem[] }) {
   );
 }
 
-/** the one place on the site that points at flikk */
+/** the one place on the site that points at Flikk! */
 function FlikkCard() {
   return (
     <a
@@ -68,13 +68,13 @@ function FlikkCard() {
       rel="noreferrer"
       className="group flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-4 transition-colors hover:bg-muted/70"
     >
-      <p className="text-sm font-medium">Built while building flikk</p>
+      <p className="text-sm font-medium">Built while building Flikk!</p>
       <p className="text-sm text-pretty text-muted-foreground">
         Flikk turns the work you describe into software that runs it. These components came out of
         making it.
       </p>
       <span className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary">
-        See flikk
+        See Flikk!
         <ArrowUpRightIcon className="size-3.5 transition-transform group-hover:translate-x-px group-hover:-translate-y-px" />
       </span>
     </a>

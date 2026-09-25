@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { CodeBlock } from "@/components/code-block";
+import { Example } from "@/components/example";
 import { Article, Prose, Section, SubSection } from "@/components/docs";
-import { ComposedDemo, PlainDemo, RichDemo, RichTextareaDemo } from "@/components/rich-demo";
+import { RichInputDemo } from "@/components/examples/rich-input-demo";
+import { RichTextareaDemo } from "@/components/examples/rich-textarea-demo";
+import { RichPlainDemo } from "@/components/examples/rich-plain-demo";
+import { RichComposedDemo } from "@/components/examples/rich-composed-demo";
+import { EXAMPLES } from "@/lib/source";
 import { CATALOG } from "@/lib/catalog";
 
 const entry = CATALOG.find((e) => e.slug === "rich-input")!;
@@ -11,6 +16,7 @@ export const metadata: Metadata = { title: entry.name, description: entry.summar
 const toc = [
   { id: "installation", label: "Installation" },
   { id: "usage", label: "Usage" },
+  { id: "picker", label: "Picker" },
   { id: "examples", label: "Examples" },
   { id: "textarea", label: "Textarea", depth: 2 as const },
   { id: "plain", label: "No fields", depth: 2 as const },
@@ -46,11 +52,25 @@ const RESOLVE = `const user = defineInputField("user", {
   },
 })`;
 
+const PICKER = `const user = defineInputField("user", {
+  pattern: /@([\\w-]+)/,
+  opens:   /@([\\w-]*)$/,   // anchored at the caret
+  render:  ({ groups }) => <span>{groups[0]}</span>,
+})
+
+<RichInput
+  components={[user]}
+  renderPicker={({ query, replace, close }) => (
+    <RichPicker query={query} search={findPeople} onPick={replace} close={close} />
+  )}
+/>`;
+
 const API = `defineInputField(key, {
   pattern:   RegExp                      // a complete token
   render:    (match) => ReactNode        // or { draft, resolved }
   resolved?: RegExp                      // the settled form of an async token
   resolve?:  (match) => Promise<string | null>
+  opens?:    RegExp                      // an unfinished token, anchored at the caret
   editable?: boolean                     // caret may re-enter it. default false
   className?: string                     // the chip shell
 })
@@ -59,16 +79,24 @@ const API = `defineInputField(key, {
   components={fields}
   value | defaultValue
   onValueChange={(value: string) => void}
+  renderPicker={({ query, start, end, replace, close }) => ReactNode}
   placeholder disabled className
   ref={{ value, selectionStart, selectionEnd, setSelectionRange, focus, undo, redo }}
 />`;
 
+const code = {
+  main: EXAMPLES["rich-input-demo"],
+  textarea: EXAMPLES["rich-textarea-demo"],
+  plain: EXAMPLES["rich-plain-demo"],
+  composed: EXAMPLES["rich-composed-demo"],
+};
+
 export default function Page() {
   return (
     <Article title={entry.name} lede={entry.summary} toc={toc}>
-      <div className="rounded-lg border border-border p-6">
-        <RichDemo />
-      </div>
+      <Example code={code.main}>
+        <RichInputDemo />
+      </Example>
 
       <Section id="installation" title="Installation">
         <Prose>
@@ -93,15 +121,24 @@ export default function Page() {
         </Prose>
       </Section>
 
+      <Section id="picker" title="Picker">
+        <Prose>
+          Give a field an <code className="font-mono text-xs text-foreground">opens</code> pattern
+          anchored to the caret and it reports what is being typed. The list, the filtering and the
+          keys are yours: the component only says what the query is and how to replace it.
+        </Prose>
+        <CodeBlock code={PICKER} />
+      </Section>
+
       <Section id="examples" title="Examples">
         <SubSection id="textarea" title="Textarea">
           <Prose>
             Same core. Enter inserts a line here and does nothing in the single line field, which
             also strips newlines out of its value.
           </Prose>
-          <div className="rounded-lg border border-border p-6">
+          <Example code={code.textarea}>
             <RichTextareaDemo />
-          </div>
+          </Example>
         </SubSection>
 
         <SubSection id="plain" title="No fields">
@@ -109,9 +146,9 @@ export default function Page() {
             With nothing declared it is a text field, and it is tested against a native one: value
             and caret after the same keystrokes, across generated scripts.
           </Prose>
-          <div className="rounded-lg border border-border p-6">
-            <PlainDemo />
-          </div>
+          <Example code={code.plain}>
+            <RichPlainDemo />
+          </Example>
         </SubSection>
 
         <SubSection id="composed" title="Composed input">
@@ -119,9 +156,9 @@ export default function Page() {
             An input method writes into the field directly, the one case the component cannot
             intercept. Compose a word, accept a candidate, then edit around it.
           </Prose>
-          <div className="rounded-lg border border-border p-6">
-            <ComposedDemo />
-          </div>
+          <Example code={code.composed}>
+            <RichComposedDemo />
+          </Example>
         </SubSection>
       </Section>
 

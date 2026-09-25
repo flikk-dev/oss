@@ -2,11 +2,11 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-export const alt = "flikk open source";
+export const alt = "Flikk! open source";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-/** OG card on the flikk palette with the mascot; no fonts fetched, system sans */
+/** OG card on the Flikk! palette with the mascot; no fonts fetched, system sans */
 export default async function Image() {
   const mark = await readFile(join(process.cwd(), "public/icon.png"));
   const src = `data:image/png;base64,${mark.toString("base64")}`;
@@ -44,7 +44,7 @@ export default async function Image() {
             letterSpacing: -2,
           }}
         >
-          The parts of flikk
+          The parts of Flikk!
         </div>
         <div
           style={{

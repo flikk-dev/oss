@@ -5,7 +5,7 @@ import { CATALOG } from "@/lib/catalog";
 
 export const metadata: Metadata = {
   title: "Components",
-  description: "The components flikk has open-sourced, and how to install them.",
+  description: "The components Flikk! has open sourced, and how to install them.",
 };
 
 export default function DocsIndex() {

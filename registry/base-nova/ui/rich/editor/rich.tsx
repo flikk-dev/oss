@@ -4,9 +4,11 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import {
   clampOut,
+  openAt,
   parse,
   rendererFor,
   type InputField,
+  type OpenToken,
   type Segment,
 } from "@/registry/base-nova/ui/rich/core";
 import { RAW, readSelection, readValue, toOffset as domOffset, writeSelection } from "./dom";
@@ -20,6 +22,28 @@ type Snapshot = { value: string; start: number; end: number };
 
 /** what an edit was, for folding a run of them into one undo step */
 type EditKind = "type" | "delete" | "other" | "silent";
+
+export type PickerProps = OpenToken & {
+  /** put this text in place of what is being typed */
+  replace: (text: string) => void;
+  /** leave it as typed */
+  close: () => void;
+};
+
+/**
+ * The picker gets its own component, and that is not a detail.
+ *
+ * Calling a render prop during our own render runs the caller's hooks inside
+ * ours, so a picker with state changes this component's hook count the moment
+ * it opens. Rendering it as an element gives those hooks a home that mounts and
+ * unmounts as one piece.
+ */
+function Picker({
+  render,
+  ...props
+}: PickerProps & { render: (open: PickerProps) => React.ReactNode }) {
+  return <>{render(props)}</>;
+}
 
 export type RichHandle = {
   readonly value: string;
@@ -45,6 +69,14 @@ type Props = {
   onValueChange?: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  /**
+   * Offer completions for the token being typed.
+   *
+   * Called while a field's `opens` pattern matches at the caret. The list, the
+   * filtering and the keys are yours: the component only says what is being
+   * typed and how to replace it. Return null to show nothing.
+   */
+  renderPicker?: (open: PickerProps) => React.ReactNode;
   className?: string;
   ref?: React.Ref<RichHandle>;
   "aria-label"?: string;
@@ -104,6 +136,7 @@ function Surface({
   onValueChange,
   placeholder,
   disabled,
+  renderPicker,
   className,
   ref,
   ...rest
@@ -182,6 +215,8 @@ function Surface({
   } | null>(null);
   /** remounts the element itself, discarding anything the IME left in it */
   const [domKey, setDomKey] = React.useState(0);
+  /** a picker the user dismissed stays shut until the token changes */
+  const [shut, setShut] = React.useState("");
   const hadFocus = React.useRef(false);
   /** tokens looked up already, so a rewrite never loops or refetches */
   const tried = React.useRef(new Set<string>());
@@ -447,6 +482,12 @@ function Surface({
     el.dispatchEvent(new Event("input", { bubbles: true }));
   });
 
+  const open = React.useMemo(
+    () => (caret === null || disabled ? null : openAt(value, caret, components)),
+    [value, caret, components, disabled],
+  );
+  const openKey = open ? `${open.field.key}:${open.start}:${open.query}` : "";
+
   // the DOM is ours: React renders the value, then we put the caret back
   React.useLayoutEffect(() => {
     const el = root.current;
@@ -685,7 +726,7 @@ function Surface({
     });
   };
 
-  return (
+  const field = (
     <div
       {...rest}
       key={domKey}
@@ -711,7 +752,10 @@ function Surface({
         "not-data-empty:before:content-none",
         multiline
           ? "min-h-20 whitespace-pre-wrap"
-          : "overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:h-0",
+          : // pre, not nowrap: nowrap still collapses a run of spaces, so a
+            // trailing one has no width and the caret after it has nowhere to
+            // draw. pre keeps every space and still refuses to wrap
+            "overflow-x-auto whitespace-pre [&::-webkit-scrollbar]:h-0",
         className,
       )}
       data-placeholder={placeholder}
@@ -728,6 +772,30 @@ function Surface({
           />
         ),
       )}
+    </div>
+  );
+
+  if (!renderPicker) return field;
+  return (
+    <div className="relative">
+      {field}
+      {open && openKey !== shut ? (
+        <Picker
+          key={open.field.key}
+          render={renderPicker}
+          {...open}
+          replace={(text) => {
+            const at = open.start + text.length;
+            commit(
+              value.slice(0, open.start) + text + value.slice(open.end),
+              { start: at, end: at },
+              false,
+              "other",
+            );
+          }}
+          close={() => setShut(openKey)}
+        />
+      ) : null}
     </div>
   );
 }

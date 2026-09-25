@@ -2,7 +2,7 @@ import { SITE } from "../layout";
 
 /** llms.txt: what this site is, for agents and LLM crawlers (llmstxt.org) */
 export function GET() {
-  const body = `# flikk open source
+  const body = `# Flikk! open source
 
 > The parts of flikk (https://flikk.dev) that are useful outside it, published under MIT and shipped the shadcn way: one command copies the source into your app and you own it from there. Components today; anything else that outgrows our own use lands here the same way.
 

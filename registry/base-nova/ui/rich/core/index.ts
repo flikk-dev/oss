@@ -41,6 +41,16 @@ export type InputField = {
    */
   resolve?: (match: FieldMatch) => Promise<string | null>;
   /**
+   * What a token looks like while it is still being typed, anchored to the
+   * caret: `/@([\w-]*)$/`. When it matches, the field reports an open query and
+   * the host may show a picker.
+   *
+   * The component does not own that picker. It says what is being typed, where
+   * it sits, and how to replace it; everything else, the list, the filtering,
+   * the keys, belongs to whoever knows what can be picked.
+   */
+  opens?: RegExp;
+  /**
    * What the chip looks like.
    *
    * One function when a token has a single form. A pair when it settles, since
@@ -72,6 +82,28 @@ export type InputField = {
 
 export type Renderer = (match: FieldMatch) => ReactNode;
 
+/** a token being typed, which a host may offer to complete */
+export type OpenToken = {
+  field: InputField;
+  /** the capture from `opens`, so far */
+  query: string;
+  /** what a pick replaces, in value space */
+  start: number;
+  end: number;
+};
+
+/** the token under the caret, if one is open */
+export function openAt(value: string, caret: number, fields: InputField[]): OpenToken | null {
+  const before = value.slice(0, caret);
+  for (const field of fields) {
+    if (!field.opens) continue;
+    const m = field.opens.exec(before);
+    if (!m) continue;
+    return { field, query: m[1] ?? "", start: caret - m[0].length, end: caret };
+  }
+  return null;
+}
+
 /** the renderer for the form this match actually took */
 export function rendererFor(field: InputField, form: FieldMatch["form"]): Renderer {
   return typeof field.render === "function" ? field.render : field.render[form];
@@ -86,6 +118,7 @@ export function defineInputField(key: string, spec: Omit<InputField, "key">): In
   for (const [name, re] of [
     ["pattern", spec.pattern],
     ["resolved", spec.resolved],
+    ["opens", spec.opens],
   ] as const)
     if (re && (re.global || re.sticky))
       throw new Error(

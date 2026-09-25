@@ -10,7 +10,7 @@ export default function Page() {
     <main className="mx-auto flex max-w-4xl flex-col gap-16 px-6 pt-20 pb-24">
       <section className="flex flex-col gap-6">
         <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-balance sm:text-5xl">
-          The parts of flikk that were never ours to keep.
+          The parts of Flikk! that were never ours to keep.
         </h1>
         <p className="max-w-xl text-lg leading-relaxed text-pretty text-muted-foreground">
           We keep building pieces that are useful well outside our product. Those get published here

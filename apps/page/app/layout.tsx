@@ -11,9 +11,9 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const fontMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const SITE = "https://oss.flikk.dev/ui";
-const title = "flikk open source";
+const title = "Flikk! open source";
 const description =
-  "The parts of flikk that are useful outside it, published under MIT. React components you copy into your app the shadcn way: one command, the source lands, you own it.";
+  "The parts of Flikk! that are useful outside it, published under MIT. React components you copy into your app the shadcn way: one command, the source lands, you own it.";
 
 /**
  * resizes-content: without it the on-screen keyboard overlays the layout
@@ -28,7 +28,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
-  title: { default: title, template: "%s · flikk open source" },
+  title: { default: title, template: "%s · Flikk! open source" },
   description,
   keywords: [
     "json schema",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: SITE,
-    siteName: "flikk open source",
+    siteName: "Flikk! open source",
     title,
     description,
   },
@@ -76,7 +76,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "SoftwareSourceCode",
-              name: "flikk open source",
+              name: "Flikk! open source",
               description,
               url: SITE,
               codeRepository: "https://github.com/flikk-dev/oss",
