@@ -24,19 +24,10 @@ export function SiteNav() {
           variant="ghost"
           size="sm"
           nativeButton={false}
-          render={<a href="#demo" />}
+          render={<Link href="/docs" />}
           className="font-normal text-muted-foreground"
         >
-          Demo
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          nativeButton={false}
-          render={<a href="#usage" />}
-          className="font-normal text-muted-foreground"
-        >
-          Usage
+          Components
         </Button>
         <Button
           variant="ghost"

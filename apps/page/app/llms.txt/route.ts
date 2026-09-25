@@ -4,15 +4,17 @@ import { SITE } from "../layout";
 export function GET() {
   const body = `# flikk UI
 
-> Open-source React components from flikk (https://flikk.dev), shipped the shadcn way: one command copies the source into your app and you own it from there. The first component is a JSON Schema builder.
+> The parts of flikk (https://flikk.dev) that are useful outside it, published under MIT and shipped the shadcn way: one command copies the source into your app and you own it from there. Components today; anything else that outgrows our own use lands here the same way.
 
 Site: ${SITE}
+Components: ${SITE}/docs
 Source: https://github.com/flikk-dev/oss
 License: MIT
 Stack: React 19, Tailwind 4, Base UI (via shadcn), zustand, motion
 
 ## JSON Schema builder
 
+Docs: ${SITE}/docs/json-editor
 Install: \`npx shadcn@latest add ${SITE}/r/json-editor.json\`. It lands in \`components/ui/json/editor\`.
 
 Three ways in:

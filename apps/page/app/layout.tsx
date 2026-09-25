@@ -11,9 +11,9 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const fontMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const SITE = "https://oss.flikk.dev/ui";
-const title = "flikk UI: a JSON Schema builder for React";
+const title = "flikk open source";
 const description =
-  "Open-source React components from flikk, shipped the shadcn way. A JSON Schema builder you edit as a tree: presets, compound parts, two hooks, drag and drop across the tree, bulk actions. One command copies the source into your app.";
+  "The parts of flikk that are useful outside it, published under MIT. React components you copy into your app the shadcn way: one command, the source lands, you own it.";
 
 /**
  * resizes-content: without it the on-screen keyboard overlays the layout
@@ -28,7 +28,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
-  title: { default: title, template: "%s · flikk UI" },
+  title: { default: title, template: "%s · flikk open source" },
   description,
   keywords: [
     "json schema",
