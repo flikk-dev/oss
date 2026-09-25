@@ -100,6 +100,22 @@ function toDom(root: HTMLElement, offset: number): { node: Node; offset: number 
   return { node: root, offset: root.childNodes.length };
 }
 
+/** where a run of the value sits on screen, for anchoring something to it */
+export function rectOf(root: HTMLElement, start: number, end: number): DOMRect | null {
+  const a = toDom(root, start);
+  const b = toDom(root, end);
+  const range = root.ownerDocument.createRange();
+  try {
+    range.setStart(a.node, a.offset);
+    range.setEnd(b.node, b.offset);
+  } catch {
+    return null;
+  }
+  const rect = range.getBoundingClientRect();
+  // a collapsed range in an empty text node measures zero on every side
+  return rect.width || rect.height || rect.top ? rect : null;
+}
+
 export function writeSelection(root: HTMLElement, start: number, end: number) {
   const sel = root.ownerDocument.getSelection();
   if (!sel) return;

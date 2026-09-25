@@ -24,16 +24,52 @@ export type PickerItem = {
   icon?: React.ReactNode;
 };
 
+/** where the list sits relative to the token it belongs to */
+export type PickerSide = "bottom" | "top" | "left" | "right";
+
+export type PickerRect = { top: number; left: number; width: number; height: number };
+
+/** the list's offset inside the field, for the chosen side */
+export function placeAt(rect: PickerRect | null, side: PickerSide, gap = 4) {
+  if (!rect) return { top: "100%", left: 0 } as React.CSSProperties;
+  const { top, left, width, height } = rect;
+  const at: Record<PickerSide, React.CSSProperties> = {
+    bottom: { top: top + height + gap, left },
+    top: { top: top - gap, left, transform: "translateY(-100%)" },
+    left: { top, left: left - gap, transform: "translateX(-100%)" },
+    right: { top, left: left + width + gap },
+  };
+  return at[side];
+}
+
 export function RichPicker({
   query = "",
   items,
   search,
+  searchable,
+  rect,
+  side = "bottom",
   onPick,
   close,
   className,
 }: {
   /** what is being typed, for `search` */
   query?: string;
+  /**
+   * Bring an input of its own.
+   *
+   * A picker opened from a settled token has no caret to type into, so without
+   * this it can only show whatever the token already said. Pass it whenever
+   * `mode` is `chip`.
+   */
+  searchable?: boolean;
+  /** where the token sits, handed over by the field */
+  rect?: PickerRect | null;
+  /**
+   * Which way the list opens off that token. The field measures, you decide:
+   * it has no idea what else is on your page.
+   */
+  side?: PickerSide;
   /** a fixed list, when everything is already in hand */
   items?: PickerItem[];
   /** or a lookup, run as the query changes */
@@ -45,6 +81,8 @@ export function RichPicker({
   const [found, setFound] = React.useState<PickerItem[]>(items ?? []);
   const [loading, setLoading] = React.useState(false);
   const [at, setAt] = React.useState(0);
+  const [typed, setTyped] = React.useState("");
+  const asking = searchable ? typed : query;
 
   /**
    * Only the newest search may write.
@@ -57,7 +95,7 @@ export function RichPicker({
   React.useEffect(() => {
     if (!search) return;
     const mine = ++newest.current;
-    const out = search(query);
+    const out = search(asking);
     if (!(out instanceof Promise)) {
       setFound(out);
       setLoading(false);
@@ -72,7 +110,7 @@ export function RichPicker({
       })
       .catch(() => mine === newest.current && setFound([]))
       .finally(() => mine === newest.current && setLoading(false));
-  }, [query, search]);
+  }, [asking, search]);
 
   const list = items ?? found;
   const here = Math.min(at, Math.max(0, list.length - 1));
@@ -103,15 +141,27 @@ export function RichPicker({
     return () => document.removeEventListener("keydown", onKey, true);
   }, [list, here, onPick, close]);
 
-  if (!list.length && !loading) return null;
+  if (!list.length && !loading && !searchable) return null;
   return (
     <div
+      style={placeAt(rect ?? null, side)}
       className={cn(
-        "absolute z-50 mt-1 max-h-64 min-w-56 overflow-y-auto rounded-md border border-border",
+        "absolute z-50 max-h-64 min-w-56 overflow-y-auto rounded-md border border-border",
         "bg-popover p-1 text-popover-foreground shadow-md",
         className,
       )}
     >
+      {searchable && (
+        <input
+          autoFocus
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+          onKeyDown={(e) => e.key === "Escape" && close()}
+          placeholder="Search"
+          aria-label="Search"
+          className="mb-1 w-full rounded-sm bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
+        />
+      )}
       {loading && !list.length ? (
         <p className="px-2 py-1.5 text-sm text-muted-foreground">Searching</p>
       ) : (

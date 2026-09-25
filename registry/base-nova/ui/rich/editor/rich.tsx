@@ -11,7 +11,14 @@ import {
   type OpenToken,
   type Segment,
 } from "@/registry/base-nova/ui/rich/core";
-import { RAW, readSelection, readValue, toOffset as domOffset, writeSelection } from "./dom";
+import {
+  RAW,
+  readSelection,
+  readValue,
+  rectOf,
+  toOffset as domOffset,
+  writeSelection,
+} from "./dom";
 
 /**
  * A text field first. With no fields declared it is an `<input>` that happens
@@ -24,9 +31,21 @@ type Snapshot = { value: string; start: number; end: number };
 type EditKind = "type" | "delete" | "other" | "silent";
 
 export type PickerProps = OpenToken & {
-  /** put this text in place of what is being typed */
+  /**
+   * Why the picker is open.
+   *
+   * `typing` means the query is coming from the field and grows as they type.
+   * `chip` means they clicked a settled token, so there is no caret in it and
+   * nothing to type into: a picker opened this way has to bring its own search.
+   */
+  mode: "typing" | "chip";
+  /** the text being replaced, when a settled token is being changed */
+  current?: string;
+  /** where the token sits, relative to the field, for anchoring the list */
+  rect: { top: number; left: number; width: number; height: number } | null;
+  /** put this text in place of what is open */
   replace: (text: string) => void;
-  /** leave it as typed */
+  /** leave it as it was */
   close: () => void;
 };
 
@@ -87,10 +106,12 @@ function Chip({
   segment,
   pending,
   selected,
+  onEdit,
 }: {
   segment: Extract<Segment, { type: "field" }>;
   pending?: boolean;
   selected?: boolean;
+  onEdit?: () => void;
 }) {
   return (
     <span
@@ -100,6 +121,16 @@ function Chip({
       data-form={segment.match.form}
       data-pending={pending ? "" : undefined}
       data-selected={selected ? "" : undefined}
+      data-pickable={onEdit ? "" : undefined}
+      onMouseDown={
+        onEdit &&
+        ((e: React.MouseEvent) => {
+          // keep the field focused; the picker decides where focus goes next
+          e.preventDefault();
+          e.stopPropagation();
+          onEdit();
+        })
+      }
       {...{ [RAW]: segment.match.raw }}
       className={cn(
         // structural only. items-baseline keeps the chip's text on the
@@ -120,6 +151,8 @@ function Chip({
         // the browser paints the selection now, so this is only a hook for a
         // host that wants more than the native highlight
         "rounded-[0.2em]",
+        // a token you cannot edit as text is still worth changing
+        onEdit && "cursor-pointer",
         segment.field.className,
       )}
     >
@@ -217,6 +250,8 @@ function Surface({
   const [domKey, setDomKey] = React.useState(0);
   /** a picker the user dismissed stays shut until the token changes */
   const [shut, setShut] = React.useState("");
+  /** a settled token they clicked, to pick a different one for */
+  const [picking, setPicking] = React.useState<OpenToken | null>(null);
   const hadFocus = React.useRef(false);
   /** tokens looked up already, so a rewrite never loops or refetches */
   const tried = React.useRef(new Set<string>());
@@ -483,10 +518,42 @@ function Surface({
   });
 
   const open = React.useMemo(
-    () => (caret === null || disabled ? null : openAt(value, caret, components)),
-    [value, caret, components, disabled],
+    () =>
+      disabled ? null : (picking ?? (caret === null ? null : openAt(value, caret, components))),
+    [value, caret, components, disabled, picking],
   );
   const openKey = open ? `${open.field.key}:${open.start}:${open.query}` : "";
+  const mode: "typing" | "chip" = picking ? "chip" : "typing";
+
+  /**
+   * A caret arriving beside a settled chip is not someone opening a picker.
+   *
+   * `opens` matches the text before the caret, and a committed `@sam` matches
+   * it just as well as one being typed. Without this, arrowing past a chip pops
+   * the list open. A chip is changed by clicking it instead.
+   */
+  const spurious =
+    mode === "typing" &&
+    !!open &&
+    segments.some(
+      (seg) => seg.type === "field" && seg.match.start === open.start && seg.match.end === open.end,
+    );
+
+  const [rect, setRect] = React.useState<PickerProps["rect"]>(null);
+  React.useLayoutEffect(() => {
+    const el = root.current;
+    if (!el || !open || spurious) return setRect(null);
+    const box = rectOf(el, open.start, open.end);
+    const host = el.getBoundingClientRect();
+    setRect(
+      box && {
+        top: box.top - host.top,
+        left: box.left - host.left,
+        width: box.width,
+        height: box.height,
+      },
+    );
+  }, [openKey, open, spurious, value]);
 
   // the DOM is ours: React renders the value, then we put the caret back
   React.useLayoutEffect(() => {
@@ -769,6 +836,17 @@ function Surface({
             segment={s}
             pending={inFlight.has(`${s.field.key}:${s.match.raw}`)}
             selected={!!range && s.match.start < range.end && s.match.end > range.start}
+            onEdit={
+              renderPicker && s.field.opens && !s.field.editable
+                ? () =>
+                    setPicking({
+                      field: s.field,
+                      query: "",
+                      start: s.match.start,
+                      end: s.match.end,
+                    })
+                : undefined
+            }
           />
         ),
       )}
@@ -779,21 +857,40 @@ function Surface({
   return (
     <div className="relative">
       {field}
-      {open && openKey !== shut ? (
+      {open && !spurious && openKey !== shut ? (
         <Picker
           key={open.field.key}
           render={renderPicker}
           {...open}
+          mode={mode}
+          rect={rect}
+          current={picking ? value.slice(open.start, open.end) : undefined}
           replace={(text) => {
-            const at = open.start + text.length;
+            /**
+             * A pick lands finished, so it gets a space after it.
+             *
+             * Without one the caret sits at the end of the token it just wrote,
+             * `opens` matches again, and the list reopens on the thing already
+             * chosen. Only while typing: replacing a settled chip keeps
+             * whatever already followed it.
+             */
+            const rest = value.slice(open.end);
+            const pad = mode === "typing" && !/^\s/.test(rest) ? " " : "";
+            const at = open.start + text.length + pad.length;
+            setPicking(null);
             commit(
-              value.slice(0, open.start) + text + value.slice(open.end),
+              value.slice(0, open.start) + text + pad + rest,
               { start: at, end: at },
               false,
               "other",
             );
+            root.current?.focus();
           }}
-          close={() => setShut(openKey)}
+          close={() => {
+            setPicking(null);
+            setShut(openKey);
+            root.current?.focus();
+          }}
         />
       ) : null}
     </div>

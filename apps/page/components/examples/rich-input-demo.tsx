@@ -28,7 +28,7 @@ const user = defineInputField("user", {
 });
 
 export function RichInputDemo() {
-  const [value, setValue] = React.useState("Hi @marc");
+  const [value, setValue] = React.useState("Hi @marc, click that to change it");
   return (
     <RichInput
       aria-label="Rich input"
@@ -36,8 +36,16 @@ export function RichInputDemo() {
       value={value}
       onValueChange={setValue}
       placeholder="Type @ to pick someone"
-      renderPicker={({ query, replace, close }) => (
-        <RichPicker query={query} search={findPeople} onPick={replace} close={close} />
+      renderPicker={({ query, mode, rect, replace, close }) => (
+        <RichPicker
+          query={query}
+          rect={rect}
+          side="bottom"
+          searchable={mode === "chip"}
+          search={findPeople}
+          onPick={replace}
+          close={close}
+        />
       )}
     />
   );

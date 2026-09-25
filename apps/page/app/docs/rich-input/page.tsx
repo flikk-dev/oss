@@ -52,16 +52,18 @@ const RESOLVE = `const user = defineInputField("user", {
   },
 })`;
 
-const PICKER = `const user = defineInputField("user", {
-  pattern: /@([\\w-]+)/,
-  opens:   /@([\\w-]*)$/,   // anchored at the caret
-  render:  ({ groups }) => <span>{groups[0]}</span>,
-})
-
-<RichInput
+const PICKER = `<RichInput
   components={[user]}
-  renderPicker={({ query, replace, close }) => (
-    <RichPicker query={query} search={findPeople} onPick={replace} close={close} />
+  renderPicker={({ query, mode, rect, replace, close }) => (
+    <RichPicker
+      query={query}
+      rect={rect}                    // where the token sits
+      side="bottom"                  // bottom | top | left | right
+      searchable={mode === "chip"}   // no caret to type into
+      search={findPeople}
+      onPick={replace}
+      close={close}
+    />
   )}
 />`;
 
@@ -79,7 +81,7 @@ const API = `defineInputField(key, {
   components={fields}
   value | defaultValue
   onValueChange={(value: string) => void}
-  renderPicker={({ query, start, end, replace, close }) => ReactNode}
+  renderPicker={({ query, mode, current, start, end, replace, close }) => ReactNode}
   placeholder disabled className
   ref={{ value, selectionStart, selectionEnd, setSelectionRange, focus, undo, redo }}
 />`;
