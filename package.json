@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "bun run --cwd apps/page dev",
     "start": "bun run --cwd apps/page start",
-    "build": "bun run registry:build && bun run --cwd apps/page build",
+    "build": "bun run --cwd apps/page build",
     "registry:build": "shadcn build registry.json --output apps/page/public/r",
     "typecheck": "tsc --noEmit && bun run --cwd apps/page typecheck",
     "test": "bun test",
