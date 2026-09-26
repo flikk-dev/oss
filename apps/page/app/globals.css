@@ -121,14 +121,15 @@
   --type-email: oklch(0.586 0.253 17.585);
   --type-url: oklch(0.511 0.262 276.966);
   --type-null: oklch(0.5 0.02 275);
-  /* code blocks */
-  --code-keyword: oklch(0.55 0.2 300);
-  --code-string: oklch(0.55 0.16 145);
-  --code-tag: oklch(0.55 0.2 38);
-  --code-attr: oklch(0.5 0.14 250);
-  --code-comment: oklch(0.6 0.02 275);
-  --code-punct: oklch(0.45 0.02 275);
-  --code-number: oklch(0.55 0.18 58);
+  /* code blocks: low chroma on purpose, so a snippet reads as text with
+     accents rather than as a paint chart competing with the page */
+  --code-keyword: oklch(0.52 0.13 12);
+  --code-string: oklch(0.52 0.1 155);
+  --code-tag: oklch(0.52 0.11 250);
+  --code-attr: oklch(0.55 0.1 70);
+  --code-comment: oklch(0.63 0.012 275);
+  --code-punct: oklch(0.56 0.012 275);
+  --code-number: oklch(0.53 0.1 200);
 }
 
 .dark {
@@ -177,13 +178,13 @@
   --type-url: oklch(0.785 0.115 274.713);
   --type-null: oklch(0.65 0.015 295);
   /* code blocks */
-  --code-keyword: oklch(0.78 0.14 300);
-  --code-string: oklch(0.78 0.14 145);
-  --code-tag: oklch(0.78 0.16 38);
-  --code-attr: oklch(0.76 0.1 250);
-  --code-comment: oklch(0.6 0.015 295);
-  --code-punct: oklch(0.7 0.015 295);
-  --code-number: oklch(0.8 0.14 58);
+  --code-keyword: oklch(0.77 0.1 12);
+  --code-string: oklch(0.79 0.09 155);
+  --code-tag: oklch(0.77 0.09 250);
+  --code-attr: oklch(0.81 0.08 70);
+  --code-comment: oklch(0.58 0.012 295);
+  --code-punct: oklch(0.67 0.012 295);
+  --code-number: oklch(0.77 0.08 200);
 }
 
 @layer base {
