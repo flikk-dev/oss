@@ -13,7 +13,7 @@ export function Tabs({
   if (!showing) return null;
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex gap-1">
+      <div className="flex gap-4 border-b border-border">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -21,10 +21,10 @@ export function Tabs({
             onClick={() => setOn(t.id)}
             aria-pressed={t.id === showing.id}
             className={cn(
-              "rounded-sm px-2 py-1 text-xs",
+              "-mb-px border-b-2 pb-2 text-sm",
               t.id === showing.id
-                ? "bg-muted font-medium text-foreground"
-                : "text-muted-foreground hover:text-foreground",
+                ? "border-foreground font-medium text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
             {t.label}

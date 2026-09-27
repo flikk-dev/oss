@@ -13,7 +13,7 @@ const SHAPE = [
   { title: "Example", body: "the component running, with the file behind it one click away." },
   { title: "Installation", body: "the CLI command, and the manual copy for when you want it." },
   { title: "Usage", body: "the imports and the smallest thing that works." },
-  { title: "Composition", body: "how the parts nest, and what each one is for." },
+  { title: "Composition", body: "the element tree: what you write inside what." },
   { title: "Examples", body: "one running demo per idea, each with its own file." },
   { title: "API reference", body: "the whole surface, as a signature." },
 ];

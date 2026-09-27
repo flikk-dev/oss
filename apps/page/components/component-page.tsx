@@ -1,6 +1,7 @@
 import { CodeBlock } from "@/components/code-block";
 import { Example } from "@/components/example";
 import { Tabs } from "@/components/tabs";
+import { runners, Terminal } from "@/components/terminal";
 import { Article, Prose, Section, SubSection, type TocItem } from "@/components/docs";
 
 /**
@@ -18,16 +19,20 @@ export type ComponentDoc = {
   /** the component running, plus the file behind it */
   example: { demo: React.ReactNode; code: string };
   install: {
-    /** the one-line add, when it is in the registry */
+    /** what `shadcn add` is given, when it is in the registry */
     cli?: string;
     /** what to do when it is not, or when you would rather not run anything */
     manual: string;
-    /** anything it expects to already be there */
-    dependencies?: string[];
   };
   /** the smallest thing that works */
   usage: { imports: string; code: string };
-  /** how the parts nest, and what each one is for */
+  /**
+   * The element tree: what you write inside what.
+   *
+   * Elements only. Props, options and the objects you pass belong in the API
+   * reference, and a tree that lists them is an inventory wearing box
+   * characters. A component with nothing to nest says so.
+   */
   composition: { tree: string; notes?: React.ReactNode };
   /** one running demo each, with its own file */
   examples: { id: string; title: string; about: string; demo: React.ReactNode; code: string }[];
@@ -59,22 +64,19 @@ export function ComponentPage({ doc }: { doc: ComponentDoc }) {
             ...(doc.install.cli
               ? [
                   {
-                    id: "cli",
-                    label: "CLI",
-                    content: <CodeBlock code={doc.install.cli} />,
+                    id: "command",
+                    label: "Command",
+                    content: <Terminal commands={runners(doc.install.cli)} />,
                   },
                 ]
               : []),
             {
               id: "manual",
               label: "Manual",
-              content: <CodeBlock code={doc.install.manual} />,
+              content: <Terminal commands={{ shell: doc.install.manual }} />,
             },
           ]}
         />
-        {doc.install.dependencies?.length ? (
-          <Prose>Expects {doc.install.dependencies.join(", ")} to already be in your app.</Prose>
-        ) : null}
       </Section>
 
       <Section id="usage" title="Usage">

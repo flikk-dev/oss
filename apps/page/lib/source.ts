@@ -24,4 +24,6 @@ export const EXAMPLES = {
   "rich-textarea-demo": read("rich-textarea-demo.tsx"),
   "rich-plain-demo": read("rich-plain-demo.tsx"),
   "rich-composed-demo": read("rich-composed-demo.tsx"),
+  "rich-async-demo": read("rich-async-demo.tsx"),
+  "rich-textarea-plain-demo": read("rich-textarea-plain-demo.tsx"),
 } as const;
