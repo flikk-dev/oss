@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test";
 import * as React from "react";
 import { act, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { defineInputField, RichInput, type RichHandle } from "@/registry/base-nova/ui/rich/editor";
+import {
+  defineInputField,
+  RichInput,
+  RichTextarea,
+  type RichHandle,
+} from "@/registry/base-nova/ui/rich/editor";
 
 /** where a rich input is meant to differ from a text field */
 
@@ -102,5 +107,50 @@ describe("a committed chip only melts for the right reasons", () => {
     handle().setSelectionRange(0, 0);
     await flush();
     expect(chips(el)).toHaveLength(1);
+  });
+});
+
+describe("filler line breaks the browser leaves behind", () => {
+  /**
+   * happy-dom does not add them, so they are added here on purpose.
+   *
+   * A real browser drops a <br> into a contenteditable to keep a trailing empty
+   * line reachable. React never removes it, because React never rendered it, so
+   * deleting the newline that caused it leaves a line break the value does not
+   * have. This is that <br>, and the component has to sweep it.
+   */
+  function mountArea(value: string) {
+    let handle: RichHandle | null = null;
+    const view = render(
+      <RichTextarea
+        ref={(h) => {
+          handle = h;
+        }}
+        data-testid="subject"
+        defaultValue={value}
+      />,
+    );
+    const el = view.getByTestId("subject");
+    el.focus();
+    return { el, handle: () => handle! };
+  }
+
+  test("are swept when the value has no newline", async () => {
+    const { el, handle } = mountArea("ab");
+    el.appendChild(el.ownerDocument.createElement("br"));
+    expect(el.querySelectorAll("br")).toHaveLength(1);
+    handle().setSelectionRange(2, 2);
+    await flush();
+    expect(el.querySelectorAll("br")).toHaveLength(0);
+    expect(handle().value).toBe("ab");
+  });
+
+  test("but one is left when the value really ends in a newline", async () => {
+    const { el, handle } = mountArea("ab\n");
+    el.appendChild(el.ownerDocument.createElement("br"));
+    handle().setSelectionRange(3, 3);
+    await flush();
+    // without it, that last line cannot be clicked into
+    expect(el.querySelectorAll("br")).toHaveLength(1);
   });
 });

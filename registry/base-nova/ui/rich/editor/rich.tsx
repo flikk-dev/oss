@@ -555,6 +555,27 @@ function Surface({
     );
   }, [openKey, open, spurious, value]);
 
+  /**
+   * Sweep up filler line breaks the browser left behind.
+   *
+   * Every newline in the value is a "\n" React rendered into a text node; we
+   * never render a <br>. Browsers add one anyway, to keep a trailing empty line
+   * reachable, and React will not remove it later because React did not put it
+   * there. Delete the newline that caused it and the <br> stays, showing a line
+   * break that the value does not have: Enter, Backspace, space, and the text
+   * lands on a line of its own.
+   *
+   * One trailing filler is kept when the value really does end in a newline,
+   * because without it that last line cannot be clicked into.
+   */
+  React.useLayoutEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const fillers = Array.from(el.querySelectorAll("br"));
+    if (value.endsWith("\n")) fillers.pop();
+    for (const br of fillers) br.remove();
+  });
+
   // the DOM is ours: React renders the value, then we put the caret back
   React.useLayoutEffect(() => {
     const el = root.current;

@@ -26,7 +26,7 @@ const doc: ComponentDoc = {
 })
 
 export function Compose() {
-  const [value, setValue] = useState("Hi @marc")
+  const [value, setValue] = useState("Ask @nadia")
   return <RichInput components={[user]} value={value} onValueChange={setValue} />
 }`,
   },
@@ -56,7 +56,7 @@ export function Compose() {
       id: "async",
       title: "Async tokens",
       about:
-        "A mention names a lookup but carries no answer. Type @sam, move the caret away, and watch the value underneath rewrite itself into a form that needs no second lookup.",
+        "A mention names a lookup but carries no answer. Type @priya, move the caret away, and watch the value underneath rewrite itself into a form that needs no second lookup.",
       demo: <RichAsyncDemo />,
       code: EXAMPLES["rich-async-demo"],
     },

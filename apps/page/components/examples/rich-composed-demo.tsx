@@ -15,7 +15,7 @@ const user = defineInputField("user", {
 });
 
 export function RichComposedDemo() {
-  const [value, setValue] = React.useState("おはようございます、@sam さん。");
+  const [value, setValue] = React.useState("おはようございます、@priya さん。");
   return (
     <RichTextarea
       aria-label="Composed input"

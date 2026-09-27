@@ -4,17 +4,19 @@ import * as React from "react";
 import { defineInputField, RichInput } from "@/registry/base-nova/ui/rich/editor";
 
 const DIRECTORY: Record<string, string> = {
-  marc: "Marc Egger",
-  ana: "Ana Ruiz",
-  sam: "Sam Okoye",
+  nadia: "Nadia Rahman",
+  tomas: "Tomás Iglesias",
+  priya: "Priya Menon",
+  luka: "Luka Novak",
+  amara: "Amara Okafor",
 };
 
 /**
  * Two patterns, because a mention is a lookup.
  *
- * `@sam` says who to find but not who they are, so it can only render after a
+ * `@priya` says who to find but not who they are, so it renders only after a
  * fetch, and pasting it elsewhere would need the same fetch again. `resolve`
- * rewrites it into `@[Sam Okoye](sam)`, which the second pattern matches and
+ * rewrites it into `@[Priya Menon](priya)`, which the second pattern matches and
  * renders from its own groups. The value ends up carrying the answer.
  */
 const user = defineInputField("user", {
@@ -33,7 +35,7 @@ const user = defineInputField("user", {
 });
 
 export function RichAsyncDemo() {
-  const [value, setValue] = React.useState("Ping @ana about it");
+  const [value, setValue] = React.useState("Ping @amara about it");
   return (
     <div className="flex flex-col gap-2">
       <RichInput
@@ -41,7 +43,7 @@ export function RichAsyncDemo() {
         components={[user]}
         value={value}
         onValueChange={setValue}
-        placeholder="Type @sam and move the caret away"
+        placeholder="Type @priya and move the caret away"
       />
       <pre className="overflow-x-auto rounded-sm bg-muted/50 px-2 py-1.5 font-mono text-xs whitespace-pre-wrap text-muted-foreground">
         {value}
