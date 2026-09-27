@@ -1,5 +1,6 @@
 import { CodeBlock } from "@/components/code-block";
 import { Example } from "@/components/example";
+import { EXAMPLES, type ExampleKey } from "@/lib/examples";
 import { Tabs } from "@/components/tabs";
 import { runners, Terminal } from "@/components/terminal";
 import { Article, Prose, Section, SubSection, type TocItem } from "@/components/docs";
@@ -16,8 +17,13 @@ export type ComponentDoc = {
   name: string;
   /** one or two sentences, in the header */
   lede: string;
-  /** the component running, plus the file behind it */
-  example: { demo: React.ReactNode; code: string };
+  /**
+   * The component running, and the file behind it.
+   *
+   * One key, not a component and a filename: the two are bound together in
+   * EXAMPLES, so the preview and the Code tab cannot be different things.
+   */
+  example: ExampleKey;
   install: {
     /** what `shadcn add` is given, when it is in the registry */
     cli?: string;
@@ -34,8 +40,8 @@ export type ComponentDoc = {
    * characters. A component with nothing to nest says so.
    */
   composition: { tree: string; notes?: React.ReactNode };
-  /** one running demo each, with its own file */
-  examples: { id: string; title: string; about: string; demo: React.ReactNode; code: string }[];
+  /** one running demo each, named the same way */
+  examples: { id: string; title: string; about: string; example: ExampleKey }[];
   /** the full surface, as a signature */
   api: { code: string; notes?: React.ReactNode }[];
 };
@@ -47,6 +53,16 @@ const BASE: TocItem[] = [
   { id: "examples", label: "Examples" },
 ];
 
+/** the one place a demo and its source are put together */
+function Preview({ of }: { of: ExampleKey }) {
+  const { Demo, code } = EXAMPLES[of];
+  return (
+    <Example code={code}>
+      <Demo />
+    </Example>
+  );
+}
+
 export function ComponentPage({ doc }: { doc: ComponentDoc }) {
   const toc: TocItem[] = [
     ...BASE,
@@ -56,7 +72,7 @@ export function ComponentPage({ doc }: { doc: ComponentDoc }) {
 
   return (
     <Article title={doc.name} lede={doc.lede} toc={toc}>
-      <Example code={doc.example.code}>{doc.example.demo}</Example>
+      <Preview of={doc.example} />
 
       <Section id="installation" title="Installation">
         <Tabs
@@ -93,7 +109,7 @@ export function ComponentPage({ doc }: { doc: ComponentDoc }) {
         {doc.examples.map((e) => (
           <SubSection key={e.id} id={e.id} title={e.title}>
             <Prose>{e.about}</Prose>
-            <Example code={e.code}>{e.demo}</Example>
+            <Preview of={e.example} />
           </SubSection>
         ))}
       </Section>

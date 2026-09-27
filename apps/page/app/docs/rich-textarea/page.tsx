@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import { ComponentPage, type ComponentDoc } from "@/components/component-page";
 import { Prose } from "@/components/docs";
-import { RichTextareaDemo } from "@/components/examples/rich-textarea-demo";
-import { RichTextareaPlainDemo } from "@/components/examples/rich-textarea-plain-demo";
-import { RichComposedDemo } from "@/components/examples/rich-composed-demo";
-import { EXAMPLES } from "@/lib/source";
 import { CATALOG } from "@/lib/catalog";
 import { FIELD_API, INSTALL, PICKER_API } from "../rich-shared";
 
@@ -15,7 +11,7 @@ export const metadata: Metadata = { title: entry.name, description: entry.summar
 const doc: ComponentDoc = {
   name: entry.name,
   lede: entry.summary,
-  example: { demo: <RichTextareaDemo />, code: EXAMPLES["rich-textarea-demo"] },
+  example: "rich-textarea-demo",
   install: INSTALL,
 
   usage: {
@@ -55,16 +51,14 @@ export function Body() {
       title: "Composed input",
       about:
         "An input method writes into the field directly, the one case the component cannot intercept. Compose a word, accept a candidate, press Enter, then edit around it.",
-      demo: <RichComposedDemo />,
-      code: EXAMPLES["rich-composed-demo"],
+      example: "rich-composed-demo",
     },
     {
       id: "plain",
       title: "No fields",
       about:
         "With nothing declared it is a textarea, and it is tested as one: value and caret against a native textarea after the same keystrokes, newlines included.",
-      demo: <RichTextareaPlainDemo />,
-      code: EXAMPLES["rich-textarea-plain-demo"],
+      example: "rich-textarea-plain-demo",
     },
   ],
 

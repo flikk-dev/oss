@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import { ComponentPage, type ComponentDoc } from "@/components/component-page";
 import { Prose } from "@/components/docs";
-import { RichInputDemo } from "@/components/examples/rich-input-demo";
-import { RichPlainDemo } from "@/components/examples/rich-plain-demo";
-import { RichAsyncDemo } from "@/components/examples/rich-async-demo";
-import { EXAMPLES } from "@/lib/source";
 import { CATALOG } from "@/lib/catalog";
 import { FIELD_API, INSTALL, PICKER_API } from "../rich-shared";
 
@@ -15,7 +11,7 @@ export const metadata: Metadata = { title: entry.name, description: entry.summar
 const doc: ComponentDoc = {
   name: entry.name,
   lede: entry.summary,
-  example: { demo: <RichInputDemo />, code: EXAMPLES["rich-input-demo"] },
+  example: "rich-input-demo",
   install: INSTALL,
 
   usage: {
@@ -57,16 +53,14 @@ export function Compose() {
       title: "Async tokens",
       about:
         "A mention names a lookup but carries no answer. Type @priya, move the caret away, and watch the value underneath rewrite itself into a form that needs no second lookup.",
-      demo: <RichAsyncDemo />,
-      code: EXAMPLES["rich-async-demo"],
+      example: "rich-async-demo",
     },
     {
       id: "plain",
       title: "No fields",
       about:
         "With nothing declared it is a text field, and it is tested as one: value and caret against a native input after the same keystrokes, across a hundred generated scripts.",
-      demo: <RichPlainDemo />,
-      code: EXAMPLES["rich-plain-demo"],
+      example: "rich-plain-demo",
     },
   ],
 
