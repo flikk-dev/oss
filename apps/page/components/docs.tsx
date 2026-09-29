@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRightIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Toc } from "./toc";
 
 export type TocItem = { id: string; label: string; depth?: 1 | 2 };
 
@@ -32,30 +32,6 @@ export function Article({
         </div>
       </div>
     </div>
-  );
-}
-
-function Toc({ items }: { items: TocItem[] }) {
-  if (!items.length) return null;
-  return (
-    <nav aria-label="On this page" className="hidden flex-col gap-2 lg:flex">
-      <p className="text-xs font-medium">On this page</p>
-      <ul className="flex flex-col gap-1.5 text-sm">
-        {items.map((i) => (
-          <li key={i.id}>
-            <a
-              href={`#${i.id}`}
-              className={cn(
-                "block text-muted-foreground hover:text-foreground",
-                i.depth === 2 && "pl-3",
-              )}
-            >
-              {i.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
   );
 }
 

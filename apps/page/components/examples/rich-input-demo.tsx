@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { PreviewCard } from "@base-ui/react/preview-card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { defineInputField, RichInput, RichPicker } from "@/registry/base-nova/ui/rich/editor";
 
 type Person = { username: string; name: string; title: string; team: string };
@@ -16,34 +18,29 @@ const PEOPLE: Person[] = [
 
 const find = (username: string) => PEOPLE.find((p) => p.username === username.toLowerCase());
 
-/** stands in for however you show a face */
-function Avatar({ name, size = "sm" }: { name: string; size?: "sm" | "lg" }) {
-  const hue = [...name].reduce((h, c) => h + c.charCodeAt(0), 0) % 360;
-  const initials = name
+const initials = (name: string) =>
+  name
     .split(" ")
     .map((w) => w[0])
     .join("")
     .slice(0, 2);
-  return (
-    <span
-      aria-hidden
-      style={{ background: `oklch(0.84 0.08 ${hue})`, color: `oklch(0.34 0.09 ${hue})` }}
-      className={
-        size === "lg"
-          ? "flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-medium"
-          : "inline-flex size-4 shrink-0 items-center justify-center self-center rounded-full text-[0.55rem] font-medium"
-      }
-    >
-      {initials}
-    </span>
-  );
-}
 
-function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-sm border border-border px-1 py-px text-[0.65rem] font-medium text-muted-foreground">
-      {children}
-    </span>
+/**
+ * Inline, an avatar has to fit the line it sits on.
+ *
+ * Avatar's own `data-[size]` class wins over a plain `size-4`, so the override
+ * is marked important; at four it also has to lose the border ring, which at
+ * that scale reads as grit rather than an edge.
+ */
+function Face({ name, big }: { name: string; big?: boolean }) {
+  return big ? (
+    <Avatar size="lg">
+      <AvatarFallback className="text-xs">{initials(name)}</AvatarFallback>
+    </Avatar>
+  ) : (
+    <Avatar className="size-4! self-center after:hidden">
+      <AvatarFallback className="text-[0.5rem] leading-none">{initials(name)}</AvatarFallback>
+    </Avatar>
   );
 }
 
@@ -51,31 +48,29 @@ function Badge({ children }: { children: React.ReactNode }) {
 function Mention({ person, raw }: { person?: Person; raw: string }) {
   if (!person) return <span>{raw}</span>;
   return (
-    <PreviewCard.Root>
-      <PreviewCard.Trigger render={<span className="inline-flex items-baseline gap-1" />}>
-        <Avatar name={person.name} />
+    <HoverCard>
+      <HoverCardTrigger
+        render={<span className="inline-flex items-baseline gap-1 rounded-sm hover:bg-muted" />}
+      >
+        <Face name={person.name} />
         <span>{person.name}</span>
-      </PreviewCard.Trigger>
-      <PreviewCard.Portal>
-        <PreviewCard.Positioner side="top" sideOffset={6} className="z-50">
-          <PreviewCard.Popup className="flex w-64 flex-col gap-3 rounded-lg bg-popover p-3 text-popover-foreground shadow-md ring-1 ring-foreground/10">
-            <div className="flex items-center gap-3">
-              <Avatar name={person.name} size="lg" />
-              <div className="flex min-w-0 flex-col">
-                <span className="truncate text-sm font-medium">{person.name}</span>
-                <span className="truncate font-mono text-xs text-muted-foreground">
-                  @{person.username}
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Badge>{person.title}</Badge>
-              <Badge>{person.team}</Badge>
-            </div>
-          </PreviewCard.Popup>
-        </PreviewCard.Positioner>
-      </PreviewCard.Portal>
-    </PreviewCard.Root>
+      </HoverCardTrigger>
+      <HoverCardContent className="w-64">
+        <div className="flex items-center gap-3">
+          <Face name={person.name} big />
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-sm font-medium">{person.name}</span>
+            <span className="truncate font-mono text-xs text-muted-foreground">
+              @{person.username}
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge variant="secondary">{person.title}</Badge>
+          <Badge variant="outline">{person.team}</Badge>
+        </div>
+      </HoverCardContent>
+    </HoverCard>
   );
 }
 
@@ -93,12 +88,12 @@ async function searchPeople(query: string) {
   return PEOPLE.filter((p) => p.username.startsWith(q) || p.name.toLowerCase().includes(q)).map(
     (p) => ({
       value: `@${p.username}`,
-      icon: <Avatar name={p.name} />,
+      icon: <Face name={p.name} />,
       label: (
         <span className="flex min-w-0 flex-col">
           <span className="flex items-center gap-1.5">
             <span className="truncate text-foreground">{p.name}</span>
-            <Badge>{p.title}</Badge>
+            <Badge variant="secondary">{p.title}</Badge>
           </span>
           <span className="truncate font-mono text-xs text-muted-foreground">@{p.username}</span>
         </span>
