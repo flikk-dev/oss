@@ -1,6 +1,6 @@
 import { CodeBlock } from "@/components/code-block";
 import { Example } from "@/components/example";
-import { EXAMPLES, type ExampleKey } from "@/lib/examples";
+import { DEMOS, source, type ExampleKey } from "@/lib/examples";
 import { Tabs } from "@/components/tabs";
 import { Terminal } from "@/components/terminal";
 import { runners } from "@/lib/runners";
@@ -56,9 +56,9 @@ const BASE: TocItem[] = [
 
 /** the one place a demo and its source are put together */
 function Preview({ of }: { of: ExampleKey }) {
-  const { Demo, code } = EXAMPLES[of];
+  const Demo = DEMOS[of];
   return (
-    <Example code={code}>
+    <Example code={source(of)}>
       <Demo />
     </Example>
   );

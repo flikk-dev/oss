@@ -8,45 +8,41 @@ import { RichComposedDemo } from "@/components/examples/rich-composed-demo";
 import { RichAsyncDemo } from "@/components/examples/rich-async-demo";
 
 /**
- * Every example, bound to its own source.
+ * Every example, named once.
  *
- * The component and the code are one entry, so a page names an example once and
- * cannot pair the preview with somebody else's file. The alternative, a page
- * holding a component in one hand and a filename in the other, is a mismatch
- * waiting for a copy and paste.
- *
- * The source is read at build (these pages are prerendered) and its registry
- * import is rewritten to where the CLI puts the files, so what you copy is what
- * you would have written in your own app.
+ * A page names an example and gets both the component and its source, so the
+ * preview and the Code tab cannot be different things. Holding a component in
+ * one hand and a filename in the other is a mismatch waiting for a paste.
  */
-
-const pascal = (key: string) => key.replace(/(^|-)([a-z])/g, (_, __, c: string) => c.toUpperCase());
-
-function read(key: string) {
-  const file = `${key}.tsx`;
-  const text = readFileSync(join(process.cwd(), "components/examples", file), "utf8")
-    .replaceAll("@/registry/base-nova/ui/", "@/components/ui/")
-    .trimEnd();
-  // the preview renders this name; if the file stopped exporting it, the two
-  // have drifted and the page would show one thing while running another
-  const expected = `export function ${pascal(key)}(`;
-  if (!text.includes(expected))
-    throw new Error(`${file} does not declare ${expected.trim()}, so its preview is not its code`);
-  return text;
-}
-
-const bind = <T extends Record<string, React.ComponentType>>(demos: T) =>
-  Object.fromEntries(
-    Object.entries(demos).map(([key, Demo]) => [key, { Demo, code: read(key) }]),
-  ) as { [K in keyof T]: { Demo: T[K]; code: string } };
-
-export const EXAMPLES = bind({
+export const DEMOS = {
   "rich-input-demo": RichInputDemo,
   "rich-textarea-demo": RichTextareaDemo,
   "rich-plain-demo": RichPlainDemo,
   "rich-textarea-plain-demo": RichTextareaPlainDemo,
   "rich-composed-demo": RichComposedDemo,
   "rich-async-demo": RichAsyncDemo,
-});
+} satisfies Record<string, React.ComponentType>;
 
-export type ExampleKey = keyof typeof EXAMPLES;
+export type ExampleKey = keyof typeof DEMOS;
+
+const pascal = (key: string) => key.replace(/(^|-)([a-z])/g, (_, __, c: string) => c.toUpperCase());
+
+/**
+ * Read at render, not at import.
+ *
+ * At module scope this is evaluated once and cached, so in dev the preview
+ * refreshes with the file while the Code tab keeps serving whatever the server
+ * started with: the two drift, silently, in exactly the place that claims they
+ * cannot. These pages are prerendered, so in a build this still runs once.
+ */
+export function source(key: ExampleKey): string {
+  const file = `${key}.tsx`;
+  const text = readFileSync(join(process.cwd(), "components/examples", file), "utf8")
+    .replaceAll("@/registry/base-nova/ui/", "@/components/ui/")
+    .trimEnd();
+  // if the file stopped exporting what the preview renders, they have drifted
+  const expected = `export function ${pascal(key)}(`;
+  if (!text.includes(expected))
+    throw new Error(`${file} does not declare ${expected.trim()}, so its preview is not its code`);
+  return text;
+}

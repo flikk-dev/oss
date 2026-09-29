@@ -25,6 +25,14 @@ const initials = (name: string) =>
     .join("")
     .slice(0, 2);
 
+/** one hue per string, so a person and their team keep the same colour */
+const hueOf = (text: string) => [...text].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+
+const tint = (hue: number, weight = 1) => ({
+  background: `light-dark(oklch(0.94 ${0.05 * weight} ${hue}), oklch(0.3 ${0.06 * weight} ${hue}))`,
+  color: `light-dark(oklch(0.4 ${0.12 * weight} ${hue}), oklch(0.88 ${0.1 * weight} ${hue}))`,
+});
+
 /**
  * Inline, an avatar has to fit the line it sits on.
  *
@@ -33,14 +41,38 @@ const initials = (name: string) =>
  * that scale reads as grit rather than an edge.
  */
 function Face({ name, big }: { name: string; big?: boolean }) {
+  const skin = tint(hueOf(name));
   return big ? (
     <Avatar size="lg">
-      <AvatarFallback className="text-xs">{initials(name)}</AvatarFallback>
+      <AvatarFallback style={skin} className="text-xs font-medium">
+        {initials(name)}
+      </AvatarFallback>
     </Avatar>
   ) : (
     <Avatar className="size-4! self-center after:hidden">
-      <AvatarFallback className="text-[0.5rem] leading-none">{initials(name)}</AvatarFallback>
+      <AvatarFallback style={skin} className="text-[0.5rem] leading-none font-medium">
+        {initials(name)}
+      </AvatarFallback>
     </Avatar>
+  );
+}
+
+/**
+ * A label sat beside the handle, not under it.
+ *
+ * Smaller than the handle it follows: it qualifies the person, so it reads
+ * after their name rather than competing with it. The colour comes from the
+ * word, so two tags are two things at a glance.
+ */
+function Tag({ children }: { children: string }) {
+  return (
+    <Badge
+      variant="secondary"
+      style={tint(hueOf(children), 1.2)}
+      className="h-4 shrink-0 border-transparent px-1.5 text-[0.625rem]"
+    >
+      {children}
+    </Badge>
   );
 }
 
@@ -55,19 +87,18 @@ function Mention({ person, raw }: { person?: Person; raw: string }) {
         <Face name={person.name} />
         <span>{person.name}</span>
       </HoverCardTrigger>
-      <HoverCardContent className="w-64">
-        <div className="flex items-center gap-3">
-          <Face name={person.name} big />
-          <div className="flex min-w-0 flex-col">
-            <span className="truncate text-sm font-medium">{person.name}</span>
+      {/* the popup is not a flex row of its own, so it stacks flush */}
+      <HoverCardContent className="flex w-auto max-w-sm items-center gap-3 p-3">
+        <Face name={person.name} big />
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="truncate font-medium">{person.name}</span>
+          <span className="flex min-w-0 items-center gap-1.5">
             <span className="truncate font-mono text-xs text-muted-foreground">
               @{person.username}
             </span>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant="secondary">{person.title}</Badge>
-          <Badge variant="outline">{person.team}</Badge>
+            <Tag>{person.title}</Tag>
+            <Tag>{person.team}</Tag>
+          </span>
         </div>
       </HoverCardContent>
     </HoverCard>
@@ -93,7 +124,7 @@ async function searchPeople(query: string) {
         <span className="flex min-w-0 flex-col">
           <span className="flex items-center gap-1.5">
             <span className="truncate text-foreground">{p.name}</span>
-            <Badge variant="secondary">{p.title}</Badge>
+            <Tag>{p.title}</Tag>
           </span>
           <span className="truncate font-mono text-xs text-muted-foreground">@{p.username}</span>
         </span>
