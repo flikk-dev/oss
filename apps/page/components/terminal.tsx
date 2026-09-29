@@ -4,16 +4,6 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { CheckIcon, CopyIcon, TerminalIcon } from "lucide-react";
 
-/** the same command, however you run things */
-export function runners(command: string) {
-  return {
-    pnpm: `pnpm dlx ${command}`,
-    npm: `npx ${command}`,
-    yarn: `yarn dlx ${command}`,
-    bun: `bunx --bun ${command}`,
-  };
-}
-
 export function Terminal({ commands }: { commands: Record<string, string> }) {
   const names = Object.keys(commands);
   const [on, setOn] = React.useState(names.at(-1)!);

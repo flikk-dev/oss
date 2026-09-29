@@ -2,7 +2,8 @@ import { CodeBlock } from "@/components/code-block";
 import { Example } from "@/components/example";
 import { EXAMPLES, type ExampleKey } from "@/lib/examples";
 import { Tabs } from "@/components/tabs";
-import { runners, Terminal } from "@/components/terminal";
+import { Terminal } from "@/components/terminal";
+import { runners } from "@/lib/runners";
 import { Article, Prose, Section, SubSection, type TocItem } from "@/components/docs";
 
 /**

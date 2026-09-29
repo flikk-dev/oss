@@ -3,6 +3,8 @@ import { Prose } from "@/components/docs";
 /** what the two rich fields say identically, stated once */
 
 export const INSTALL = {
+  // one item ships both fields: they are one core with two heads
+  cli: "shadcn@latest add https://oss.flikk.dev/ui/r/rich-input.json",
   manual: `git clone https://github.com/flikk-dev/oss
 cp -r oss/registry/base-nova/ui/rich components/ui/rich`,
 };

@@ -34,6 +34,7 @@ export const CATALOG: Entry[] = [
     blurb: "One line, where the host decides what becomes a chip.",
     summary:
       "A run matching a pattern you declared becomes one object: the caret steps over it and Backspace takes the whole thing. The value underneath stays a plain string.",
+    registry: "rich-input",
     status: "in progress",
   },
   {
@@ -42,6 +43,7 @@ export const CATALOG: Entry[] = [
     blurb: "The same field over several lines.",
     summary:
       "Everything the rich input does, with newlines. Enter breaks a line instead of doing nothing, and the value keeps them.",
+    registry: "rich-input",
     status: "in progress",
   },
 ];
