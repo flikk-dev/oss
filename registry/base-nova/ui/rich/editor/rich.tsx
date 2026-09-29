@@ -69,7 +69,10 @@ export type RichHandle = {
   readonly selectionStart: number;
   readonly selectionEnd: number;
   setSelectionRange: (start: number, end: number) => void;
+  /** the whole value, as an input's select() does */
+  select: () => void;
   focus: () => void;
+  blur: () => void;
   /**
    * Step back through the edits, value and caret together.
    *
@@ -88,6 +91,20 @@ type Props = {
   onValueChange?: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  /** shown and selectable, but not editable */
+  readOnly?: boolean;
+  /** take focus on mount */
+  autoFocus?: boolean;
+  /**
+   * Submit the value under this name.
+   *
+   * A contenteditable is not a form control and carries nothing, so a hidden
+   * input alongside it does the carrying. Without this a form posts an empty
+   * field and nothing says why.
+   */
+  name?: string;
+  /** the most characters the value may hold */
+  maxLength?: number;
   /**
    * Offer completions for the token being typed.
    *
@@ -120,6 +137,7 @@ function Chip({
       data-field={segment.field.key}
       data-form={segment.match.form}
       data-pending={pending ? "" : undefined}
+      data-state={segment.match.state}
       data-selected={selected ? "" : undefined}
       data-pickable={onEdit ? "" : undefined}
       onMouseDown={
@@ -169,6 +187,10 @@ function Surface({
   onValueChange,
   placeholder,
   disabled,
+  readOnly,
+  autoFocus,
+  name,
+  maxLength,
   renderPicker,
   className,
   ref,
@@ -199,6 +221,11 @@ function Surface({
    * a match and dropped the moment the caret leaves.
    */
   const [draft, setDraft] = React.useState<{ start: number; end: number } | null>(null);
+  /** tokens looked up already, so a rewrite never loops or refetches */
+  const tried = React.useRef(new Set<string>());
+  const [inFlight, setInFlight] = React.useState<ReadonlySet<string>>(new Set());
+  /** and the ones that came back with nothing, so a chip can say so */
+  const [failed, setFailed] = React.useState<ReadonlySet<string>>(new Set());
   const segments = React.useMemo(() => {
     const segs = parse(value, components);
     const melt = (s: Extract<Segment, { type: "field" }>): Segment => ({
@@ -209,6 +236,15 @@ function Surface({
     });
     return segs.map((s) => {
       if (s.type !== "field") return s;
+      const id = `${s.field.key}:${s.match.raw}`;
+      if (s.match.form === "draft" && s.field.resolve)
+        s = {
+          ...s,
+          match: {
+            ...s.match,
+            state: inFlight.has(id) ? "pending" : failed.has(id) ? "failed" : undefined,
+          },
+        };
       const { start, end } = s.match;
       // still being written
       if (draft && draft.start <= start && draft.end >= end) return melt(s);
@@ -216,7 +252,7 @@ function Surface({
       if (s.field.editable && caret !== null && caret > start && caret < end) return melt(s);
       return s;
     });
-  }, [value, components, caret, draft]);
+  }, [value, components, caret, draft, inFlight, failed]);
   // where the caret should sit once React has painted this value
   const pending = React.useRef<{ start: number; end: number } | null>(null);
   /**
@@ -252,10 +288,9 @@ function Surface({
   const [shut, setShut] = React.useState("");
   /** a settled token they clicked, to pick a different one for */
   const [picking, setPicking] = React.useState<OpenToken | null>(null);
+  /** the picker itself, for telling a click in the list from one anywhere else */
+  const list = React.useRef<HTMLDivElement>(null);
   const hadFocus = React.useRef(false);
-  /** tokens looked up already, so a rewrite never loops or refetches */
-  const tried = React.useRef(new Set<string>());
-  const [inFlight, setInFlight] = React.useState<ReadonlySet<string>>(new Set());
   // resolution lands late; it must rewrite whatever the value is by then
   const latest = React.useRef(value);
   latest.current = value;
@@ -403,7 +438,9 @@ function Surface({
       const { raw, start } = seg.match;
       resolve(seg.match)
         .then((settled) => {
-          if (!settled || settled === raw) return;
+          // nothing found is an answer too, and the chip should say so
+          if (!settled) return setFailed((f) => new Set(f).add(id));
+          if (settled === raw) return;
           const now = latest.current;
           // it may have moved while we were away; trust the text, not the offset
           const at = now.slice(start, start + raw.length) === raw ? start : now.indexOf(raw);
@@ -420,7 +457,7 @@ function Surface({
             "silent",
           );
         })
-        .catch(() => {})
+        .catch(() => setFailed((f) => new Set(f).add(id)))
         .finally(() =>
           setInFlight((p) => {
             const n = new Set(p);
@@ -433,6 +470,12 @@ function Surface({
   }, [value, draft, components]);
 
   // an edit or a click moves the caret, and which token is "live" follows it
+  React.useEffect(() => {
+    if (autoFocus) root.current?.focus();
+    // once, on mount: refocusing on every render would fight the user
+    // eslint-disable-next-line
+  }, []);
+
   React.useEffect(() => {
     const el = root.current;
     if (!el) return;
@@ -565,16 +608,61 @@ function Surface({
    * break that the value does not have: Enter, Backspace, space, and the text
    * lands on a line of its own.
    *
-   * One trailing filler is kept when the value really does end in a newline,
-   * because without it that last line cannot be clicked into.
+   * The one we render ourselves is marked, and left alone.
    */
   React.useLayoutEffect(() => {
     const el = root.current;
     if (!el) return;
-    const fillers = Array.from(el.querySelectorAll("br"));
-    if (value.endsWith("\n")) fillers.pop();
-    for (const br of fillers) br.remove();
+    for (const br of el.querySelectorAll("br:not([data-filler])")) br.remove();
   });
+
+  /**
+   * After every render, what is on screen must read back as the value.
+   *
+   * React owns these children, but it is not the only thing that writes here:
+   * an input method, a browser filling in a line break, anything we did not
+   * intercept. When the two disagree the field shows one thing and holds
+   * another, and the next keystroke appears to apply the previous one. Rather
+   * than name each cause, check the invariant and rebuild when it breaks.
+   */
+  React.useLayoutEffect(() => {
+    const el = root.current;
+    if (!el || composing.current) return;
+    if (readValue(el) === value) return;
+    // a rebuild discards the element, and with it the caret and the focus;
+    // ask for both back on the other side
+    const { start, end } = readSelection(el);
+    pending.current = { start: Math.min(start, value.length), end: Math.min(end, value.length) };
+    setDomKey((k) => k + 1);
+  });
+
+  /**
+   * A click anywhere else puts the picker away.
+   *
+   * Escape and picking already close it, and typing past the token closes it by
+   * no longer matching. Clicking elsewhere did nothing, so the list sat over
+   * the page while the caret was somewhere else entirely.
+   *
+   * Anywhere else includes the field: clicking into the text is a deliberate
+   * move of the caret, not a request to keep choosing. Only the list holds
+   * itself open, which is what keeps the chip picker's own search box usable.
+   *
+   * pointerdown, not click: the list should be gone by the time whatever was
+   * clicked reacts.
+   */
+  const dismissing = !!open && openKey !== shut;
+  React.useEffect(() => {
+    if (!dismissing) return;
+    const doc = root.current?.ownerDocument;
+    if (!doc) return;
+    const away = (e: Event) => {
+      if (list.current?.contains(e.target as Node)) return;
+      setPicking(null);
+      setShut(openKey);
+    };
+    doc.addEventListener("pointerdown", away);
+    return () => doc.removeEventListener("pointerdown", away);
+  }, [dismissing, openKey]);
 
   // the DOM is ours: React renders the value, then we put the caret back
   React.useLayoutEffect(() => {
@@ -613,7 +701,12 @@ function Surface({
         const [a, b] = [fit(start), fit(end)].sort((x, y) => x - y) as [number, number];
         writeSelection(el, clampOut(segs, a, -1), clampOut(segs, b, 1));
       },
+      select: () => {
+        const el = root.current;
+        if (el) writeSelection(el, 0, readValue(el).length);
+      },
       focus: () => root.current?.focus(),
+      blur: () => root.current?.blur(),
       undo,
       redo,
     }),
@@ -634,9 +727,20 @@ function Surface({
     if (!el) return;
 
     const onBeforeInput = (e: InputEvent) => {
-      if (disabled || composing.current) return;
+      // stand back entirely while an input method composes: cancelling its
+      // input rejects the keystroke it is in the middle of
+      if (composing.current) return;
+      if (disabled || readOnly) return e.preventDefault();
       const type = e.inputType;
-      const current = readValue(el);
+      /**
+       * The value, not the DOM.
+       *
+       * Reading the text back out of the field means trusting whatever else
+       * wrote to it, and then an edit carries that rubbish forward into the
+       * value where it becomes real. React's state is what this component
+       * knows; the DOM is only asked where the caret is.
+       */
+      const current = value;
       const segs = parse(current, components);
       const live = readSelection(el);
 
@@ -677,6 +781,11 @@ function Surface({
         kind: EditKind = "other",
       ) => {
         e.preventDefault();
+        // an insert may only take the field up to maxLength, never past it
+        if (maxLength !== undefined) {
+          const room = maxLength - (current.length - (to - from));
+          insert = room <= 0 ? "" : insert.slice(0, room);
+        }
         commit(
           current.slice(0, from) + insert + current.slice(to),
           { start: from + insert.length, end: from + insert.length },
@@ -822,10 +931,13 @@ function Surface({
       role="textbox"
       aria-multiline={multiline}
       aria-disabled={disabled || undefined}
-      contentEditable={!disabled}
+      contentEditable={!disabled && !readOnly}
+      autoFocus={autoFocus}
+      aria-readonly={readOnly || undefined}
       suppressContentEditableWarning
       spellCheck={false}
       tabIndex={disabled ? -1 : 0}
+      // readOnly still takes focus and a selection; only disabled is out of reach
       data-slot={multiline ? "rich-textarea" : "rich-input"}
       data-empty={value === "" ? "" : undefined}
       onPaste={onPaste}
@@ -848,6 +960,13 @@ function Surface({
       )}
       data-placeholder={placeholder}
     >
+      {/*
+        A trailing newline needs something after it or it collapses: `pre-wrap`
+        gives the last line no height, so Enter at the end of the value looks
+        like nothing happened until a second one pushes text below it. Browsers
+        add this filler for their own edits; every edit here is intercepted, so
+        no browser ever gets the chance.
+      */}
       {segments.map((s, i) =>
         s.type === "text" ? (
           <React.Fragment key={i}>{s.text}</React.Fragment>
@@ -855,7 +974,7 @@ function Surface({
           <Chip
             key={i}
             segment={s}
-            pending={inFlight.has(`${s.field.key}:${s.match.raw}`)}
+            pending={s.match.state === "pending"}
             selected={!!range && s.match.start < range.end && s.match.end > range.start}
             onEdit={
               renderPicker && s.field.opens && !s.field.editable
@@ -871,49 +990,55 @@ function Surface({
           />
         ),
       )}
+      {value.endsWith("\n") && <br key="filler" data-filler />}
     </div>
   );
 
-  if (!renderPicker) return field;
   return (
     <div className="relative">
       {field}
-      {open && !spurious && openKey !== shut ? (
-        <Picker
-          key={open.field.key}
-          render={renderPicker}
-          {...open}
-          mode={mode}
-          rect={rect}
-          current={picking ? value.slice(open.start, open.end) : undefined}
-          replace={(text) => {
-            /**
-             * A pick lands finished, so it gets a space after it.
-             *
-             * Without one the caret sits at the end of the token it just wrote,
-             * `opens` matches again, and the list reopens on the thing already
-             * chosen. Only while typing: replacing a settled chip keeps
-             * whatever already followed it.
-             */
-            const rest = value.slice(open.end);
-            const pad = mode === "typing" && !/^\s/.test(rest) ? " " : "";
-            const at = open.start + text.length + pad.length;
-            setPicking(null);
-            commit(
-              value.slice(0, open.start) + text + pad + rest,
-              { start: at, end: at },
-              false,
-              "other",
-            );
-            root.current?.focus();
-          }}
-          close={() => {
-            setPicking(null);
-            setShut(openKey);
-            root.current?.focus();
-          }}
-        />
-      ) : null}
+      {/* a contenteditable is not a form control; this is what gets submitted */}
+      {name !== undefined && <input type="hidden" name={name} value={value} readOnly />}
+      {/* display:contents so the ref costs no box, and the list still
+          positions against the field */}
+      <div ref={list} style={{ display: "contents" }}>
+        {renderPicker && open && !spurious && openKey !== shut ? (
+          <Picker
+            key={open.field.key}
+            render={renderPicker}
+            {...open}
+            mode={mode}
+            rect={rect}
+            current={picking ? value.slice(open.start, open.end) : undefined}
+            replace={(text) => {
+              /**
+               * A pick lands finished, so it gets a space after it.
+               *
+               * Without one the caret sits at the end of the token it just wrote,
+               * `opens` matches again, and the list reopens on the thing already
+               * chosen. Only while typing: replacing a settled chip keeps
+               * whatever already followed it.
+               */
+              const rest = value.slice(open.end);
+              const pad = mode === "typing" && !/^\s/.test(rest) ? " " : "";
+              const at = open.start + text.length + pad.length;
+              setPicking(null);
+              commit(
+                value.slice(0, open.start) + text + pad + rest,
+                { start: at, end: at },
+                false,
+                "other",
+              );
+              root.current?.focus();
+            }}
+            close={() => {
+              setPicking(null);
+              setShut(openKey);
+              root.current?.focus();
+            }}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }
