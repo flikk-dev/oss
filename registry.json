@@ -9,8 +9,19 @@
       "title": "JSON Schema builder",
       "description": "Edit a JSON Schema as a tree: presets, compound parts, two hooks, drag and drop across the tree, bulk actions. JSON Schema draft 2020-12 in and out.",
       "author": "flikk <https://flikk.dev>",
-      "dependencies": ["zustand", "motion", "lucide-react", "@base-ui/react"],
-      "registryDependencies": ["button", "dropdown-menu", "dialog", "checkbox", "badge"],
+      "dependencies": [
+        "zustand",
+        "motion",
+        "lucide-react",
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "button",
+        "dropdown-menu",
+        "dialog",
+        "checkbox",
+        "badge"
+      ],
       "files": [
         {
           "path": "registry/base-nova/ui/json/core/editor.ts",
@@ -147,6 +158,42 @@
         }
       },
       "docs": "import { JsonSchemaEditor, useJsonSchema } from \"@/components/ui/json/editor\""
+    },
+    {
+      "name": "rich-input",
+      "type": "registry:ui",
+      "title": "Rich input",
+      "description": "A text field where the host declares what becomes a chip. Patterns tokenize as you type, the caret steps over a chip and Backspace takes it whole, and the value underneath stays a plain string.",
+      "author": "flikk <https://flikk.dev>",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "registry/base-nova/ui/rich/core/index.ts",
+          "type": "registry:ui",
+          "target": "components/ui/rich/core/index.ts"
+        },
+        {
+          "path": "registry/base-nova/ui/rich/editor/dom.ts",
+          "type": "registry:ui",
+          "target": "components/ui/rich/editor/dom.ts"
+        },
+        {
+          "path": "registry/base-nova/ui/rich/editor/picker.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/rich/editor/picker.tsx"
+        },
+        {
+          "path": "registry/base-nova/ui/rich/editor/rich.tsx",
+          "type": "registry:ui",
+          "target": "components/ui/rich/editor/rich.tsx"
+        },
+        {
+          "path": "registry/base-nova/ui/rich/editor/index.ts",
+          "type": "registry:ui",
+          "target": "components/ui/rich/editor/index.ts"
+        }
+      ]
     }
   ]
 }
