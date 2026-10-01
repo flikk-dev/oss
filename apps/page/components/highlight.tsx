@@ -39,6 +39,13 @@ export function tokenize(src: string): [Kind, string][] {
   const out: [Kind, string][] = [];
   let rest = src;
   while (rest) {
+    // the lookbehind needs the character before, which `rest` has dropped
+    const before = src[src.length - rest.length - 1];
+    if (before === ":" && rest.startsWith("//")) {
+      out.push(["plain", rest.slice(0, 2)]);
+      rest = rest.slice(2);
+      continue;
+    }
     for (const [re, kind] of RULES) {
       const m = re.exec(rest);
       if (!m) continue;
