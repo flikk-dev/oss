@@ -31,9 +31,19 @@ export const CATALOG: Entry[] = [
   {
     slug: "rich-input",
     name: "Rich input",
-    blurb: "A text field where the host decides what becomes a chip.",
+    blurb: "One line, where the host decides what becomes a chip.",
     summary:
-      "You type, and a run matching a pattern you declared turns into one object: the caret steps over it and Backspace takes the whole thing. The value underneath stays a plain string, so it round-trips through anything that already accepts text.",
+      "A run matching a pattern you declared becomes one object: the caret steps over it and Backspace takes the whole thing. The value underneath stays a plain string.",
+    registry: "rich-input",
+    status: "in progress",
+  },
+  {
+    slug: "rich-textarea",
+    name: "Rich textarea",
+    blurb: "The same field over several lines.",
+    summary:
+      "Everything the rich input does, with newlines. Enter breaks a line instead of doing nothing, and the value keeps them.",
+    registry: "rich-input",
     status: "in progress",
   },
 ];

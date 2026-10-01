@@ -11,6 +11,14 @@ import type { ReactNode } from "react";
 export type FieldMatch = {
   /** which of the field's two patterns caught this: as typed, or settled */
   form: "draft" | "resolved";
+  /**
+   * How the lookup went, for a draft that has one.
+   *
+   * `pending` while it runs, `failed` when it threw or found nothing. A
+   * renderer that ignores this shows a token that looks exactly like one still
+   * loading, forever, which is the worst of the three.
+   */
+  state?: "pending" | "failed";
   /** the whole matched run, exactly as it appears in the value */
   raw: string;
   /** capture groups, so a host can name a chip without re-parsing */

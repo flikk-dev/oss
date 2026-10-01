@@ -37,3 +37,7 @@ next-env.d.ts
 
 # claude internal
 .claude
+
+# built registry: generated from registry/ by `bun run registry:build`, which
+# `bun run build` runs. committing it duplicates every component in the diff.
+apps/page/public/r/
