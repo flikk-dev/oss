@@ -6,6 +6,10 @@ import { RichPlainDemo } from "@/components/examples/rich-plain-demo";
 import { RichTextareaPlainDemo } from "@/components/examples/rich-textarea-plain-demo";
 import { RichComposedDemo } from "@/components/examples/rich-composed-demo";
 import { RichAsyncDemo } from "@/components/examples/rich-async-demo";
+import { JsonEditorDemo } from "@/components/examples/json-editor-demo";
+import { JsonEditorVariantsDemo } from "@/components/examples/json-editor-variants-demo";
+import { JsonEditorPartsDemo } from "@/components/examples/json-editor-parts-demo";
+import { JsonEditorTypesDemo } from "@/components/examples/json-editor-types-demo";
 
 /**
  * Every example, named once.
@@ -21,6 +25,10 @@ export const DEMOS = {
   "rich-textarea-plain-demo": RichTextareaPlainDemo,
   "rich-composed-demo": RichComposedDemo,
   "rich-async-demo": RichAsyncDemo,
+  "json-editor-demo": JsonEditorDemo,
+  "json-editor-variants-demo": JsonEditorVariantsDemo,
+  "json-editor-parts-demo": JsonEditorPartsDemo,
+  "json-editor-types-demo": JsonEditorTypesDemo,
 } satisfies Record<string, React.ComponentType>;
 
 export type ExampleKey = keyof typeof DEMOS;
